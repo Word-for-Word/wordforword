@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Get Involved — Word for Word</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=148" />
+</head>
+<body>
+    <!-- Same header markup as index.html's own <header>, minus the
+         intro-reveal/intro-reveal--drop classes and --intro-delay style —
+         secondary pages (this one included) have no homepage intro splash
+         to choreograph against, so the header just renders visible from
+         the start. See initIntroReveal() in main.js: with no
+         .intro-reveal elements on the page, it sets body.intro-finished
+         immediately instead of waiting on a timer, which is what the
+         Publications dropdown's own height transition is gated on. -->
+    <header class="site-header">
+      <div class="nav__dropdown-hover-zone" aria-hidden="true"></div>
+      <div class="site-header__clip">
+        <a href="index.html" class="nav__logo">
+          <img src="assets/images/Logo.png" alt="Word for Word logo" />
+        </a>
+        <nav class="nav">
+          <ul class="nav__links">
+            <li><a href="index.html">Overview</a></li>
+            <li class="nav__item--publications">
+              <a href="publications.html">Publications*</a>
+              <div class="nav__dropdown">
+                <a href="index.html#publications"><span class="nav__dropdown-asterisk">*</span>Volumes</a>
+                <a href="publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
+                <a href="publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
+                <a href="publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
+                <a href="publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
+              </div>
+            </li>
+            <li><a href="about.html">About Us</a></li>
+            <li><a href="get-involved.html">Get Involved</a></li>
+            <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <div class="nav-dim-overlay" aria-hidden="true"></div>
+
+  <!-- Deliberately empty for now — see .static-page in style.css. Just
+       the header + matching page background, standing in so section 2's
+       small diamond CTA (index.html) has a real page to lead to. -->
+  <main class="static-page"></main>
+
+    <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
+    <script src="js/main.js?v=80" defer></script>
+</body>
+</html>

@@ -213,9 +213,32 @@ def build_article(md_path, css_version, js_version):
     }
 
 
+def build_marquee_cycle(word, cycles=12):
+    """Same script/serif/caps word-span cycle used by index.html's own
+    marquee strips (#get-involved, #publications) — kept in sync by hand
+    since one side is static HTML and the other generated Python, not by
+    sharing code. See .marquee-banner__track's own comment in style.css
+    for the face/size/case rules this markup relies on, and
+    centerMarqueeTracks() in main.js for how the Freight word gets
+    centered. 12 cycles (36 words) — deliberately more than needed to
+    fill one viewport, so the sequence overflows both edges at any
+    realistic width instead of exposing its own start/end as a visible
+    gap. Confirmed via Playwright that 8 cycles wasn't enough margin for
+    the SHORTEST word here ("Essays" — its own total rendered width per
+    cycle is much narrower than "Interviews"/"Narratives"/"Outreach", so
+    it ran out of overflow on one side at wide viewports while the
+    longer words were still fine); 12 covers the shortest word with
+    margin to spare, at the cost of a bit of unused width on the longer
+    ones — harmless, since it's all clipped off-screen anyway."""
+    faces = ["script", "serif", "caps"]
+    words = faces * cycles
+    spans = [f'<span class="marquee-banner__word marquee-banner__word--{face}">{word}</span>' for face in words]
+    return " &nbsp;*&nbsp; ".join(spans)
+
+
 def render_category_section(category, articles_in_category):
     label = category.capitalize()
-    track = " &nbsp;*&nbsp; ".join([label] * 8)
+    track = build_marquee_cycle(label)
     if not articles_in_category:
         body = f'      <p class="publications-category__empty">More {label.lower()} coming soon.</p>\n'
     else:

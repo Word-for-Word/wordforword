@@ -18,6 +18,25 @@ const ASSET_BASE = location.pathname.includes("/articles/") ? "../" : "";
 // contradict what the ongoing check computes moments later.
 const HERO_EXIT_THRESHOLD = 0.95;
 
+// Only ever true when index.html's own inline <head> script (right after
+// __pageLoadStart) found the one-shot sessionStorage flag set — meaning
+// this navigation came from clicking the "Overview" nav link (see
+// initOverviewSkipsSplash() below), not a fresh reload or the logo
+// (initLogoSecretEntry() below). That script already added
+// html.skip-intro-splash synchronously, hiding the splash before first
+// paint (see style.css) — this constant just lets initIntroReveal() know
+// to also shift the HERO's own entrance earlier, instead of it still
+// waiting out the (now invisible) splash's multi-second head start.
+const SKIP_INTRO_SPLASH = document.documentElement.classList.contains("skip-intro-splash");
+// Subtracted from every --intro-delay AND the final anchor timeout in
+// initIntroReveal(), on top of the normal elapsed-time correction —
+// chosen so the EARLIEST --intro-delay in index.html (3220ms, the
+// title's first word) lands at a small, still-deliberate ~100ms instead
+// of 0. The whole staggered choreography (title -> eyebrows -> header)
+// shifts as one block, preserving its existing relative timing exactly,
+// just starting right away instead of after the splash.
+const SKIP_INTRO_SPLASH_OFFSET_MS = SKIP_INTRO_SPLASH ? 3120 : 0;
+
 // Always land at the top on a refresh/reload — without this, the browser's
 // own scroll-restoration silently re-applies whatever scroll position was
 // last recorded for this page before any of our JS (Lenis, reveal
@@ -36,18 +55,73 @@ document.addEventListener("DOMContentLoaded", () => {
   initLuxuryScroll();
   initIntroReveal();
   initIntroSplashHold();
+  initIntroScrollLock();
   initHeroAsteriskPosition();
   initRevealOnScroll();
   initMosaicReveal();
   initSplitCtaReveal();
   initHeroEyebrowExit();
   initMarqueeAsterisks();
+  initMarqueeCentering();
   initCustomCursor();
   initRoleTapReveal();
-  initSocialCarousel();
+  initFeaturedCarousel();
   initCarouselReveal();
   initLogoSecretEntry();
+  initOverviewSkipsSplash();
+  initPublicationsDropdown();
 });
+
+// Manages .nav__dropdown-is-open on .site-header via real JS state (a
+// grace-period timer), rather than a live CSS :has(...:hover) condition
+// — see .nav__dropdown-hover-zone's own CSS comment for exactly why a
+// pure-CSS condition doesn't work here: the hover zone needs its own
+// pointer-events to already be "auto" the instant the cursor leaves the
+// trigger heading toward it, but a :has(trigger:hover) condition (which
+// pointer-events would have to be keyed off) reverts to false in that
+// SAME instant, since it's recomputed live on every mousemove — verified
+// via Playwright (instrumenting pointer-events and :hover directly frame
+// by frame) that this produces a real window where NEITHER element can
+// be hovered, reported as the dropdown "jittering" as it starts to open.
+// mouseenter on the trigger sets the class (and, in the same synchronous
+// step, the zone's pointer-events) BEFORE the cursor ever needs to reach
+// the zone; a real elapsed-time grace period (not a same-tick CSS
+// recomputation) is what decides when it later reverts, so a fast-
+// moving cursor crossing between the two never finds a moment where
+// neither is hoverable.
+function initPublicationsDropdown() {
+  const trigger = document.querySelector(".nav__item--publications");
+  const header = document.querySelector(".site-header");
+  const hoverZone = document.querySelector(".nav__dropdown-hover-zone");
+  if (!trigger || !header || !hoverZone) return;
+
+  // Matches the CSS close-curve's own no-longer-needed 160ms debounce
+  // (removed from CSS — this timer replaces it, see that rule's comment).
+  const CLOSE_GRACE_MS = 160;
+  let closeTimer = null;
+
+  const open = () => {
+    clearTimeout(closeTimer);
+    header.classList.add("nav__dropdown-is-open");
+  };
+  const scheduleClose = () => {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => {
+      header.classList.remove("nav__dropdown-is-open");
+    }, CLOSE_GRACE_MS);
+  };
+
+  // .nav__dropdown itself (the real, clickable links) doesn't need its
+  // own listeners — it's a DOM descendant of `trigger`, and
+  // mouseenter/mouseleave (unlike mouseover/mouseout) only fire when the
+  // cursor truly enters/exits an element INCLUDING all its descendants,
+  // so moving into the dropdown's own links never fires trigger's
+  // mouseleave in the first place.
+  for (const el of [trigger, hoverZone]) {
+    el.addEventListener("mouseenter", open);
+    el.addEventListener("mouseleave", scheduleClose);
+  }
+}
 
 // Unadvertised entry point to the Decap CMS admin panel for club members —
 // triple-clicking the nav logo opens it in a new tab, instead of the
@@ -86,6 +160,23 @@ function initLogoSecretEntry() {
   });
 }
 
+// The "Overview" nav link (always the first .nav__links item — see
+// templates/_header.html) is the ONE way of reaching index.html that
+// should skip the intro splash, per explicit request — a fresh reload
+// or clicking the logo (initLogoSecretEntry() above) should still play
+// it. Since every navigation here is a real full page load (no client-
+// side routing), the only way to signal "skip it" across that reload is
+// a one-shot sessionStorage flag, read and immediately cleared by
+// index.html's own inline <head> script — see that script + the
+// html.skip-intro-splash rules in style.css for the other half of this.
+function initOverviewSkipsSplash() {
+  const overviewLink = document.querySelector(".nav__links > li:first-child > a");
+  if (!overviewLink) return;
+  overviewLink.addEventListener("click", () => {
+    sessionStorage.setItem("wfw-skip-intro-splash", "1");
+  });
+}
+
 // vertical-align: middle centers an inline-block box against the
 // font's X-HEIGHT (baseline + half the lowercase-letter height) — not
 // its cap-height. The marquee text is all-caps, so a viewer reads
@@ -120,26 +211,90 @@ function alignAsteriskToCapHeight(span, boxHeight, track) {
 // alignAsteriskToCapHeight above. Splitting on the literal "*" preserves
 // the surrounding &nbsp; spacing already baked into the HTML (it
 // survives as plain U+00A0 characters in the split text nodes).
-const MARQUEE_ASTERISK_SIZE = 18;
+//
+// Operates on each track's own child TEXT NODES only (not
+// track.textContent as a whole) — every track now has real element
+// children (.marquee-banner__word--* spans, one per face; see index.html
+// and scripts/build_articles.py's buildMarqueeCycle()) sitting between
+// the "*" separators, and collapsing to textContent would flatten them
+// to plain text, destroying their font overrides.
+const MARQUEE_ASTERISK_SIZE = 14; // MUST match .marquee-asterisk img's height in style.css
 function initMarqueeAsterisks() {
   const tracks = document.querySelectorAll(".marquee-banner__track");
   for (const track of tracks) {
-    const parts = track.textContent.split("*");
-    track.textContent = "";
-    for (let i = 0; i < parts.length; i++) {
-      track.appendChild(document.createTextNode(parts[i]));
-      if (i < parts.length - 1) {
-        const span = document.createElement("span");
-        span.className = "marquee-asterisk";
-        const img = document.createElement("img");
-        img.src = `${ASSET_BASE}assets/images/Brown asterisk.png`;
-        img.alt = "";
-        span.appendChild(img);
-        track.appendChild(span);
-        alignAsteriskToCapHeight(span, MARQUEE_ASTERISK_SIZE, track);
+    // Snapshot first — inserting/removing nodes while iterating the live
+    // childNodes list would skip or repeat entries.
+    for (const node of Array.from(track.childNodes)) {
+      if (node.nodeType !== Node.TEXT_NODE || !node.data.includes("*")) continue;
+      const parts = node.data.split("*");
+      for (let i = 0; i < parts.length; i++) {
+        track.insertBefore(document.createTextNode(parts[i]), node);
+        if (i < parts.length - 1) {
+          const span = document.createElement("span");
+          span.className = "marquee-asterisk";
+          const img = document.createElement("img");
+          img.src = `${ASSET_BASE}assets/images/Brown asterisk.png`;
+          img.alt = "";
+          span.appendChild(img);
+          track.insertBefore(span, node);
+          alignAsteriskToCapHeight(span, MARQUEE_ASTERISK_SIZE, track);
+        }
       }
+      track.removeChild(node);
     }
   }
+}
+
+// text-align:center does NOT symmetric-center an overflowing
+// .marquee-banner__track the way it might look like it should — that
+// only holds for a line that FITS inside its container. Once the line
+// is wider than the container (true of every marquee strip site-wide:
+// white-space:nowrap + far more repeated words than fit any real
+// viewport, by design), confirmed empirically (a standalone test case,
+// same CSS) that it instead renders flush against the box's own left
+// edge with the entire overflow spilling out to the right, not split
+// evenly across both sides. Corrected the same way positionHeroAsterisk
+// handles its own metric mismatch: measure each track's real rendered
+// position, then nudge with a corrective transform, rather than trust a
+// CSS assumption that doesn't hold here.
+//
+// Targets the MIDDLE Freight occurrence by index, not "whichever is
+// nearest the viewport's center" (an earlier version) — proximity-based
+// picking could land on an occurrence near either end of the repeating
+// sequence depending on viewport width, leaving too few full cycles
+// buffering ONE side and exposing the sequence's hard start/end as a
+// visible gap (confirmed empirically at several widths). The middle
+// occurrence always has the same number of full cycles on both sides
+// regardless of viewport width, and centers just as exactly — every
+// occurrence within one track is the identical word, so which specific
+// one lands at dead-center is invisible to the eye.
+function centerMarqueeTrack(track) {
+  // Reset before measuring — otherwise a stale correction from a
+  // previous run (e.g. before a resize) would be baked into this run's
+  // own measurement, compounding instead of replacing it.
+  track.style.transform = "none";
+  const capsSpans = track.querySelectorAll(".marquee-banner__word--caps");
+  if (!capsSpans.length) return;
+  const target = capsSpans[Math.floor(capsSpans.length / 2)];
+  const rect = target.getBoundingClientRect();
+  const center = (rect.left + rect.right) / 2;
+  const delta = window.innerWidth / 2 - center;
+  track.style.transform = `translateX(${delta}px)`;
+}
+
+function centerMarqueeTracks() {
+  for (const track of document.querySelectorAll(".marquee-banner__track")) {
+    centerMarqueeTrack(track);
+  }
+}
+
+function initMarqueeCentering() {
+  centerMarqueeTracks();
+  // Re-measure once the real webfonts (Freight/Instrument/Bickham) are
+  // actually in — same fallback-vs-real-font reflow reasoning as
+  // positionHeroAsterisk.
+  document.fonts.ready.then(centerMarqueeTracks);
+  window.addEventListener("resize", centerMarqueeTracks);
 }
 
 // Plays the one-time load-in sequence (title -> eyebrows -> nav), driven
@@ -224,7 +379,12 @@ function initIntroReveal() {
   const asteriskWrap = document.querySelector(".hero__wordmark-asterisk-wrap");
   const timedEls = asteriskWrap ? [...introEls, asteriskWrap] : Array.from(introEls);
 
-  const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
+  // + SKIP_INTRO_SPLASH_OFFSET_MS: 0 normally (no-op); when the splash
+  // itself was skipped, this folds the "start earlier" shift into the
+  // SAME subtraction already used for real elapsed-load-time correction
+  // below (and into the final anchor timeout further down, which reuses
+  // this same `elapsed`), rather than needing a second code path.
+  const elapsed = Date.now() - (window.__pageLoadStart || Date.now()) + SKIP_INTRO_SPLASH_OFFSET_MS;
   for (const el of timedEls) {
     const original = parseFloat(el.style.getPropertyValue("--intro-delay")) || 0;
     el.style.setProperty("--intro-delay", `${Math.max(0, original - elapsed)}ms`);
@@ -286,7 +446,10 @@ function initIntroReveal() {
 // construction it's already true by the time this code executes.
 function initIntroSplashHold() {
   const splash = document.querySelector(".intro-splash");
-  if (!splash) return;
+  // Already force-hidden by the html.skip-intro-splash CSS rule (see
+  // style.css) — no point racing fonts/timers to reveal a splash that's
+  // permanently opacity:0 either way.
+  if (!splash || SKIP_INTRO_SPLASH) return;
 
   const MIN_VISUAL_MS = 2480; // matches the slide-away delay this replaces
   const READY_TIMEOUT_MS = 8000;
@@ -303,6 +466,31 @@ function initIntroSplashHold() {
   Promise.all([minVisualTime, readiness]).then(() => {
     splash.classList.add("is-ready-to-slide");
   });
+}
+
+// Removes html.intro-scroll-locked (see style.css) once the splash has
+// ACTUALLY finished sliding away — not a fixed guess at a duration, so
+// this stays correct even if any of the intro's own timings change
+// later. The grey layer (.intro-splash-layer--grey) is the last of the
+// 3 stacked full-screen layers to clear (see the HTML/CSS comments
+// above the splash for the brown/grey "rapidfire cascade" order), so
+// its own slide finishing is the exact moment the real page is fully
+// uncovered and safe to scroll again. No-op if the splash was skipped
+// entirely (see SKIP_INTRO_SPLASH above) — nothing was ever locked to
+// unlock, since the html.intro-scroll-locked class is only added in the
+// first place when NOT skipping (see index.html's own inline <head>
+// script).
+function initIntroScrollLock() {
+  if (SKIP_INTRO_SPLASH) return;
+  const greyLayer = document.querySelector(".intro-splash-layer--grey");
+  if (!greyLayer) return;
+  greyLayer.addEventListener(
+    "animationend",
+    () => {
+      document.documentElement.classList.remove("intro-scroll-locked");
+    },
+    { once: true }
+  );
 }
 
 // Pins the hero asterisk to the actual top-right corner of the "d" in
@@ -457,9 +645,23 @@ function initNavHighlight() {
     navLinks[0];
   activeLink.classList.add("is-active");
 
+  // getBoundingClientRect() (viewport-relative, then subtracted against
+  // the indicator's own container) rather than offsetLeft/offsetWidth —
+  // offsetLeft is relative to the nearest POSITIONED ancestor, which
+  // silently changes per-link: .nav__item--publications has its own
+  // position:relative (needed as .nav__dropdown's containing block, see
+  // that HTML comment), making IT the offsetParent for "Publications*"
+  // specifically, while every other link's offsetParent stays whatever
+  // it was before — so offsetLeft measured 0 (relative to that link's
+  // own now-positioned <li>) instead of its true position in the bar,
+  // placing the indicator at the wrong spot only when Publications was
+  // the active link. getBoundingClientRect() is immune to this: it's
+  // real rendered geometry, independent of the offsetParent chain.
   const placeIndicator = () => {
-    indicator.style.left = `${activeLink.offsetLeft}px`;
-    indicator.style.width = `${activeLink.offsetWidth}px`;
+    const containerRect = indicator.parentElement.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    indicator.style.left = `${linkRect.left - containerRect.left}px`;
+    indicator.style.width = `${linkRect.width}px`;
   };
 
   placeIndicator();
@@ -547,7 +749,7 @@ function initRevealOnScroll() {
   // illustration box its tile-by-tile cascade: 4 tiles sharing one
   // parent, same stagger math as any other square-grid.
   const staggeredTargets = document.querySelectorAll(
-    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .social-carousel__mask, .quote-block, .publication-card"
+    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block, .publication-card"
   );
   // .partners reveals as ONE unit (slide up + fade, like the hero
   // elements — see .mosaic-reveal/.mosaic-reveal--slide on it in
@@ -602,8 +804,27 @@ function initRevealOnScroll() {
       const rect = el.getBoundingClientRect();
       const inView = rect.top < vh * 0.9 && rect.bottom > vh * 0.1;
       const farAway = rect.bottom < -vh * 1.5 || rect.top > vh * 2.5;
-      if (inView) el.classList.add("is-visible");
-      else if (farAway) el.classList.remove("is-visible");
+      // Guarded with contains() now — calling classList.add()/remove()
+      // for a token that's already (not) present still fires a genuine
+      // MutationObserver "attributes" mutation, even though the
+      // resulting class string is unchanged (a real, surprising browser
+      // behavior, not a spec violation on our part). This ran
+      // UNCONDITIONALLY on every scroll frame for every tracked target,
+      // so anything watching one of these elements' class via
+      // MutationObserver (see initSplitCtaReveal()) was getting fired
+      // dozens of times per second for the ENTIRE duration of active
+      // scrolling, not once when visibility genuinely changed —
+      // confirmed via direct instrumentation: a single continuous
+      // scroll produced ~80 redundant callbacks in 1.4s, each one
+      // cancelling and rescheduling initSplitCtaReveal()'s pending
+      // reveal, so it could only ever fire once scrolling had been
+      // fully still for a longer stretch than its own delay — read as
+      // "waits for the whole section to finish, then a big pause."
+      if (inView) {
+        if (!el.classList.contains("is-visible")) el.classList.add("is-visible");
+      } else if (farAway) {
+        if (el.classList.contains("is-visible")) el.classList.remove("is-visible");
+      }
     }
     ticking = false;
   };
@@ -865,6 +1086,10 @@ function initMosaicReveal() {
 // .split-cta__illustration's own opacity/transform transition duration),
 // on every browser, every time.
 const SPLIT_CTA_ILLUSTRATION_TRANSITION_MS = 450;
+// Big asterisk pops in first, small one chases it — same succession the
+// user asked for, using the hero wordmark's own pop-in keyframes
+// (hero-asterisk-intro) rather than a new animation.
+const SPLIT_CTA_ASTERISK_STAGGER_MS = 180;
 function initSplitCtaReveal() {
   const section = document.querySelector(".split-cta");
   if (!section) return;
@@ -872,35 +1097,90 @@ function initSplitCtaReveal() {
   const tiles = section.querySelectorAll(".split-cta__illustration-tile");
   const illustration = section.querySelector(".split-cta__illustration");
   const textLines = section.querySelectorAll(".split-cta__text-line");
+  const asteriskLarge = section.querySelector(".split-cta__illustration-asterisk-wrap--large");
+  const asteriskSmall = section.querySelector(".split-cta__illustration-asterisk-wrap--small");
   if (!tiles.length || !illustration) return;
 
   const revealIllustration = () => illustration.classList.add("is-visible");
   const revealTextLines = () => {
     for (const line of textLines) line.classList.add("is-visible");
   };
-
-  const triggerTile = tiles[2] || tiles[tiles.length - 1];
-  const scheduleFromTriggerTile = () => {
-    const delay = parseFloat(triggerTile.style.getPropertyValue("--reveal-delay")) || 0;
-    setTimeout(() => {
-      revealIllustration();
-      setTimeout(revealTextLines, SPLIT_CTA_ILLUSTRATION_TRANSITION_MS);
-    }, delay);
+  let asteriskTimer = null;
+  const revealAsterisks = () => {
+    if (asteriskLarge) asteriskLarge.classList.add("is-visible");
+    asteriskTimer = setTimeout(() => {
+      if (asteriskSmall) asteriskSmall.classList.add("is-visible");
+    }, SPLIT_CTA_ASTERISK_STAGGER_MS);
+  };
+  const hideAll = () => {
+    illustration.classList.remove("is-visible");
+    for (const line of textLines) line.classList.remove("is-visible");
+    if (asteriskLarge) asteriskLarge.classList.remove("is-visible");
+    if (asteriskSmall) asteriskSmall.classList.remove("is-visible");
   };
 
-  if (triggerTile.classList.contains("is-visible")) {
-    scheduleFromTriggerTile();
-    return;
-  }
-  // Tile visibility itself is still scroll-triggered by
-  // initRevealOnScroll() (a plain class toggle, not a transition event)
-  // — watch for that class change directly rather than any transition
-  // firing on it.
-  const observer = new MutationObserver(() => {
-    if (!triggerTile.classList.contains("is-visible")) return;
-    observer.disconnect();
-    scheduleFromTriggerTile();
-  });
+  // Settled back on tile 3 (index 2) after trying tiles 1/2 — with a
+  // real, gradual scroll (not an instant jump), the 4 tiles don't
+  // actually reveal in one synced batch the way a synthetic test
+  // suggested; each crosses its own reveal threshold at a different
+  // moment as the page scrolls. Explicitly wanted: the illustration
+  // should start at the same moment tile 3 itself starts (not once the
+  // whole grid has already finished), with the text lines still coming
+  // last in the chain.
+  const triggerTile = tiles[2] || tiles[tiles.length - 1];
+  let showTimer = null;
+  let textTimer = null;
+
+  // Kept bidirectional (not a one-shot MutationObserver that disconnects
+  // after its first fire, as an earlier version did) — the tile itself
+  // is scroll-reset by initRevealOnScroll() like every other tile
+  // (scrolling far enough away removes its own is-visible so scrolling
+  // back re-triggers it), but this function used to only ever listen
+  // for the FIRST time that happened, so the illustration/text stayed
+  // visible forever afterward regardless of scroll position. Now this
+  // mirrors the tile's own state every time it changes, either
+  // direction, matching how every other reveal on this page resets.
+  // Tracks the last state this function actually acted on — defense in
+  // depth alongside the checkAll() fix (see initRevealOnScroll()): even
+  // with that fix, this guards against ever re-scheduling/re-hiding for
+  // a mutation that didn't represent a genuine visibility change, rather
+  // than trusting every MutationObserver callback to mean exactly that.
+  let lastKnownVisible = null;
+  const sync = () => {
+    const nowVisible = triggerTile.classList.contains("is-visible");
+    if (nowVisible === lastKnownVisible) return;
+    lastKnownVisible = nowVisible;
+
+    clearTimeout(showTimer);
+    clearTimeout(textTimer);
+    clearTimeout(asteriskTimer);
+    if (nowVisible) {
+      const delay = parseFloat(triggerTile.style.getPropertyValue("--reveal-delay")) || 0;
+      showTimer = setTimeout(() => {
+        // Double rAF (same idiom initIntroReveal() already uses, same
+        // reason) guarantees the illustration's initial opacity:0 state
+        // has genuinely been painted at least once before flipping to
+        // is-visible. Needed now specifically because trigger delay can
+        // be 0 (see triggerTile above) — a setTimeout(fn, 0) alone isn't
+        // guaranteed to land after a real paint, so the browser can
+        // coalesce "set opacity:0" and "set opacity:1" into the same
+        // frame and skip the transition outright, popping straight to
+        // the end state with no visible animation at all.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            revealIllustration();
+            revealAsterisks();
+            textTimer = setTimeout(revealTextLines, SPLIT_CTA_ILLUSTRATION_TRANSITION_MS);
+          });
+        });
+      }, delay);
+    } else {
+      hideAll();
+    }
+  };
+
+  sync();
+  const observer = new MutationObserver(sync);
   observer.observe(triggerTile, { attributes: true, attributeFilter: ["class"] });
 }
 
@@ -1090,32 +1370,194 @@ function initRoleTapReveal() {
   }
 }
 
-// Section 4's carousel: prev/next just move .social-carousel__track by
-// one slide-width via transform, wrapping past either end instead of
-// stopping — modulo (index + slideCount) % slideCount handles both
-// directions in one expression (JS's own % can return negative for a
-// negative left-hand side, e.g. -1 % 4 === -1, not 3 — adding
-// slideCount first keeps it always positive before the real mod).
-function initSocialCarousel() {
-  const track = document.querySelector(".social-carousel__track");
-  const prevBtn = document.querySelector(".social-carousel__nav--prev");
-  const nextBtn = document.querySelector(".social-carousel__nav--next");
+// Builds a plain, always-fully-visible stand-in for a slide, for the
+// loop-continuity clones below — NOT a blind cloneNode(true). The real
+// .featured-carousel__slide--first carries one-time reveal machinery (8
+// mask tiles, mosaic-reveal classes on its scrim) that only ever gets
+// wired up ONCE, on the ORIGINAL element, by initCarouselReveal(); a
+// naive clone of it would carry the SAME masks/mosaic-reveal classes
+// but with nothing driving them, so it'd sit permanently in whatever
+// pre-reveal (masked-over, invisible scrim) state it happened to be
+// cloned in — exactly wrong for something that needs to always look
+// identical to the finished slide. Every OTHER real slide already has
+// no reveal machinery at all (see the HTML comment above the carousel),
+// so this just mirrors that same plain shape regardless of which slide
+// it's standing in for. No title/edition/number here — those live on
+// the one shared caption outside the track now (see initFeaturedCarousel()),
+// carried forward via the source slide's own data-title/data-edition/
+// data-number attributes instead of a cloned element.
+function buildCarouselLoopClone(sourceSlide) {
+  const clone = document.createElement("div");
+  clone.className = "featured-carousel__slide";
+  clone.setAttribute("aria-hidden", "true");
+  clone.dataset.title = sourceSlide.dataset.title ?? "";
+  clone.dataset.edition = sourceSlide.dataset.edition ?? "";
+  clone.dataset.number = sourceSlide.dataset.number ?? "";
+  clone.dataset.articleUrl = sourceSlide.dataset.articleUrl ?? "#";
+
+  const photo = sourceSlide.querySelector(".featured-carousel__photo");
+  const placeholder = sourceSlide.querySelector(".featured-carousel__photo-placeholder");
+  if (photo) {
+    const img = document.createElement("img");
+    img.className = "featured-carousel__photo";
+    img.src = photo.src;
+    img.alt = "";
+    clone.appendChild(img);
+  } else if (placeholder) {
+    const div = document.createElement("div");
+    div.className = "featured-carousel__photo-placeholder";
+    div.setAttribute("aria-hidden", "true");
+    clone.appendChild(div);
+  }
+
+  const scrim = document.createElement("div");
+  scrim.className = "featured-carousel__scrim";
+  scrim.setAttribute("aria-hidden", "true");
+  clone.appendChild(scrim);
+
+  const hoverTiles = document.createElement("div");
+  hoverTiles.className = "featured-carousel__hover-tiles";
+  for (let i = 0; i < 8; i++) {
+    const tile = document.createElement("div");
+    tile.className = "featured-carousel__hover-tile";
+    tile.setAttribute("aria-hidden", "true");
+    hoverTiles.appendChild(tile);
+  }
+  clone.appendChild(hoverTiles);
+
+  return clone;
+}
+
+// Section 4's carousel: prev/next move .featured-carousel__track by one
+// slide-width via transform. A truly infinite loop, not just wrapping
+// the index — clicking "next" on the last real slide used to jump
+// straight back to translateX(0), a visible reverse slide all the way
+// across the track. Instead, a clone of the first slide is appended
+// after the last (and a clone of the last is prepended before the
+// first), so continuing past either end slides CONTINUOUSLY into that
+// clone — visually identical to the real slide it's a copy of — and
+// only once that motion finishes does it snap (transition:none, no
+// visible jump) back to the real slide sitting in the same spot,
+// closing the loop invisibly.
+function initFeaturedCarousel() {
+  const track = document.querySelector(".featured-carousel__track");
+  const prevBtn = document.querySelector(".featured-carousel__nav--prev");
+  const nextBtn = document.querySelector(".featured-carousel__nav--next");
   if (!track || !prevBtn || !nextBtn) return;
 
-  const slideCount = track.children.length;
-  let index = 0;
+  const carousel = document.querySelector(".featured-carousel");
+  const captionTitle = document.querySelector(".featured-carousel__title");
+  const captionEdition = document.querySelector(".featured-carousel__edition");
+  const captionNumber = document.querySelector(".featured-carousel__number");
 
-  const render = () => {
-    track.style.transform = `translateX(-${index * (100 / slideCount)}%)`;
+  const realSlides = Array.from(track.children);
+  const realCount = realSlides.length;
+  if (realCount < 2) return;
+
+  track.appendChild(buildCarouselLoopClone(realSlides[0]));
+  track.insertBefore(buildCarouselLoopClone(realSlides[realCount - 1]), track.firstChild);
+
+  // CSS's own width:400%/flex:0 0 25% are sized for exactly 4 real
+  // slides (a sane fallback if this script ever failed to run) — now
+  // that there are 2 more (the clones), both need to match the ACTUAL
+  // total instead.
+  const totalSlides = realCount + 2;
+  track.style.width = `${totalSlides * 100}%`;
+  for (const slide of track.children) {
+    slide.style.flex = `0 0 ${100 / totalSlides}%`;
+  }
+
+  // Index 1 (not 0) — the prepended clone occupies slot 0, so the real
+  // first slide starts at slot 1.
+  let index = 1;
+
+  const render = (animate) => {
+    track.style.transition = animate ? "" : "none";
+    track.style.transform = `translateX(-${index * (100 / totalSlides)}%)`;
+    if (!animate) {
+      // Forces the browser to actually apply transition:none before the
+      // NEXT render() call re-enables it — otherwise the snap itself
+      // could get caught by the real transition and animate visibly,
+      // exactly the reverse-slide this exists to avoid.
+      track.getBoundingClientRect();
+    }
+  };
+  render(false);
+
+  // The shared caption (see the HTML comment above the carousel)
+  // crossfades its own text to match whichever slide is now active —
+  // completely decoupled from the track's transform transition, so it
+  // fades in place instead of physically sliding past with the image.
+  // 500ms, not some shorter value, to actually MATCH the real opacity
+  // transition duration these elements get from .mosaic-reveal--slide in
+  // style.css (they carry that class too, for the one-time scroll
+  // reveal) — swapping text any earlier than the fade-out's own real
+  // duration means it happens mid-fade, at partial opacity, which reads
+  // as a jarring flash-swap rather than a clean crossfade.
+  const CAPTION_FADE_MS = 500;
+  const applyCaption = (slide) => {
+    if (captionTitle) {
+      captionTitle.textContent = slide.dataset.title ?? "";
+      // Edition's own href (-> publications.html) is static and set once
+      // in the HTML — only the title's target changes per-slide.
+      captionTitle.href = slide.dataset.articleUrl || "#";
+    }
+    if (captionEdition) captionEdition.textContent = slide.dataset.edition ?? "";
+    if (captionNumber) captionNumber.textContent = slide.dataset.number ?? "";
+  };
+  applyCaption(track.children[index]);
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const crossfadeCaptionTo = (slide) => {
+    if (!carousel || reduceMotion) {
+      applyCaption(slide);
+      return;
+    }
+    carousel.classList.add("is-caption-fading");
+    window.setTimeout(() => {
+      applyCaption(slide);
+      carousel.classList.remove("is-caption-fading");
+    }, CAPTION_FADE_MS);
   };
 
+  // Clicking faster than the track's own 0.6s transform transition used
+  // to let `index` overshoot its valid 0..totalSlides-1 range: retargeting
+  // an in-flight CSS transition to a new value never fires transitionend
+  // for the interrupted one, so the wraparound-snap logic below could go
+  // multiple clicks without ever running. Once `index` overshot,
+  // track.children[index] was undefined, which crashed crossfadeCaptionTo
+  // mid-fade and left the caption permanently stuck at opacity:0 (see the
+  // is-caption-fading rule) — the "goes blank" bug. Ignoring nav clicks
+  // until the current transition actually settles keeps `index` always
+  // valid, which fixes the caption bug at its root instead of just
+  // guarding around a bad index.
+  let isAnimating = false;
+
+  track.addEventListener("transitionend", (e) => {
+    if (e.propertyName !== "transform") return;
+    if (index === totalSlides - 1) {
+      index = 1;
+      render(false);
+    } else if (index === 0) {
+      index = realCount;
+      render(false);
+    }
+    isAnimating = false;
+  });
+
   prevBtn.addEventListener("click", () => {
-    index = (index - 1 + slideCount) % slideCount;
-    render();
+    if (isAnimating) return;
+    isAnimating = true;
+    index -= 1;
+    render(true);
+    crossfadeCaptionTo(track.children[index]);
   });
   nextBtn.addEventListener("click", () => {
-    index = (index + 1) % slideCount;
-    render();
+    if (isAnimating) return;
+    isAnimating = true;
+    index += 1;
+    render(true);
+    crossfadeCaptionTo(track.children[index]);
   });
 }
 
@@ -1124,21 +1566,30 @@ function initSocialCarousel() {
 // as a 4th thing that reveals alongside the title/edition — all 3 wait
 // on the SAME scrim transitionend, not chained to each other, since
 // there's no ordering between them that matters. Only wired up for
-// .social-carousel__slide--first: the other 3 slides have no masks/
+// .featured-carousel__slide--first: the other 3 slides have no masks/
 // scrim.mosaic-reveal to chain from (see the HTML comment above the
 // carousel) since they're never scrolled into view, only clicked into.
+const CAROUSEL_SCRIM_TRIGGER_MASK_COUNT = 4;
 function initCarouselReveal() {
-  const slide = document.querySelector(".social-carousel__slide--first");
+  const slide = document.querySelector(".featured-carousel__slide--first");
   if (!slide) return;
 
-  const masks = slide.querySelectorAll(".social-carousel__mask");
-  const scrim = slide.querySelector(".social-carousel__scrim");
+  const masks = slide.querySelectorAll(".featured-carousel__mask");
+  const scrim = slide.querySelector(".featured-carousel__scrim");
+  // Title/edition/number now live outside any slide (see the HTML
+  // comment above the carousel) — queried at the document level, not
+  // scoped to `slide`, since they're no longer its descendants.
   const rest = [
-    ...slide.querySelectorAll(".social-carousel__title, .social-carousel__edition"),
-    ...document.querySelectorAll(".social-carousel__nav"),
+    ...document.querySelectorAll(".featured-carousel__title, .featured-carousel__edition, .featured-carousel__number"),
+    ...document.querySelectorAll(".featured-carousel__nav"),
   ];
   if (!masks.length || !scrim) return;
 
+  // Was masks.length (waits for all 8) — per explicit request, the
+  // words/gradient should start appearing once HALF the tiles (4) have
+  // revealed, not the last one, so they feel woven into the tile
+  // cascade instead of arriving as an afterthought once it's all done.
+  const triggerCount = Math.min(CAROUSEL_SCRIM_TRIGGER_MASK_COUNT, masks.length);
   let doneCount = 0;
   for (const mask of masks) {
     mask.addEventListener(
@@ -1146,7 +1597,7 @@ function initCarouselReveal() {
       (e) => {
         if (e.propertyName !== "opacity") return;
         doneCount += 1;
-        if (doneCount < masks.length) return;
+        if (doneCount < triggerCount) return;
         scrim.classList.add("is-visible");
       },
       { once: true }

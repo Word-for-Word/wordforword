@@ -10,6 +10,33 @@
        back out of the intro timing — see the comment on
        initIntroReveal() for why that matters. -->
   <script>window.__pageLoadStart = Date.now();</script>
+  <!-- Must run here, synchronously, before the rest of <head>/<body>
+       parses — the intro splash's own screen-01 animation starts from
+       parse time with no JS gating, so anything added later (even on
+       DOMContentLoaded) would let it flash on screen first. One-shot:
+       removed the instant it's read, so only THIS specific navigation
+       (via the "Overview" nav link — see initOverviewSkipsSplash() in
+       main.js, which is what sets the flag before navigating here)
+       skips the splash. A fresh reload or the logo never set this flag,
+       so the splash plays normally for those. See the matching
+       html.skip-intro-splash rules in style.css.
+
+       When the splash IS going to play, this also locks page scroll
+       immediately (html.intro-scroll-locked, see style.css) — same
+       "must happen before first paint" reasoning: the splash is a fixed
+       overlay, so scrolling the real page underneath it while it's up
+       is invisible in the moment, but the destination is wherever that
+       scroll landed once the splash finally clears. initIntroScrollLock()
+       in main.js removes this once the splash has genuinely finished
+       sliding away. -->
+  <script>
+    if (sessionStorage.getItem("wfw-skip-intro-splash")) {
+      sessionStorage.removeItem("wfw-skip-intro-splash");
+      document.documentElement.classList.add("skip-intro-splash");
+    } else {
+      document.documentElement.classList.add("intro-scroll-locked");
+    }
+  </script>
   <!-- Asterisks 2/3/4 in the intro splash are CSS mask-image sources
        (see .intro-splash__asterisk--2/3/4 in style.css), not <img> tags
        — the browser's preload scanner discovers a plain <img src> almost
@@ -46,7 +73,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   <!-- "Freight" is a licensed font (not on Google Fonts) — add your own @font-face
        for "Freight Text Pro" in css/style.css once you have the font files. -->
-  <link rel="stylesheet" href="css/style.css?v=108" />
+  <link rel="stylesheet" href="css/style.css?v=148" />
 </head>
 <body>
 
@@ -103,7 +130,7 @@
     <div class="intro-splash__caption-wrap">
       <p class="intro-splash__caption intro-splash__caption--1">
         <span class="intro-splash__caption-line1">verbatim.</span>
-        <span class="intro-splash__caption-line2">(01)</span>
+        <span class="intro-splash__caption-line2">(<span class="intro-splash__caption--1-digits">01</span>)</span>
       </p>
       <p class="intro-splash__caption intro-splash__caption--2">
         <span class="intro-splash__caption-line1">voice.</span>
@@ -168,39 +195,47 @@
        bar: nesting means top:100%/left:0 resolve against the <li> itself
        (which has its own position:relative), sidestepping .nav's own
        transform:translateY(-50%) entirely, AND means hovering the
-       dropdown is just hovering a descendant of the trigger — no gap
-       between the two, no separate bridge/second :has() clause needed to
-       keep it open while the cursor moves from one into the other. The
+       dropdown's own visible text is hovering a descendant of the
+       trigger, no gap between the two. .nav__dropdown-hover-zone (see
+       its own CSS comment) is a SEPARATE mechanism layered on top of
+       that — it sustains the open state across the full width/height of
+       the expanded bar, not just the narrow text column, and needs its
+       own second :has() clause since it's a sibling of .site-header
+       __clip (not nested inside the trigger <li>) specifically so it
+       can escape that element's own overflow:hidden clipping. The
        asterisk after "Publications" is a plain text character (matching
        the site's own "*" convention elsewhere, e.g. the role squares)
        indicating more content is available, not a separate interactive
-       element. "Editions" points back at THIS page's own #publications
+       element. "Volumes" points back at THIS page's own #publications
        section (the existing hand-maintained issue-cover cards) rather
        than the generated publications.html — that page is only for the
        article-publishing system's 4 categories, not whole-issue
-       editions, which are a separate, already-existing concept. -->
+       volumes, which are a separate, already-existing concept. -->
   <header class="site-header intro-reveal intro-reveal--drop" style="--intro-delay: 4870ms;">
-    <a href="index.html" class="nav__logo">
-      <img src="assets/images/Logo.png" alt="Word for Word logo" />
-    </a>
-    <nav class="nav">
-      <ul class="nav__links">
-        <li><a href="index.html">Overview</a></li>
-        <li class="nav__item--publications">
-          <a href="publications.html">Publications*</a>
-          <div class="nav__dropdown">
-            <a href="index.html#publications"><span class="nav__dropdown-asterisk">*</span>Editions</a>
-            <a href="publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
-            <a href="publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
-            <a href="publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
-            <a href="publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
-          </div>
-        </li>
-        <li><a href="about.html">About Us</a></li>
-        <li><a href="get-involved.html">Get Involved</a></li>
-        <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
-      </ul>
-    </nav>
+    <div class="nav__dropdown-hover-zone" aria-hidden="true"></div>
+    <div class="site-header__clip">
+      <a href="index.html" class="nav__logo">
+        <img src="assets/images/Logo.png" alt="Word for Word logo" />
+      </a>
+      <nav class="nav">
+        <ul class="nav__links">
+          <li><a href="index.html">Overview</a></li>
+          <li class="nav__item--publications">
+            <a href="publications.html">Publications*</a>
+            <div class="nav__dropdown">
+              <a href="index.html#publications"><span class="nav__dropdown-asterisk">*</span>Volumes</a>
+              <a href="publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
+              <a href="publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
+              <a href="publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
+              <a href="publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
+            </div>
+          </li>
+          <li><a href="about.html">About Us</a></li>
+          <li><a href="get-involved.html">Get Involved</a></li>
+          <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
+        </ul>
+      </nav>
+    </div>
   </header>
   <!-- Dims the page behind the header while the Publications dropdown
        is open — a sibling of .site-header (not a child) so the general
@@ -295,11 +330,11 @@
          what came before it. -->
     <section id="overview" class="square-grid square-grid--4col square-grid--rows-4">
       <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-      <div class="square square--red" style="grid-column: 2; grid-row: 1;">
-        <p class="square__label">We are</p>
+      <div class="square square--red square--pad-lg" style="grid-column: 2; grid-row: 1;">
+        <p class="square__body">At Word for Word, we explore the intersection of medicine and the humanities.</p>
       </div>
-      <div class="square square--tan" style="grid-column: 3; grid-row: 1;">
-        <p class="square__script">Word for Word.</p>
+      <div class="square square--tan square--pad-lg" style="grid-column: 3; grid-row: 1;">
+        <p class="square__body">Through interviews, scholarship, and creative work, we illuminate stories from across the healthcare experience.</p>
       </div>
       <div class="square square--grey square--inset" style="grid-column: 4; grid-row: 1;">
         <img class="square__inset-image" src="assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
@@ -317,7 +352,7 @@
            tile-by-tile reveal instead comes from 6 mask panels layered on
            top that fade OUT to unveil the photo underneath. -->
       <div class="image-mosaic" style="grid-column: 1 / span 2; grid-row: 2 / span 3;">
-        <img class="image-mosaic__photo" src="assets/images/Latest Edition Cover.jpg" alt="Featured artwork for the latest issue, Edition 2" />
+        <img class="image-mosaic__photo" src="assets/images/Latest Edition Cover.jpg" alt="Featured artwork for the latest issue, Volume 2" />
         <!-- Sequenced after the mosaic tiles: main.js listens for every
              mask's fade-in to actually finish (not a guessed delay — the
              mosaic can be taller than the viewport, so tiles don't all
@@ -338,12 +373,19 @@
              link already points to. Point this at the real latest-issue
              page once it's built. -->
         <a href="publications.html" class="image-mosaic__caption image-mosaic__caption--left image-mosaic__caption--headline mosaic-reveal mosaic-reveal--slide">Read our<br />latest issue!
-          <span class="arrow-glyph">
-            <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
-            <img class="arrow-glyph__hover" src="assets/images/Arrow, red.png" alt="" />
+          <!-- Now one of the small diamond buttons (same tan/red scheme
+               as section 2's own arrow-only diamond) instead of a bare
+               rotated arrow glyph — diamond-cta--inline keeps it sitting
+               inline with the preceding text, since the base .diamond-cta
+               is a block-level flex box. -->
+          <span class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--red diamond-cta--tight diamond-cta--inline">
+            <span class="arrow-glyph">
+              <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
+              <img class="arrow-glyph__hover" src="assets/images/Arrow, red.png" alt="" />
+            </span>
           </span>
         </a>
-        <p class="image-mosaic__caption image-mosaic__caption--right mosaic-reveal mosaic-reveal--slide">Edition 2</p>
+        <p class="image-mosaic__caption image-mosaic__caption--right mosaic-reveal mosaic-reveal--slide">Volume 2</p>
         <!-- Separate from .image-mosaic__masks on purpose: those end at
              opacity:0 permanently once revealed, so a hover effect added
              to them would have no visible content to brighten. This is
@@ -359,38 +401,44 @@
         </div>
       </div>
 
-      <div class="square square--red square--split square--pad-lg" style="grid-column: 3; grid-row: 2;">
-        <p class="square__body">We&rsquo;re Penn&rsquo;s journal of narrative, here to explore how medicine and humanities intersect.<sup>*</sup></p>
-        <p class="square__footnote">*Still curious?</p>
+      <div class="square square--red square--text-gap-30 square--pad-lg" style="grid-column: 3; grid-row: 2;">
+        <p class="square__body">We strive to share their stories as told&mdash;</p>
+        <p class="square__footnote">&mdash;word for word.</p>
       </div>
       <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-tan); --checker-b: var(--color-red);" aria-hidden="true"></div>
 
       <div class="square square--grey square--deco" style="grid-column: 3; grid-row: 3;">
-        <!-- Curved along an actual circular arc (SVG textPath), not just
-             a flat rotate() tilt like before — the path is the top half
-             of a perfect circle, so the text follows a true curve rather
-             than an approximated one. -->
-        <svg class="square__arc" viewBox="0 0 200 50" aria-hidden="true">
-          <path id="square11-arc-path" d="M 10,50 A 143,143 0 0,1 190,50" fill="none" />
-          <text text-anchor="middle">
-            <textPath href="#square11-arc-path" startOffset="50%">You&rsquo;re in luck!</textPath>
-          </text>
-        </svg>
-        <!-- TODO(future reference): about.html doesn't exist yet — same
-             not-yet-built placeholder the nav's own "About Us" link
-             already points to (see .nav__links above). Point this at
-             the real About page once it's built. -->
-        <a href="about.html" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--blue">
-          <span>Learn<br />more<br />
-            <span class="arrow-glyph">
-              <!-- "Arrow, brown.png" is the misnamed file for --color-grey
-                   (this project's informal "blue") — see the .arrow-glyph
-                   comment in style.css. -->
-              <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
-              <img class="arrow-glyph__hover" src="assets/images/Arrow, brown.png" alt="" />
+        <!-- .square__deco-content wrapper: see its own comment in
+             style.css for why the arc+diamond block needs a corrective
+             translateY on a wrapper rather than the square itself. -->
+        <div class="square__deco-content">
+          <!-- Curved along an actual circular arc (SVG textPath), not just
+               a flat rotate() tilt like before — the path is the top half
+               of a perfect circle, so the text follows a true curve rather
+               than an approximated one. -->
+          <svg class="square__arc" viewBox="0 0 200 50" aria-hidden="true">
+            <path id="square11-arc-path" d="M 10,50 A 143,143 0 0,1 190,50" fill="none" />
+            <text text-anchor="middle">
+              <textPath href="#square11-arc-path" startOffset="50%">Still curious?</textPath>
+            </text>
+          </svg>
+          <a href="about.html" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--blue">
+            <span>Learn<br />more<br />
+              <span class="arrow-glyph">
+                <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
+                <!-- --fill-on-hover--blue's hover TEXT color is
+                     --color-grey (this project's informal "blue"), so
+                     the hover ARROW needs to match: "Arrow, brown.png"
+                     is the misnamed file that's actually --color-grey
+                     (see the .arrow-glyph comment in style.css) — fixed
+                     from "Arrow, blue.png" (actually --color-dark/brown,
+                     the wrong color for this tile, despite the
+                     filename). -->
+                <img class="arrow-glyph__hover" src="assets/images/Arrow, brown.png" alt="" />
+              </span>
             </span>
-          </span>
-        </a>
+          </a>
+        </div>
       </div>
       <div class="square square--checker" style="grid-column: 4; grid-row: 3; --checker-a: var(--color-dark); --checker-b: var(--color-red);" aria-hidden="true"></div>
 
@@ -407,10 +455,34 @@
     <!-- Full-bleed (ignores the page's 10px margin via the 100vw/negative
          -margin trick) so the repeated text reads as a carousel strip cut
          off at both screen edges — it's static, doesn't actually scroll,
-         the repetition + off-screen crop is what sells the illusion. -->
+         the repetition + off-screen crop is what sells the illusion.
+
+         Unlike every other .marquee-banner__track (one flat uppercase
+         Instrument Serif repeat), this one cycles 3 faces per word —
+         Bickham Script, Instrument Serif, Freight Text Book (only this
+         last one rendered in caps) — per explicit request. Plain
+         repeating cycle (script, serif, caps), 8 full cycles (24 words)
+         — deliberately more than needed to just fill one viewport width:
+         text-align:center does NOT symmetric-center this overflowing
+         white-space:nowrap content the way it would narrower content
+         (confirmed empirically — it renders flush against the box's own
+         left edge, all overflow spilling out to the right only), and
+         centerGetInvolvedMarquee() in main.js (see below) then nudges
+         the whole track with a corrective translateX to land a Freight
+         word dead-center — which shifts the sequence's own true start
+         left or right by a varying amount depending on viewport width.
+         24 words gives enough slack that even the largest such shift
+         still leaves real content overflowing past BOTH edges at any
+         realistic viewport width, instead of occasionally exposing the
+         sequence's hard start as a visible gap on the left. See
+         .marquee-banner__word--* in style.css for the face/size/case
+         overrides, and initMarqueeAsterisks() (rewritten to operate on
+         child text nodes instead of the whole track's textContent, so
+         it can insert asterisk-image spans between these word spans
+         without flattening them). -->
     <section id="get-involved" class="marquee-banner">
       <p class="marquee-banner__track">
-        Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*&nbsp; Get Involved &nbsp;*
+        <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Get Involved</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Get Involved</span>
       </p>
     </section>
 
@@ -454,13 +526,11 @@
       </div>
       <div class="square square--red square--content-left">
         <p class="square__script square__script--sub">Applications open<br />in the spring.</p>
-        <!-- TODO(future reference): get-involved.html doesn't exist yet — same
-             not-yet-built placeholder the nav's own "Get Involved" link already
-             points to. Point this at the real page once it's built. Was a bare
-             non-interactive div; now a real <a> so it (a) actually leads
-             somewhere and (b) matches a[href] in initCustomCursor()'s
-             isClickablePoint(), so hovering it triggers the asterisk cursor's
-             clickable state like every other real link/button on the page. -->
+        <!-- Was a bare non-interactive div; now a real <a> so it (a)
+             actually leads somewhere and (b) matches a[href] in
+             initCustomCursor()'s isClickablePoint(), so hovering it
+             triggers the asterisk cursor's clickable state like every
+             other real link/button on the page. -->
         <a href="get-involved.html" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--red diamond-cta--tight">
           <span class="arrow-glyph">
             <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
@@ -483,6 +553,14 @@
          to, same pattern as .image-mosaic__scrim -> .image-mosaic__caption. -->
     <section class="split-cta">
       <div class="split-cta__text">
+        <!-- Title, Instrument Serif, sentence case ("What else?" not
+             "What Else?") to match the surrounding copy's own voice —
+             everything else in this block ("Submit a guest
+             publication.", the 3 lines below) is sentence case too, not
+             title case. Shares .split-cta__text-line so it reveals as
+             the FIRST step of the same stagger chain (see that class's
+             own comment below) rather than popping in separately. -->
+        <h3 class="split-cta__title split-cta__text-line">What else?</h3>
         <!-- Hardcoded as 3 separate lines (not one wrapped <p>) so each
              can stagger in independently — same tradeoff as the hero
              wordmark/eyebrow lines: matches the CURRENT wrap at this
@@ -500,7 +578,7 @@
                .split-cta__diamond in style.css) — this one sits directly
                on the cream page, not a colored square, so the other
                instance's tan border/arrow would be low-contrast here. -->
-          <a href="#" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--tight split-cta__diamond">
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLScCihpX2HeX_OttkOGviXbyk_KYqVJ2bUszshVnDyyqJZ214A/viewform?usp=header" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--tight split-cta__diamond">
             <span class="arrow-glyph">
               <!-- "Arrow, blue.png" is the misnamed file for --color-dark
                    — see the .arrow-glyph comment in style.css. -->
@@ -539,14 +617,34 @@
             <div class="split-cta__illustration-tile"></div>
           </div>
           <img class="split-cta__illustration" src="assets/images/Section 3 Artwork.png" alt="" />
-          <img class="split-cta__illustration-asterisk split-cta__illustration-asterisk--small" src="assets/images/Asterisk - Default, Cream.png" alt="" />
-          <img class="split-cta__illustration-asterisk split-cta__illustration-asterisk--large" src="assets/images/Asterisk - Default, Cream.png" alt="" />
+          <!-- <div>s, not <img>s, now that these are beige (--color-tan)
+               instead of the asset's own native cream — mask-image (the
+               same PNG, used purely as an alpha stencil) + an explicit
+               background-color is the only reliable way to recolor a
+               raster asset to an arbitrary exact color; a plain <img>'s
+               own pixel colors can't be overridden by CSS. Same
+               technique already used for .intro-splash__asterisk--2/3/4.
+
+               Split across a wrap + inner div, same reason
+               .hero__wordmark-asterisk-wrap/asterisk are split: the wrap
+               holds position + the one-shot scroll-triggered intro pop-in
+               (hero-asterisk-intro — opacity/scale/decelerating extra
+               spin), the inner div holds only its own continuous
+               constant-speed spin. One element can't run both animations
+               at once since they'd fight over the same transform
+               property. -->
+          <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--small">
+            <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+          </div>
+          <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--large">
+            <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ============ NEWSLETTER / SOCIAL SQUARE GRID + CAROUSEL ============ -->
-    <!-- Section 4: the square-grid and .social-carousel below are wrapped
+    <!-- ============ NEWSLETTER / SOCIAL SQUARE GRID + FEATURED CAROUSEL ============ -->
+    <!-- Section 4: the square-grid and .featured-carousel below are wrapped
          in one <section> (not 2 separate ones) specifically so they sit
          flush with zero gap — main's own flex `gap: 60px` only applies
          BETWEEN main's direct children, so nesting both inside one
@@ -555,165 +653,221 @@
          and the carousel. square-grid--flush-bottom squares off the
          grid's own bottom corners (normally rounded via the base
          .square-grid rule) so the carousel's bottom corners are the ones
-         that visually conclude the section — see .social-carousel. -->
+         that visually conclude the section — see .featured-carousel. -->
     <section>
       <div class="square-grid square-grid--4col square-grid--rows-2 square-grid--flush-bottom">
         <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-        <div class="square square--red square--pad-lg">
-          <p class="square__body square__body--display-italic">Keep up with the latest!</p>
+        <div class="square square--red square--pad-lg square--text-gap-30 square--align-left">
+          <p class="square__body">For news &amp; events, follow us on Instagram:</p>
+          <!-- Own block now (was inline in the paragraph above) — italic
+               is a deliberate one-off exception to "Freight is never
+               italic" elsewhere on the page: a real italic face exists
+               for this weight (Freight Text Book Italic, see the
+               @font-face block), so this isn't the browser faux-slanting
+               a face that has none. -->
+          <p class="square__body square__handle">@pennword4word</p>
         </div>
-        <div class="square square--tan square--content-left">
-          <p class="square__body square__body--small">For news &amp; events, follow us on instagram: <a href="https://www.instagram.com/pennword4word/?hl=en" target="_blank" rel="noopener" class="square__handle">@pennword4word</a></p>
+        <!-- Just the diamond now (no arc text above it) — base .square
+             already centers a single child on both axes, so no
+             .square--deco/.square__deco-content wrapper needed here
+             (those exist specifically to correct for an arc+diamond
+             COMBINATION's off-center rotation quirk — see their own
+             comments — which doesn't apply with only one child). -->
+        <div class="square square--tan">
+          <a href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-tan">
+            <span>Check<br />us out!<br />
+              <span class="arrow-glyph">
+                <!-- "Arrow, blue.png" is the misnamed file for
+                     --color-dark — see the .arrow-glyph comment in
+                     style.css. Default arrow here (not hover) since the
+                     default state is dark-on-tan, the reverse of square
+                     11's beige-on-grey default. -->
+                <img class="arrow-glyph__default" src="assets/images/Arrow, blue.png" alt="" />
+                <!-- Beige mask, not a PNG — reuses
+                     .split-cta__diamond-arrow-cream's own mask-image
+                     machinery, just recolored via
+                     .diamond-cta--dark-on-tan's own override (see
+                     style.css) rather than cream. -->
+                <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+              </span>
+            </span>
+          </a>
         </div>
         <div class="square square--red" aria-hidden="true"></div>
 
         <div class="square square--dark" aria-hidden="true"></div>
-        <!-- Exact same tile as section 1 square 4 (same photo, same
-             top-left asterisk decoration). -->
+        <!-- Circle img + asterisk moved back here per explicit request
+             (had briefly relocated one tile left) — exact same photo/
+             asterisk-decoration as section 1 square 4. -->
         <div class="square square--grey square--inset">
           <img class="square__inset-image" src="assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
           <div class="square__inset-asterisk-wrap square__inset-asterisk-wrap--top-left" aria-hidden="true">
             <div class="square__inset-asterisk"></div>
           </div>
         </div>
-        <!-- Same diamond-cta button TYPE as section 1 square 11's "Learn
-             more" (text + arrow, .diamond-cta--fill-on-hover, no
-             --tight) — just its own text and its own fill color (see
-             .diamond-cta--fill-on-hover--dark in style.css), and with no
-             arc text above it. -->
-        <div class="square square--dark square--deco">
-          <a href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--dark">
-            <span>Check<br />us out!<br />
-              <span class="arrow-glyph">
-                <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
-                <!-- "Arrow, blue.png" is the misnamed file for --color-dark
-                     — see the .arrow-glyph comment in style.css. -->
-                <img class="arrow-glyph__hover" src="assets/images/Arrow, blue.png" alt="" />
-              </span>
-            </span>
-          </a>
+        <div class="square square--dark square--content-left square--pad-lg">
+          <p class="square__body">Interested in what we do? Peruse the featured articles below.</p>
+          <!-- Points down toward the carousel directly below this grid.
+               3 stacked copies of the same static beige arrow (not
+               .arrow-glyph — that class is for the default/hover
+               CROSSFADE pair inside a diamond-cta, a different thing),
+               opacity-cycled 120deg out of phase with each other via
+               .square__down-arrow-group's own CSS animation — see that
+               rule for how the "traveling downward" illusion works. -->
+          <div class="square__down-arrow-group" aria-hidden="true">
+            <img class="square__down-arrow" src="assets/images/Arrow, beige.png" alt="" />
+            <img class="square__down-arrow" src="assets/images/Arrow, beige.png" alt="" />
+            <img class="square__down-arrow" src="assets/images/Arrow, beige.png" alt="" />
+          </div>
         </div>
         <div class="square square--checker" style="--checker-a: var(--color-red); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       </div>
 
-      <!-- Carousel: .social-carousel is BOTH the rounded/clipped VIEWPORT
+      <!-- Carousel: .featured-carousel is BOTH the rounded/clipped VIEWPORT
            and the positioning context for the 2 nav buttons — they sit
            INSIDE it now (absolutely positioned over the image, 24px
            inset — same convention as .image-mosaic__caption--left/right),
            not in an outer margin, and the viewport itself is full width
            with no side whitespace, same aspect-ratio (4/2) as every
            other 4-col x 2-row grid in sections 1-3. The 4 slides live
-           in .social-carousel__track, which initSocialCarousel() in
+           in .featured-carousel__track, which initFeaturedCarousel() in
            main.js slides via transform: translateX on nav click,
            wrapping past the last slide back to the first.
            Only the FIRST slide gets the real reveal treatment (the
            other 3 only ever appear via a click, not a scroll-into-view,
            so there's no "first paint" moment for them to reveal INTO):
            same 2-layer construction as section 1's image-mosaic — ONE
-           shared placeholder "photo" (.social-carousel__photo-
+           shared placeholder "photo" (.featured-carousel__photo-
            placeholder, a single continuous hatch pattern, not 8
            independently-hatched tiles that'd seam at every tile edge)
-           behind a 4x2 grid of .social-carousel__mask panels that fade
+           behind a 4x2 grid of .featured-carousel__mask panels that fade
            OUT tile-by-tile to reveal it, exactly like
            .image-mosaic__mask — see initCarouselReveal() in main.js,
            which chains masks-done -> scrim.mosaic-reveal ->
            title/edition/nav-buttons.mosaic-reveal, the same 3-step chain
            initMosaicReveal() runs for section 1. -->
-      <div class="social-carousel">
-        <div class="social-carousel__track">
-          <div class="social-carousel__slide social-carousel__slide--first">
-            <img class="social-carousel__photo" src="assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="Illustration: The Consumptive's Kiss" />
-            <div class="social-carousel__scrim mosaic-reveal" aria-hidden="true"></div>
-            <div class="social-carousel__masks">
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
-              <div class="social-carousel__mask" aria-hidden="true"></div>
+      <div class="featured-carousel">
+        <div class="featured-carousel__track">
+          <!-- TODO(future reference): no real article page exists yet for
+               this illustration — data-article-url is a "#" placeholder
+               (same not-yet-built pattern as about.html/get-involved.html
+               were before they existed). Point this at the real article
+               URL once it's built. -->
+          <div class="featured-carousel__slide featured-carousel__slide--first" data-title="Caption title goes here" data-edition="Volume #" data-number="(01)" data-article-url="#">
+            <img class="featured-carousel__photo" src="assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="Illustration: The Consumptive's Kiss" />
+            <div class="featured-carousel__scrim mosaic-reveal" aria-hidden="true"></div>
+            <div class="featured-carousel__masks">
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
+              <div class="featured-carousel__mask" aria-hidden="true"></div>
             </div>
-            <p class="social-carousel__title mosaic-reveal mosaic-reveal--slide">Caption title goes here</p>
-            <p class="social-carousel__edition mosaic-reveal mosaic-reveal--slide">Edition #</p>
-            <div class="social-carousel__hover-tiles">
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-            </div>
-          </div>
-          <div class="social-carousel__slide">
-            <img class="social-carousel__photo" src="assets/images/carousel/ILLUST The Doctor as Writer.jpg" alt="Illustration: The Doctor as Writer" />
-            <div class="social-carousel__scrim" aria-hidden="true"></div>
-            <p class="social-carousel__title">Caption title goes here</p>
-            <p class="social-carousel__edition">Edition #</p>
-            <div class="social-carousel__hover-tiles">
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
+            <div class="featured-carousel__hover-tiles">
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
             </div>
           </div>
-          <div class="social-carousel__slide">
-            <img class="social-carousel__photo" src="assets/images/carousel/ILLUST Demystifying the Hispanic Paradox.jpg" alt="Illustration: Demystifying the Hispanic Paradox" />
-            <div class="social-carousel__scrim" aria-hidden="true"></div>
-            <p class="social-carousel__title">Caption title goes here</p>
-            <p class="social-carousel__edition">Edition #</p>
-            <div class="social-carousel__hover-tiles">
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
+          <!-- TODO(future reference): no real article page yet — see the
+               same TODO on the first slide above. -->
+          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(02)" data-article-url="#">
+            <img class="featured-carousel__photo" src="assets/images/carousel/ILLUST The Doctor as Writer.jpg" alt="Illustration: The Doctor as Writer" />
+            <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__hover-tiles">
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
             </div>
           </div>
-          <div class="social-carousel__slide">
-            <div class="social-carousel__photo-placeholder" aria-hidden="true"></div>
-            <div class="social-carousel__scrim" aria-hidden="true"></div>
-            <p class="social-carousel__title">Caption title goes here</p>
-            <p class="social-carousel__edition">Edition #</p>
-            <div class="social-carousel__hover-tiles">
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
-              <div class="social-carousel__hover-tile" aria-hidden="true"></div>
+          <!-- TODO(future reference): no real article page yet — see the
+               same TODO on the first slide above. -->
+          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(03)" data-article-url="#">
+            <img class="featured-carousel__photo" src="assets/images/carousel/ILLUST Demystifying the Hispanic Paradox.jpg" alt="Illustration: Demystifying the Hispanic Paradox" />
+            <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__hover-tiles">
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+            </div>
+          </div>
+          <!-- TODO(future reference): no real article page yet — see the
+               same TODO on the first slide above. -->
+          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(04)" data-article-url="#">
+            <div class="featured-carousel__photo-placeholder" aria-hidden="true"></div>
+            <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__hover-tiles">
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
+              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
             </div>
           </div>
         </div>
-        <button type="button" class="social-carousel__nav social-carousel__nav--prev mosaic-reveal diamond-cta diamond-cta--tight" aria-label="Previous carousel item">
+        <!-- One shared caption, a direct child of .featured-carousel (sibling
+             of .track, not inside it) — same "stays fixed, doesn't ride the
+             sliding track" reasoning as the nav buttons above. initFeaturedCarousel()
+             crossfades its text to match whichever slide is active instead of
+             each slide carrying its own title/edition/number that would
+             physically slide past with the image. Only this element (standing
+             in for slide 1's own caption) gets the scroll-reveal treatment.
+             Both title and edition are real links now: title's href updates
+             per-slide (see data-article-url above + applyCaption() in
+             main.js) since it goes to that slide's own article; edition
+             always goes to publications.html regardless of slide, so its
+             href is just set once here and never touched by JS. -->
+        <a href="#" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">Caption title goes here</a>
+        <a href="publications.html" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">Volume #</a>
+        <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>
+        <button type="button" class="featured-carousel__nav featured-carousel__nav--prev mosaic-reveal diamond-cta diamond-cta--fill-on-hover diamond-cta--tight" aria-label="Previous carousel item">
           <span class="arrow-glyph">
             <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
+            <!-- "Arrow, blue.png" is the misnamed file for --color-dark
+                 (brown) — see the .arrow-glyph comment in style.css. -->
+            <img class="arrow-glyph__hover" src="assets/images/Arrow, blue.png" alt="" />
           </span>
         </button>
-        <button type="button" class="social-carousel__nav social-carousel__nav--next mosaic-reveal diamond-cta diamond-cta--tight" aria-label="Next carousel item">
+        <button type="button" class="featured-carousel__nav featured-carousel__nav--next mosaic-reveal diamond-cta diamond-cta--fill-on-hover diamond-cta--tight" aria-label="Next carousel item">
           <span class="arrow-glyph">
             <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
+            <!-- "Arrow, blue.png" is the misnamed file for --color-dark
+                 (brown) — see the .arrow-glyph comment in style.css. -->
+            <img class="arrow-glyph__hover" src="assets/images/Arrow, blue.png" alt="" />
           </span>
         </button>
       </div>
     </section>
 
     <!-- ============ PUBLICATIONS BANNER ============ -->
-    <!-- Same full-bleed carousel-strip treatment as #get-involved above. -->
+    <!-- Same full-bleed marquee-strip preset as #get-involved above (see
+         its own comment for the word-span/centering/overflow reasoning)
+         — same 8-cycle script/serif/caps sequence, just this section's
+         own word. -->
     <section id="publications" class="marquee-banner">
       <p class="marquee-banner__track">
-        Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*&nbsp; Publications &nbsp;*
+        <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Publications</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Publications</span>
       </p>
     </section>
 
@@ -721,31 +875,44 @@
     <section class="publications">
       <div class="publications__grid">
         <article class="publication-card">
-          <div class="publication-card__cover publication-card__cover--placeholder" data-caption="Summer 2024 Cover"></div>
-          <p class="publication-card__meta">Summer 2024 — Ed. 1</p>
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="assets/images/Cover_ Volume 1.png" alt="Word for Word Volume 1 cover" />
+          </div>
+          <p class="publication-card__meta">Summer 2024 — Vol. 1</p>
         </article>
         <article class="publication-card">
-          <div class="publication-card__cover publication-card__cover--placeholder" data-caption="Fall 2024 Cover"></div>
-          <p class="publication-card__meta">Fall 2024 — Ed. 2</p>
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="assets/images/Cover_ Volume 2.png" alt="Word for Word Volume 2 cover" />
+          </div>
+          <p class="publication-card__meta">Fall 2024 — Vol. 2</p>
         </article>
         <article class="publication-card">
-          <div class="publication-card__cover publication-card__cover--coming-soon">Coming soon!</div>
-          <p class="publication-card__meta">Fall 2025 — Ed. 3</p>
+          <!-- Real cover template (blank, no art yet) rather than a flat
+               color box — see .publication-card__cover-caption in
+               style.css for the "Coming soon!" label overlaid on top. -->
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="assets/images/Cover_ Upcoming Volume.png" alt="" />
+            <p class="publication-card__cover-caption">Coming soon!</p>
+          </div>
+          <p class="publication-card__meta">Fall 2025 — Vol. 3</p>
         </article>
       </div>
 
-      <a href="publications.html" class="publications__view-more">View more
-        <span class="arrow-glyph">
-          <img class="arrow-glyph__default" src="assets/images/Arrow, blue.png" alt="" />
+      <!-- Large diamond button (same size/text-inside treatment as
+           section 1's "Learn more") replacing the old plain underlined
+           "View more" link — dark-on-cream since this sits directly on
+           the plain page background, not a colored tile (same problem
+           .split-cta__diamond already solves for its own tiny icon-only
+           diamond, just at the big size with real text here). -->
+      <a href="publications.html" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream publications__view-more">
+        <span>View<br />more<br />
+          <span class="arrow-glyph">
+            <img class="arrow-glyph__default" src="assets/images/Arrow, blue.png" alt="" />
+            <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+          </span>
         </span>
       </a>
     </section>
-
-    <!-- ============ DIAMOND DIVIDER ============ -->
-    <div class="diamond-divider" aria-hidden="true">
-      <span></span><span></span><span></span><span></span><span></span>
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
 
     <!-- ============ QUOTE ============ -->
     <section class="quote-block">
@@ -801,7 +968,7 @@
         <li><a href="mailto:wordforwordpenn@gmail.com">Email</a></li>
       </ul>
       <p class="site-footer__inspo">Site Inspiration: <a href="https://www.bruegel2018.at/?ref=httpster.net" target="_blank" rel="noopener">Kunsthistorisches Museum</a></p>
-      <p class="site-footer__copyright">© 2026 Word for Word | <a href="mailto:melodyserenazhang@gmail.com">melodyserenazhang@gmail.com</a></p>
+      <p class="site-footer__copyright">© 2026 Word for Word | <a href="https://melodysz.github.io/fishtank/" target="_blank" rel="noopener">From an ocean blue...</a></p>
     </div>
   </footer>
 
@@ -818,6 +985,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="js/main.js?v=58" defer></script>
+  <script src="js/main.js?v=80" defer></script>
 </body>
 </html>
