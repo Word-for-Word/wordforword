@@ -2453,6 +2453,13 @@ a.diamond-cta {
      next to the other 2 faces at equal size otherwise). */
   font-size: calc(var(--marquee-text-size) * 1.55);
 }
+/* Wraps just the "G" (Get) and "I" (Involved) in the script-face cycle —
+   letter-spacing trails the character it's set on, so putting -0.03em on
+   a single-letter span pulls only the next letter in closer without
+   touching spacing anywhere else in the word. */
+.marquee-banner__kern-tight {
+  letter-spacing: -0.03em;
+}
 .marquee-banner__word--caps {
   font-family: var(--font-body);
   /* Freight Text BOOK (400) — the page's own ambient default is Light
