@@ -258,7 +258,7 @@ function initMarqueeAsterisks() {
 // position, then nudge with a corrective transform, rather than trust a
 // CSS assumption that doesn't hold here.
 //
-// Targets the MIDDLE Freight occurrence by index, not "whichever is
+// Targets the MIDDLE Newsreader occurrence by index, not "whichever is
 // nearest the viewport's center" (an earlier version) — proximity-based
 // picking could land on an occurrence near either end of the repeating
 // sequence depending on viewport width, leaving too few full cycles
@@ -290,7 +290,7 @@ function centerMarqueeTracks() {
 
 function initMarqueeCentering() {
   centerMarqueeTracks();
-  // Re-measure once the real webfonts (Freight/Instrument/Kapakana) are
+  // Re-measure once the real webfonts (Newsreader/Instrument/Kapakana) are
   // actually in — same fallback-vs-real-font reflow reasoning as
   // positionHeroAsterisk.
   document.fonts.ready.then(centerMarqueeTracks);
@@ -665,11 +665,11 @@ function initNavHighlight() {
   };
 
   placeIndicator();
-  // Re-measure once the real web font (Freight, a local file, not
+  // Re-measure once the real web font (Newsreader, a local file, not
   // preloaded) is actually in — if it's still showing its fallback at
   // the point this function first runs, the link measures at the
   // FALLBACK font's width, and the indicator gets sized/positioned to
-  // match that. Once Freight swaps in moments later, the link reflows
+  // match that. Once Newsreader swaps in moments later, the link reflows
   // to its real (usually narrower) width, but nothing re-measures the
   // indicator, leaving it visibly off — intermittently, since whether
   // the swap has already happened by the time this runs depends on

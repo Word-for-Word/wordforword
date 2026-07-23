@@ -71,9 +71,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <!-- "Freight" is a licensed font (not on Google Fonts) — add your own @font-face
-       for "Freight Text Pro" in css/style.css once you have the font files. -->
-  <link rel="stylesheet" href="css/style.css?v=148" />
+  <link rel="stylesheet" href="css/style.css?v=149" />
 </head>
 <body>
 
@@ -459,7 +457,7 @@
 
          Unlike every other .marquee-banner__track (one flat uppercase
          Instrument Serif repeat), this one cycles 3 faces per word —
-         Kapakana, Instrument Serif, Freight Text Book (only this
+         Kapakana, Instrument Serif, Newsreader (only this
          last one rendered in caps) — per explicit request. Plain
          repeating cycle (script, serif, caps), 8 full cycles (24 words)
          — deliberately more than needed to just fill one viewport width:
@@ -468,7 +466,7 @@
          (confirmed empirically — it renders flush against the box's own
          left edge, all overflow spilling out to the right only), and
          centerGetInvolvedMarquee() in main.js (see below) then nudges
-         the whole track with a corrective translateX to land a Freight
+         the whole track with a corrective translateX to land a Newsreader
          word dead-center — which shifts the sequence's own true start
          left or right by a varying amount depending on viewport width.
          24 words gives enough slack that even the largest such shift
@@ -660,11 +658,10 @@
         <div class="square square--red square--pad-lg square--text-gap-30 square--align-left">
           <p class="square__body">For news &amp; events, follow us on Instagram:</p>
           <!-- Own block now (was inline in the paragraph above) — italic
-               is a deliberate one-off exception to "Freight is never
+               is a deliberate one-off exception to "Newsreader is never
                italic" elsewhere on the page: a real italic face exists
-               for this weight (Freight Text Book Italic, see the
-               @font-face block), so this isn't the browser faux-slanting
-               a face that has none. -->
+               (Newsreader Italic, see the @font-face block), so this
+               isn't the browser faux-slanting a face that has none. -->
           <p class="square__body square__handle">@pennword4word</p>
         </div>
         <!-- Just the diamond now (no arc text above it) — base .square

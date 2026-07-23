@@ -219,7 +219,7 @@ def build_marquee_cycle(word, cycles=12):
     since one side is static HTML and the other generated Python, not by
     sharing code. See .marquee-banner__track's own comment in style.css
     for the face/size/case rules this markup relies on, and
-    centerMarqueeTracks() in main.js for how the Freight word gets
+    centerMarqueeTracks() in main.js for how the Newsreader word gets
     centered. 12 cycles (36 words) — deliberately more than needed to
     fill one viewport, so the sequence overflows both edges at any
     realistic width instead of exposing its own start/end as a visible

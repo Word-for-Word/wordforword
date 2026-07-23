@@ -18,7 +18,7 @@
   --color-illustration-bg: #0e1316;
 
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --font-body: "Freight Text Pro", Georgia, serif;
+  --font-body: "Newsreader", Georgia, serif;
 
   /* The only 2 sizes body/UI text should ever use (display/headline
      text — section labels, titles, quote blocks — is its own thing and
@@ -65,39 +65,23 @@
   --hero-asterisk-size: clamp(28.6px, 2.86vw, 49.4px);
 }
 
-/* Regular weight/style now come from "Freight Text Book" instead of the
-   Pro family's own 400 files — Book's apostrophes/quote glyphs read
-   cleaner. Still registered under the "Freight Text Pro" family name
-   (matches --font-body) so nothing else needs to change; Pro's own 700
-   files stay since there's no bold Book file. */
+/* Newsreader (swapped in for the formerly self-hosted, non-web-licensed
+   Freight Text Pro — see the Kapakana @font-face below for the same
+   reasoning). Both files are the real variable fonts (wght 200-800,
+   plus an opsz axis left on its automatic default), not static
+   instances, so one upright + one italic file covers every weight the
+   site uses — 300 (body default), 400, 700, and the splash caption's
+   360 — via plain font-weight, no font-variation-settings needed. */
 @font-face {
-  font-family: "Freight Text Pro";
-  src: url("../assets/Freight/Freight Text Light.otf") format("opentype");
-  font-weight: 300;
+  font-family: "Newsreader";
+  src: url("../assets/Newsreader-Variable.woff2") format("woff2-variations");
+  font-weight: 200 800;
   font-style: normal;
 }
 @font-face {
-  font-family: "Freight Text Pro";
-  src: url("../assets/Freight/Freight Text Book.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Freight Text Pro";
-  src: url("../assets/Freight/freight-text-pro_normal_700.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Freight Text Pro";
-  src: url("../assets/Freight/Freight Text Book Italic.otf") format("opentype");
-  font-weight: 400;
-  font-style: italic;
-}
-@font-face {
-  font-family: "Freight Text Pro";
-  src: url("../assets/Freight/freight-text-pro_700_italic.ttf") format("truetype");
-  font-weight: 700;
+  font-family: "Newsreader";
+  src: url("../assets/Newsreader-Italic-Variable.woff2") format("woff2-variations");
+  font-weight: 200 800;
   font-style: italic;
 }
 @font-face {
@@ -141,9 +125,9 @@ body {
   color: var(--color-dark);
   font-family: var(--font-body);
   font-size: var(--text-body);
-  /* Freight Text Light (300) — the lighter weight added alongside Book
-     (400, still available/used for anything that explicitly asks for
-     it, e.g. none currently). */
+  /* Newsreader Light (300) — the lighter weight, alongside 400/700
+     still available for anything that explicitly asks for them (e.g.
+     none currently). */
   font-weight: 300;
   line-height: 1.5;
   padding: var(--page-margin);
@@ -450,7 +434,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 .intro-splash__caption-line1 {
   font-family: var(--font-body);
-  font-weight: 400;
+  /* 360, not a standard static weight (300 Light/400 Regular) — sits
+     deliberately between them on Newsreader's own variable wght axis,
+     per explicit request for this one spot. */
+  font-weight: 360;
   font-style: italic;
   font-size: var(--text-body);
 }
@@ -1399,7 +1386,7 @@ main {
 }
 
 /* All text inside a square card — label/script/body/role/footnote —
-   uses Freight at one consistent size (--text-body). Hierarchy within a
+   uses Newsreader at one consistent size (--text-body). Hierarchy within a
    card comes from weight/style/color now, not size. Doesn't apply to
    the diamond-outline text (.square__arc, .diamond-cta) or the big
    featured-image caption, which keep their own display treatment. */
@@ -1408,8 +1395,8 @@ main {
   font-size: var(--text-body);
 }
 .square__script {
-  /* Freight (--font-body) is never italic — no italic here (or
-     anywhere else Freight is used; see
+  /* Newsreader (--font-body) is never italic — no italic here (or
+     anywhere else Newsreader is used; see
      .publication-card__cover-caption). */
   font-family: var(--font-body);
   font-size: var(--text-body);
@@ -1427,10 +1414,10 @@ main {
 .square__body:not(:last-child) { flex: none; }
 .square__body--small { font-size: var(--text-body); }
 /* Section 4 square 2's Instagram handle mention — a deliberate one-off
-   exception to "Freight is never italic" elsewhere on the page (see the
-   comment above .square__script): a real italic face exists for this
-   weight (Freight Text Book Italic, see the @font-face block), so this
-   isn't the browser faux-slanting a face that has none. */
+   exception to "Newsreader is never italic" elsewhere on the page (see
+   the comment above .square__script): a real italic face exists
+   (Newsreader Italic, see the @font-face block), so this isn't the
+   browser faux-slanting a face that has none. */
 .square__handle { font-style: italic; }
 .square__footnote {
   align-self: flex-end;
@@ -1503,7 +1490,7 @@ main {
    uses a different display face, not the shared --font-body default. */
 .square__role--display-italic { font-family: var(--font-display); font-style: italic; }
 .square__role--display { font-family: var(--font-display); font-style: normal; }
-/* Freight Text Light (300, the site's own body-text default weight —
+/* Newsreader Light (300, the site's own body-text default weight —
    see body's own font-weight in :root) rather than the 400 all the
    other roles use — explicitly requested lighter than the rest. */
 .square__role--caps { text-transform: uppercase; font-weight: 300; }
@@ -2398,12 +2385,12 @@ a.diamond-cta {
    the 4 build_articles.py-generated category strips on publications.html
    — interviews/essays/narratives/outreach). Every instance's markup
    cycles the same 3 faces per word — Kapakana, Instrument Serif,
-   Freight Text Book (only Freight rendered in caps) — see the HTML
+   Newsreader (only Newsreader rendered in caps) — see the HTML
    comment above #get-involved's own track in index.html for the
    word-span structure this relies on, buildMarqueeCycle() in
    scripts/build_articles.py for how the generated category strips build
    the identical structure, and centerMarqueeTracks() in main.js for how
-   each track's own Freight word gets centered independently. */
+   each track's own Newsreader word gets centered independently. */
 .marquee-banner {
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -2462,10 +2449,10 @@ a.diamond-cta {
 }
 .marquee-banner__word--caps {
   font-family: var(--font-body);
-  /* Freight Text BOOK (400) — the page's own ambient default is Light
+  /* Newsreader Regular (400) — the page's own ambient default is Light
      (300); this needs the heavier of the 2 to match the Figma. */
   font-weight: 400;
-  /* -5% off the track's own size per explicit request — Freight's caps
+  /* -5% off the track's own size per explicit request — Newsreader's caps
      read visually larger than Instrument Serif's mixed case at the same
      nominal size (all-caps text is cap-height-dominant with no
      descenders/ascenders breaking it up), so this brings the two back
