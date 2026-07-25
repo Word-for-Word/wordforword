@@ -1302,12 +1302,20 @@ main {
 .hero--compact {
   /* Homepage's own .hero is min-height:100vh — deliberately shorter
      here so a bit of <main>'s own first section is always visible at
-     the bottom of the viewport, rather than the hero alone filling it.
-     align-items:center (inherited from the base .hero rule) still
-     centers every child within THIS shorter height, so the title/
-     eyebrows stay horizontally AND vertically centered in the section,
-     just within less vertical room. */
+     the bottom of the viewport, rather than the hero alone filling it. */
   min-height: 55vh;
+  /* align-items:center (inherited from the base .hero rule) only
+     centers each child WITHIN the grid's single implicit row — it says
+     nothing about where that row itself sits if the row's own content
+     height is shorter than the container's min-height. Grid's default
+     align-content leaves the row flush at the top with all the leftover
+     space landing below it, which barely showed at the homepage's own
+     min-height:100vh (its hero content is tall enough to fill most of
+     that on its own) but read as badly off-center here — confirmed:
+     the title sat near the top with a huge gap underneath before this.
+     Centering the row itself within the extra space is what actually
+     centers the whole hero block vertically. */
+  align-content: center;
 }
 .hero__wordmark-wrap--compact {
   /* Wider than the homepage's own wrap (clamp(220px, 22vw, 380px)) —
@@ -1374,7 +1382,7 @@ main {
      --compact above (this page also carries that class) so the stroke
      itself — a publications-specific choice — doesn't tag along
      automatically wherever --compact's sizing gets reused. */
-  -webkit-text-stroke: 4px var(--color-cream);
+  -webkit-text-stroke: 8px var(--color-cream);
   paint-order: stroke;
 }
 
