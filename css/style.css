@@ -1277,13 +1277,16 @@ main {
 }
 .hero__wordmark-placeholder--publications {
   /* The homepage's own space-between only makes sense splitting height
-     between 2 words — a single word here just centers instead. */
+     between 2 words — a single word here just centers instead. Stays at
+     that plain center (no extra translateY) so "Publications" lines up
+     with the eyebrows' own vertical middle, same as the homepage's
+     title does with ITS eyebrows — the overlap with "Our" below comes
+     entirely from "Our" moving down into it (see
+     .hero__wordmark-for-wrap--publications), not from shifting
+     "Publications" itself out of that center. */
   justify-content: center;
   /* Per explicit request: "Publications" sits ON TOP of "Our" (not
-     underneath it, the homepage's own for/word stacking order) and
-     overlaps its bottom third — nudged up into it rather than sitting
-     in the clear space below. */
-  transform: translateY(-32%);
+     underneath it, the homepage's own for/word stacking order). */
   z-index: 2;
 }
 .hero__wordmark-word--publications {
@@ -1302,10 +1305,13 @@ main {
 }
 .hero__wordmark-for-wrap--publications {
   /* The homepage's own centers "for" through the middle of both words —
-     here "Our" instead sits above the single word, so top-align + nudge
-     up past the wrap's own top edge rather than centering through it. */
+     here "Our" instead sits above the single word. Overlap with
+     "Publications" (per explicit request: more of it, into its bottom
+     third) comes entirely from pulling "Our" DOWN toward it — not from
+     moving "Publications" itself, which needs to stay centered with the
+     eyebrows (see .hero__wordmark-placeholder--publications). */
   align-items: flex-start;
-  transform: translateY(-22%);
+  transform: translateY(13%);
   /* Sits BEHIND "Publications" (z-index: 2 above) — homepage's own
      for-wrap is on top of the placeholder since "for" bridges/overlaps
      both words there; here it's the reverse per explicit request. */

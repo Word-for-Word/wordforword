@@ -229,6 +229,20 @@ function initPublicationsDropdown() {
 
   const open = () => {
     if (!hasMovedEnough) return;
+    // The header's own entrance (fade+drop on the homepage, or the
+    // page-flash-driven drop on every other page — see initHeaderReady())
+    // physically moves the trigger's own on-screen position while it
+    // plays. Arriving via a nav-link click leaves the cursor resting
+    // exactly where THAT link ends up, so if it happens to be near
+    // "Publications" once the header settles, the trigger effectively
+    // slides in UNDER a stationary cursor — several browsers fire a
+    // genuine mouseenter for that, with a real (if tiny/incidental)
+    // mousemove alongside it, which the movement guard above alone
+    // can't tell apart from actual intent. Blocking opens until
+    // body.header-ready is set (real completion, not a guess) removes
+    // the root cause directly: there's no more moving trigger for a
+    // resting cursor to end up under by the time this can ever fire.
+    if (!document.body.classList.contains("header-ready")) return;
     clearTimeout(closeTimer);
     header.classList.add("nav__dropdown-is-open");
   };
