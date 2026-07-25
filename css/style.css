@@ -1279,14 +1279,26 @@ main {
   /* The homepage's own space-between only makes sense splitting height
      between 2 words — a single word here just centers instead. */
   justify-content: center;
+  /* Per explicit request: "Publications" sits ON TOP of "Our" (not
+     underneath it, the homepage's own for/word stacking order) and
+     overlaps its bottom third — nudged up into it rather than sitting
+     in the clear space below. */
+  transform: translateY(-32%);
+  z-index: 2;
 }
 .hero__wordmark-word--publications {
   /* Scaled down from the homepage's own clamp(104px, 14.85vw, 192px) to
      fit a 12-letter word in a similarly-proportioned wrap. */
   font-size: clamp(56px, 8vw, 104px);
-  /* Per explicit request: a stroke outline around each letter instead
-     of a plain solid fill. */
+  /* Per explicit request: a stroke OUTSIDE each letter, not eating into
+     the fill — paint-order draws the stroke first and the fill on top,
+     so the fill covers the stroke's inner half entirely and only the
+     outer half ever shows. Without this (the default paint order, fill
+     then stroke), the stroke's inner half oversits the fill from
+     outside in, reading as thin/hollowed-out letters instead of a solid
+     letter with a clean outline. */
   -webkit-text-stroke: 4px var(--color-cream);
+  paint-order: stroke;
 }
 .hero__wordmark-for-wrap--publications {
   /* The homepage's own centers "for" through the middle of both words —
@@ -1294,6 +1306,10 @@ main {
      up past the wrap's own top edge rather than centering through it. */
   align-items: flex-start;
   transform: translateY(-22%);
+  /* Sits BEHIND "Publications" (z-index: 2 above) — homepage's own
+     for-wrap is on top of the placeholder since "for" bridges/overlaps
+     both words there; here it's the reverse per explicit request. */
+  z-index: 1;
 }
 .hero__wordmark-for--publications {
   /* Smaller than the homepage's own 48% — "Our" is a lead-in flourish

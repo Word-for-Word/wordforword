@@ -29,6 +29,16 @@ const HERO_EXIT_THRESHOLD = 0.95;
 // of it still waiting out the (now invisible) splash's multi-second
 // head start.
 const SKIP_INTRO_SPLASH = document.documentElement.classList.contains("skip-intro-splash");
+// True whenever there's no long elaborate splash for this page's own
+// hero content to wait out — either it's not the homepage at all (only
+// index.html ever has a real .intro-splash element) or it IS the
+// homepage but skipping the splash (arrived via the Overview nav link).
+// Both cases used to fall through to the FULL splash-length delay math
+// below, leaving an abnormally long dead pause on a page whose hero
+// otherwise has nothing multi-second to wait for — the quick page-flash
+// (or nothing at all, on a secondary page's own fresh load) finishes in
+// a fraction of that time.
+const HAS_ELABORATE_SPLASH = !!document.querySelector(".intro-splash");
 // Subtracted from every --intro-delay AND the final anchor timeout in
 // initIntroReveal(), on top of the normal elapsed-time correction —
 // chosen so the EARLIEST --intro-delay in index.html (3220ms, the
@@ -44,8 +54,10 @@ const SKIP_INTRO_SPLASH = document.documentElement.classList.contains("skip-intr
 // separately driven by the html.show-page-flash CSS animation instead
 // (fixed to start right at that same ~1.8s mark), so this offset's own
 // effect on the header specifically is moot; only title/eyebrows still
-// depend on it.
-const SKIP_INTRO_SPLASH_OFFSET_MS = SKIP_INTRO_SPLASH ? 1300 : 0;
+// depend on it. Applies equally to any OTHER page with its own hero
+// content (see HAS_ELABORATE_SPLASH above) — same reasoning, no
+// elaborate splash there either.
+const SKIP_INTRO_SPLASH_OFFSET_MS = !HAS_ELABORATE_SPLASH || SKIP_INTRO_SPLASH ? 1300 : 0;
 
 // Always land at the top on a refresh/reload — without this, the browser's
 // own scroll-restoration silently re-applies whatever scroll position was
@@ -171,20 +183,34 @@ function initPublicationsDropdown() {
   const hoverZone = document.querySelector(".nav__dropdown-hover-zone");
   if (!trigger || !header || !hoverZone) return;
 
-  // Clicking "Publications" to get HERE leaves the cursor resting
-  // exactly over this same trigger once the new page loads — some
-  // browsers then fire a mouseenter on it as soon as layout settles,
-  // even with the mouse never actually moving, reading as the dropdown
-  // snapping open uninvited the instant you land here. Real hover
-  // intent requires the cursor to have actually traveled some minimum
-  // distance since load first; a cursor that's merely resting (however
-  // long) never satisfies this, no matter what synthetic events fire.
-  // Once real movement happens at all, this stays satisfied for the
-  // rest of the page's life — normal hovering afterward is unaffected.
+  // Landing on a page via ANY nav-link click (not just "Publications"
+  // itself — e.g. "Overview") leaves the cursor resting wherever that
+  // link was, and some browsers then fire a mouseenter on whatever ends
+  // up under it as soon as layout settles, even with the mouse never
+  // actually moving, reading as the dropdown snapping open uninvited.
+  // Real hover intent requires the cursor to have actually traveled some
+  // minimum distance since load first; a cursor that's merely resting
+  // (however long) never satisfies this, no matter what synthetic events
+  // fire. Once real movement happens at all, this stays satisfied for
+  // the rest of the page's life — normal hovering afterward is
+  // unaffected.
   const MOVE_THRESHOLD_PX = 8;
+  // A real mouse/trackpad reports several slightly-different coalesced
+  // positions in the first moments after ANY page settles — confirmed
+  // as a real source of false positives here, not just a theoretical
+  // one: a physically stationary mouse can still clear MOVE_THRESHOLD_PX
+  // from pure hardware/OS jitter alone within that window, satisfying
+  // this guard before the user has genuinely started moving toward
+  // anything. Ignoring movement reported before this grace period closes
+  // means the origin point (and everything measured against it) only
+  // ever gets seeded from movement that's had a real chance to be
+  // intentional.
+  const IGNORE_MOVEMENT_BEFORE_MS = 200;
+  const trackingStartedAt = performance.now() + IGNORE_MOVEMENT_BEFORE_MS;
   let hasMovedEnough = false;
   let originPoint = null;
   const trackMovement = (e) => {
+    if (performance.now() < trackingStartedAt) return;
     if (!originPoint) {
       originPoint = { x: e.clientX, y: e.clientY };
       return;
@@ -720,8 +746,18 @@ function positionHeroAsterisk() {
   // follow-up feedback: +2 -> +4 -> +5 -> +6. Down-nudge bumped
   // repeatedly per explicit follow-up feedback: +5 -> +20 -> +35 -> +34
   // (1px up).
-  asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34}px`;
-  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6}px`;
+  //
+  // publications.html's own asterisk-wrap carries an extra modifier
+  // class for a small page-specific nudge (right + up) requested on top
+  // of the shared positioning above — kept as an addition here rather
+  // than a fork of this whole function, since everything else about the
+  // positioning (anchor glyph, wrap, offsets) is meant to work exactly
+  // like the homepage's.
+  const isPublications = asteriskWrap.classList.contains("hero__wordmark-asterisk-wrap--publications");
+  const extraRight = isPublications ? 8 : 0;
+  const extraUp = isPublications ? 6 : 0;
+  asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp}px`;
+  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight}px`;
   asteriskWrap.style.right = "auto";
 }
 
