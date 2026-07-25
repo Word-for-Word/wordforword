@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=148" />
+  <link rel="stylesheet" href="css/style.css?v=161" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -61,6 +61,27 @@
   </script>
 </head>
 <body>
+  <!-- Must run before the rest of <body> parses, same reasoning as
+       index.html's own equivalent script — sets html.show-page-flash
+       synchronously so the flash is visible from first paint instead of
+       popping in a frame late. One-shot: cleared the instant it's read,
+       so only a nav-link arrival (see initNavPageFlash() in main.js)
+       shows it — a fresh reload/direct visit never sets this flag. -->
+  <script>
+    if (sessionStorage.getItem("wfw-page-flash") === "04") {
+      sessionStorage.removeItem("wfw-page-flash");
+      document.documentElement.classList.add("show-page-flash");
+    }
+  </script>
+  <div class="page-flash" aria-hidden="true">
+    <div class="page-flash__color page-flash--04">
+      <img class="page-flash__asterisk" src="assets/images/Asterisk 4 (nav).png" alt="" />
+      <p class="page-flash__caption page-flash__caption--04">
+        <span class="intro-splash__caption-line1">get involved.</span>
+        <span class="intro-splash__caption-line2">(04)</span>
+      </p>
+    </div>
+  </div>
     <!-- Same header markup as index.html's own <header>, minus the
          intro-reveal/intro-reveal--drop classes and --intro-delay style —
          secondary pages (this one included) have no homepage intro splash
@@ -82,10 +103,10 @@
               <a href="publications.html">Publications*</a>
               <div class="nav__dropdown">
                 <a href="index.html#publications"><span class="nav__dropdown-asterisk">*</span>Volumes</a>
-                <a href="publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
-                <a href="publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
-                <a href="publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
-                <a href="publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
+                <a href="interviews.html"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
+                <a href="essays.html"><span class="nav__dropdown-asterisk">*</span>Essays</a>
+                <a href="narratives.html"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
+                <a href="outreach.html"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
               </div>
             </li>
             <li><a href="about.html">About Us</a></li>
@@ -103,6 +124,6 @@
   <main class="static-page"></main>
 
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="js/main.js?v=80" defer></script>
+    <script src="js/main.js?v=85" defer></script>
 </body>
 </html>

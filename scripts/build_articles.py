@@ -213,32 +213,8 @@ def build_article(md_path, css_version, js_version):
     }
 
 
-def build_marquee_cycle(word, cycles=12):
-    """Same script/serif/caps word-span cycle used by index.html's own
-    marquee strips (#get-involved, #publications) — kept in sync by hand
-    since one side is static HTML and the other generated Python, not by
-    sharing code. See .marquee-banner__track's own comment in style.css
-    for the face/size/case rules this markup relies on, and
-    centerMarqueeTracks() in main.js for how the Newsreader word gets
-    centered. 12 cycles (36 words) — deliberately more than needed to
-    fill one viewport, so the sequence overflows both edges at any
-    realistic width instead of exposing its own start/end as a visible
-    gap. Confirmed via Playwright that 8 cycles wasn't enough margin for
-    the SHORTEST word here ("Essays" — its own total rendered width per
-    cycle is much narrower than "Interviews"/"Narratives"/"Outreach", so
-    it ran out of overflow on one side at wide viewports while the
-    longer words were still fine); 12 covers the shortest word with
-    margin to spare, at the cost of a bit of unused width on the longer
-    ones — harmless, since it's all clipped off-screen anyway."""
-    faces = ["script", "serif", "caps"]
-    words = faces * cycles
-    spans = [f'<span class="marquee-banner__word marquee-banner__word--{face}">{word}</span>' for face in words]
-    return " &nbsp;*&nbsp; ".join(spans)
-
-
-def render_category_section(category, articles_in_category):
+def build_category_page(category, articles_in_category, css_version, js_version):
     label = category.capitalize()
-    track = build_marquee_cycle(label)
     if not articles_in_category:
         body = f'      <p class="publications-category__empty">More {label.lower()} coming soon.</p>\n'
     else:
@@ -264,20 +240,22 @@ def render_category_section(category, articles_in_category):
             )
         body = '      <div class="article-teaser-grid">\n' + "\n".join(cards) + "\n      </div>\n"
 
-    return (
-        f'    <section id="{category}" class="marquee-banner">\n'
-        f'      <p class="marquee-banner__track">{track}</p>\n'
-        f"    </section>\n"
-        f'    <section class="publications-category">\n{body}    </section>\n'
-    )
-
-
-def build_publications_page(all_articles, css_version, js_version):
-    by_category = {c: [a for a in all_articles if a["category"] == c] for c in CATEGORIES}
-    sections_html = "\n".join(render_category_section(c, by_category[c]) for c in CATEGORIES)
-
     values = {
-        "SECTIONS_HTML": sections_html,
+        "CATEGORY": category,
+        "LABEL": label,
+        "LABEL_LOWER": label.lower(),
+        "BODY_HTML": body,
+        "BASE": "",
+        "CSS_VERSION": css_version,
+        "HEADER": build_partial("_header.html", "", js_version),
+        "FOOTER": build_partial("_footer.html", "", js_version),
+    }
+    output_html = fill(load_template("category.html"), values)
+    (ROOT / f"{category}.html").write_text(output_html, encoding="utf-8")
+
+
+def build_publications_page(css_version, js_version):
+    values = {
         "BASE": "",
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "", js_version),
@@ -291,18 +269,21 @@ def main():
     css_version, js_version = read_current_asset_versions()
 
     md_files = sorted(CONTENT_DIR.glob("*.md"))
-    if not md_files:
-        print("No content files found under content/articles/ — nothing to build.")
-        build_publications_page([], css_version, js_version)
-        return
-
     all_articles = []
     for md_path in md_files:
         article = build_article(md_path, css_version, js_version)
         all_articles.append(article)
         print(f"Built articles/{article['slug']}.html")
 
-    build_publications_page(all_articles, css_version, js_version)
+    if not md_files:
+        print("No content files found under content/articles/ — nothing to build.")
+
+    by_category = {c: [a for a in all_articles if a["category"] == c] for c in CATEGORIES}
+    for category in CATEGORIES:
+        build_category_page(category, by_category[category], css_version, js_version)
+        print(f"Built {category}.html")
+
+    build_publications_page(css_version, js_version)
     print("Built publications.html")
 
 

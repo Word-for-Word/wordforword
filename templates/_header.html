@@ -7,11 +7,11 @@
          immediately instead of waiting on a timer, which is what the
          Publications dropdown's own height transition is gated on.
 
-         {{BASE}} is substituted by the build script: "" for pages that
-         live at the repo root (publications.html), "../" for pages one
-         folder deep (articles/<slug>.html) — every relative link/asset
-         path below goes through it so this ONE partial works at either
-         depth. -->
+         The BASE placeholder is substituted by the build script: "" for
+         pages that live at the repo root (publications.html), "../" for
+         pages one folder deep (articles/<slug>.html) — every relative
+         link/asset path below goes through it so this ONE partial works
+         at either depth. -->
     <header class="site-header">
       <div class="nav__dropdown-hover-zone" aria-hidden="true"></div>
       <div class="site-header__clip">
@@ -25,10 +25,10 @@
               <a href="{{BASE}}publications.html">Publications*</a>
               <div class="nav__dropdown">
                 <a href="{{BASE}}index.html#publications"><span class="nav__dropdown-asterisk">*</span>Volumes</a>
-                <a href="{{BASE}}publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
-                <a href="{{BASE}}publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
-                <a href="{{BASE}}publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
-                <a href="{{BASE}}publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
+                <a href="{{BASE}}interviews.html"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
+                <a href="{{BASE}}essays.html"><span class="nav__dropdown-asterisk">*</span>Essays</a>
+                <a href="{{BASE}}narratives.html"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
+                <a href="{{BASE}}outreach.html"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
               </div>
             </li>
             <li><a href="{{BASE}}about.html">About Us</a></li>

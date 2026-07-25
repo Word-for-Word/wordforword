@@ -21,21 +21,31 @@ const HERO_EXIT_THRESHOLD = 0.95;
 // Only ever true when index.html's own inline <head> script (right after
 // __pageLoadStart) found the one-shot sessionStorage flag set — meaning
 // this navigation came from clicking the "Overview" nav link (see
-// initOverviewSkipsSplash() below), not a fresh reload or the logo
+// initNavPageFlash() below), not a fresh reload or the logo
 // (initLogoSecretEntry() below). That script already added
-// html.skip-intro-splash synchronously, hiding the splash before first
-// paint (see style.css) — this constant just lets initIntroReveal() know
-// to also shift the HERO's own entrance earlier, instead of it still
-// waiting out the (now invisible) splash's multi-second head start.
+// html.skip-intro-splash synchronously, hiding the elaborate splash
+// before first paint (see style.css) — this constant just lets
+// initIntroReveal() know to also shift the HERO's own entrance, instead
+// of it still waiting out the (now invisible) splash's multi-second
+// head start.
 const SKIP_INTRO_SPLASH = document.documentElement.classList.contains("skip-intro-splash");
 // Subtracted from every --intro-delay AND the final anchor timeout in
 // initIntroReveal(), on top of the normal elapsed-time correction —
 // chosen so the EARLIEST --intro-delay in index.html (3220ms, the
-// title's first word) lands at a small, still-deliberate ~100ms instead
-// of 0. The whole staggered choreography (title -> eyebrows -> header)
-// shifts as one block, preserving its existing relative timing exactly,
-// just starting right away instead of after the splash.
-const SKIP_INTRO_SPLASH_OFFSET_MS = SKIP_INTRO_SPLASH ? 3120 : 0;
+// title's first word) lands just after the .page-flash screen (see
+// style.css) finishes its own ~1.8s fade/hold/slide-away, not while
+// it's still covering the page. Was 3120 (landing at ~100ms) back when
+// skipping meant an instant hide with nothing to wait for — now that
+// arriving via "Overview" shows that quick flash first, starting the
+// title that early meant it was visibly mid-animation by the time the
+// flash finished sliding away. The whole staggered choreography (title
+// -> eyebrows -> header) shifts as one block, preserving its existing
+// relative timing exactly — though the header's own entrance is now
+// separately driven by the html.show-page-flash CSS animation instead
+// (fixed to start right at that same ~1.8s mark), so this offset's own
+// effect on the header specifically is moot; only title/eyebrows still
+// depend on it.
+const SKIP_INTRO_SPLASH_OFFSET_MS = SKIP_INTRO_SPLASH ? 1300 : 0;
 
 // Always land at the top on a refresh/reload — without this, the browser's
 // own scroll-restoration silently re-applies whatever scroll position was
@@ -68,7 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initFeaturedCarousel();
   initCarouselReveal();
   initLogoSecretEntry();
-  initOverviewSkipsSplash();
+  initNavPageFlash();
+  initHeaderReady();
   initPublicationsDropdown();
 });
 
@@ -89,11 +100,85 @@ document.addEventListener("DOMContentLoaded", () => {
 // recomputation) is what decides when it later reverts, so a fast-
 // moving cursor crossing between the two never finds a moment where
 // neither is hoverable.
+// body.header-ready gates the Publications dropdown's own height
+// transition (see that class in style.css) — separate from
+// body.intro-finished above on purpose: that class's timing is tuned to
+// protect the EYEBROW lines' scroll-exit handoff, which has nothing to
+// do with the header, and reusing it here left a real gap where the
+// header had visibly finished dropping in but the dropdown's own
+// transition hadn't been enabled yet — hovering "Publications" in that
+// window (a completely plausible thing for a fresh arrival to do)
+// opened the dropdown with an instant height snap instead of animating.
+// Driven off the header's own actual transitionend/animationend instead
+// of a hardcoded delay, so it's automatically correct whether the
+// header just sits there (no entrance at all — the common case for
+// every non-homepage page on a fresh load), transitions in via
+// .intro-reveal--drop (homepage, fresh load), or animates in via the
+// html.show-page-flash-scoped animation (arrival via nav click) — and
+// stays correct if any of those timings change later without needing a
+// matching number here. The setTimeout fallback exists for
+// prefers-reduced-motion (that media query sets `transition: none` on
+// .intro-reveal--drop, so transitionend would otherwise never fire) and
+// as a general safety net against any other case where neither event
+// fires.
+function initHeaderReady() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+
+  let settled = false;
+  const markReady = () => {
+    if (settled) return;
+    settled = true;
+    document.body.classList.add("header-ready");
+    header.removeEventListener("transitionend", onDone);
+    header.removeEventListener("animationend", onDone);
+  };
+  const onDone = (e) => {
+    if (e.target === header) markReady();
+  };
+
+  const hasEntrance =
+    header.classList.contains("intro-reveal--drop") ||
+    document.documentElement.classList.contains("show-page-flash");
+  if (!hasEntrance) {
+    markReady();
+    return;
+  }
+  header.addEventListener("transitionend", onDone);
+  header.addEventListener("animationend", onDone);
+  setTimeout(markReady, 3000);
+}
+
 function initPublicationsDropdown() {
   const trigger = document.querySelector(".nav__item--publications");
   const header = document.querySelector(".site-header");
   const hoverZone = document.querySelector(".nav__dropdown-hover-zone");
   if (!trigger || !header || !hoverZone) return;
+
+  // Clicking "Publications" to get HERE leaves the cursor resting
+  // exactly over this same trigger once the new page loads — some
+  // browsers then fire a mouseenter on it as soon as layout settles,
+  // even with the mouse never actually moving, reading as the dropdown
+  // snapping open uninvited the instant you land here. Real hover
+  // intent requires the cursor to have actually traveled some minimum
+  // distance since load first; a cursor that's merely resting (however
+  // long) never satisfies this, no matter what synthetic events fire.
+  // Once real movement happens at all, this stays satisfied for the
+  // rest of the page's life — normal hovering afterward is unaffected.
+  const MOVE_THRESHOLD_PX = 8;
+  let hasMovedEnough = false;
+  let originPoint = null;
+  const trackMovement = (e) => {
+    if (!originPoint) {
+      originPoint = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    if (Math.hypot(e.clientX - originPoint.x, e.clientY - originPoint.y) >= MOVE_THRESHOLD_PX) {
+      hasMovedEnough = true;
+      document.removeEventListener("mousemove", trackMovement);
+    }
+  };
+  document.addEventListener("mousemove", trackMovement);
 
   // Matches the CSS close-curve's own no-longer-needed 160ms debounce
   // (removed from CSS — this timer replaces it, see that rule's comment).
@@ -101,6 +186,7 @@ function initPublicationsDropdown() {
   let closeTimer = null;
 
   const open = () => {
+    if (!hasMovedEnough) return;
     clearTimeout(closeTimer);
     header.classList.add("nav__dropdown-is-open");
   };
@@ -160,20 +246,44 @@ function initLogoSecretEntry() {
   });
 }
 
-// The "Overview" nav link (always the first .nav__links item — see
-// templates/_header.html) is the ONE way of reaching index.html that
-// should skip the intro splash, per explicit request — a fresh reload
-// or clicking the logo (initLogoSecretEntry() above) should still play
-// it. Since every navigation here is a real full page load (no client-
-// side routing), the only way to signal "skip it" across that reload is
-// a one-shot sessionStorage flag, read and immediately cleared by
-// index.html's own inline <head> script — see that script + the
-// html.skip-intro-splash rules in style.css for the other half of this.
-function initOverviewSkipsSplash() {
-  const overviewLink = document.querySelector(".nav__links > li:first-child > a");
-  if (!overviewLink) return;
-  overviewLink.addEventListener("click", () => {
-    sessionStorage.setItem("wfw-skip-intro-splash", "1");
+// The 4 top-level nav links (Overview/Publications/About Us/Get
+// Involved — the DIRECT <a> children of .nav__links > li, which
+// excludes the Publications dropdown's own nested sub-links) each get
+// their own quick .page-flash (see style.css) on arrival, themed to
+// match the site's intro-splash screens 01-04 in that same order. The
+// Publications dropdown's own 4 category links (Interviews/Essays/
+// Narratives/Outreach — everything except "Volumes", which leads back
+// to index.html, Overview's own page) share screen 02 with the
+// Publications link itself, since they're all pages living under that
+// same nav item — see templates/category.html's own inline script,
+// which shows screen 02 with a caption matching whichever category you
+// actually land on. Since every navigation here is a real full page
+// load (no client-side routing), the only way to signal "which flash to
+// show" across that reload is a one-shot sessionStorage flag, read and
+// immediately cleared by the DESTINATION page's own inline script
+// (right after __pageLoadStart on index.html; right at the top of
+// <body> on every other page) — see those scripts + the
+// html.show-page-flash rules in style.css for the other half of this.
+// Overview (01) additionally still skips the elaborate homepage-only
+// intro splash entirely (see html.skip-intro-splash in style.css)
+// rather than playing both.
+const NAV_PAGE_FLASH_SCREENS = ["01", "02", "03", "04"];
+function initNavPageFlash() {
+  const topLevelLinks = document.querySelectorAll(".nav__links > li > a");
+  topLevelLinks.forEach((link, i) => {
+    const screen = NAV_PAGE_FLASH_SCREENS[i];
+    if (!screen) return;
+    link.addEventListener("click", () => {
+      sessionStorage.setItem("wfw-page-flash", screen);
+    });
+  });
+
+  // :not(:first-child) skips "Volumes" (see comment above).
+  const categoryLinks = document.querySelectorAll(".nav__dropdown a:not(:first-child)");
+  categoryLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      sessionStorage.setItem("wfw-page-flash", "02");
+    });
   });
 }
 
@@ -214,10 +324,9 @@ function alignAsteriskToCapHeight(span, boxHeight, track) {
 //
 // Operates on each track's own child TEXT NODES only (not
 // track.textContent as a whole) — every track now has real element
-// children (.marquee-banner__word--* spans, one per face; see index.html
-// and scripts/build_articles.py's buildMarqueeCycle()) sitting between
-// the "*" separators, and collapsing to textContent would flatten them
-// to plain text, destroying their font overrides.
+// children (.marquee-banner__word--* spans, one per face; see index.html)
+// sitting between the "*" separators, and collapsing to textContent would
+// flatten them to plain text, destroying their font overrides.
 const MARQUEE_ASTERISK_SIZE = 14; // MUST match .marquee-asterisk img's height in style.css
 function initMarqueeAsterisks() {
   const tracks = document.querySelectorAll(".marquee-banner__track");
@@ -344,7 +453,17 @@ function initMarqueeCentering() {
 // running effectively breaks it), which looked like "the eyebrows don't
 // move at all" when this was hardcoded to 5000ms. Update this number if
 // those delays change again — it gets the same elapsed-time correction
-// as everything else above.
+// as everything else above, so 6650 is correct for BOTH the full and
+// skip paths (the skip path's own SKIP_INTRO_SPLASH_OFFSET_MS is already
+// baked into `elapsed`, shifting this anchor's effective real-world
+// firing time by that same amount, same as every other delay here).
+//
+// The Publications dropdown's own height transition used to ALSO gate
+// on body.intro-finished (see initHeaderReady() below for why that
+// moved to its own, separate body.header-ready class instead) — this
+// timeout firing late relative to the header actually finishing its
+// entrance is exactly what caused that bug; don't reuse
+// body.intro-finished for anything header-entrance-related again.
 function initIntroReveal() {
   const introEls = document.querySelectorAll(".intro-reveal");
   if (!introEls.length) {

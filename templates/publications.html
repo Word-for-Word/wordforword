@@ -61,10 +61,134 @@
   </script>
 </head>
 <body>
+  <!-- Must run before the rest of <body> parses, same reasoning as
+       index.html's own equivalent script — sets html.show-page-flash
+       synchronously so the flash is visible from first paint instead of
+       popping in a frame late. One-shot: cleared the instant it's read,
+       so only a nav-link arrival (see initNavPageFlash() in main.js)
+       shows it — a fresh reload/direct visit never sets this flag. -->
+  <script>
+    if (sessionStorage.getItem("wfw-page-flash") === "02") {
+      sessionStorage.removeItem("wfw-page-flash");
+      document.documentElement.classList.add("show-page-flash");
+    }
+  </script>
+  <div class="page-flash" aria-hidden="true">
+    <div class="page-flash__color page-flash--02">
+      <img class="page-flash__asterisk" src="{{BASE}}assets/images/Asterisk 2 (nav).png" alt="" />
+      <p class="page-flash__caption page-flash__caption--02">
+        <span class="intro-splash__caption-line1">publications.</span>
+        <span class="intro-splash__caption-line2">(02)</span>
+      </p>
+    </div>
+  </div>
 {{HEADER}}
 
   <main class="publications-main">
-{{SECTIONS_HTML}}
+    <!-- ============ VOLUMES ============ -->
+    <!-- Same grid as index.html's own #publications section, pulled
+         verbatim — minus the "View more" CTA (that exists on the
+         homepage specifically to lead HERE, so it'd be circular on this
+         page itself) and minus the marquee (replaced by .section-eyebrow,
+         same as every other section on this page — see that class's own
+         comment in style.css). -->
+    <section id="publications" class="publications">
+      <div class="section-eyebrow">
+        <span>Volumes</span>
+        <span class="section-eyebrow__rule" aria-hidden="true"></span>
+      </div>
+      <div class="publications__grid">
+        <article class="publication-card">
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="{{BASE}}assets/images/Cover_ Volume 1.jpg" alt="Word for Word Volume 1 cover" />
+          </div>
+          <p class="publication-card__meta">Summer 2024 — Vol. 1</p>
+        </article>
+        <article class="publication-card">
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="{{BASE}}assets/images/Cover_ Volume 2.jpg" alt="Word for Word Volume 2 cover" />
+          </div>
+          <p class="publication-card__meta">Fall 2024 — Vol. 2</p>
+        </article>
+        <article class="publication-card">
+          <div class="publication-card__cover">
+            <img class="publication-card__cover-image" src="{{BASE}}assets/images/Cover_ Upcoming Volume.webp" alt="" />
+            <p class="publication-card__cover-caption">Coming soon!</p>
+          </div>
+          <p class="publication-card__meta">Fall 2025 — Vol. 3</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ SPOTLIGHT ============ -->
+    <!-- Placeholder content, by explicit request — swap the lead + grid
+         items here for real ones (sourced from content/articles/*.md,
+         same as the per-category listings below already do) once there
+         are enough real articles to fill a 1-lead + 5-grid layout. -->
+    <section class="spotlight">
+      <div class="section-eyebrow">
+        <span>Spotlight</span>
+        <span class="section-eyebrow__rule" aria-hidden="true"></span>
+      </div>
+
+      <div class="spotlight__lead">
+        <div class="spotlight__lead-art">
+          <img class="spotlight__lead-art-img" src="{{BASE}}assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="" />
+          <div class="spotlight__lead-art-scrim" aria-hidden="true"></div>
+          <p class="spotlight__lead-art-label">Vol. 2 &middot; Fall &rsquo;26</p>
+        </div>
+        <div class="spotlight__lead-body">
+          <p class="spotlight__tag">Article</p>
+          <h2 class="spotlight__lead-title"><a href="#">The Consumptive&rsquo;s Kiss: Tuberculosis and the Elegance of Death</a></h2>
+          <p class="spotlight__lead-sub">How a disease became a fashion &mdash; and what that says about who gets to be beautiful while sick.</p>
+          <p class="spotlight__teaser">A postcard found in a drug store basement leads into a history of sanatoriums, romanticized suffering, and the strange nineteenth-century glamor built around a disease that was, for most who had it, anything but glamorous.</p>
+          <p class="spotlight__byline">Finn Ryan &middot; 6 min read</p>
+        </div>
+      </div>
+
+      <div class="section-eyebrow section-eyebrow--secondary">
+        <span>More to read</span>
+        <span class="section-eyebrow__rule" aria-hidden="true"></span>
+      </div>
+
+      <div class="article-teaser-grid">
+        <a class="article-teaser" href="#">
+          <div class="article-teaser__cover" style="background: var(--color-red);" aria-hidden="true"></div>
+          <p class="spotlight__tag">Article</p>
+          <p class="article-teaser__title">Philosophy of Practice &mdash; Or Rather, Philosophy of Communication</p>
+          <p class="article-teaser__summary">A doctor-in-training on Barthes, photography, and what it means to really see a patient.</p>
+          <p class="article-teaser__meta">Max Brody &middot; 4 min read</p>
+        </a>
+        <a class="article-teaser" href="#">
+          <div class="article-teaser__cover" style="background: var(--color-grey);" aria-hidden="true"></div>
+          <p class="spotlight__tag">Article</p>
+          <p class="article-teaser__title">Restructuring the World to Deconstruct Prejudice</p>
+          <p class="article-teaser__summary">Elevators tell you to take the stairs in a fire. What universal design reveals about who campuses are really built for.</p>
+          <p class="article-teaser__meta">Tova Tachau &middot; 5 min read</p>
+        </a>
+        <a class="article-teaser" href="#">
+          <div class="article-teaser__cover" style="background: var(--color-tan-dark);" aria-hidden="true"></div>
+          <p class="spotlight__tag">Article</p>
+          <p class="article-teaser__title">Demystifying the Hispanic Paradox</p>
+          <p class="article-teaser__summary">The health data that shouldn&rsquo;t make sense &mdash; and the epigenetics that might explain why it does.</p>
+          <p class="article-teaser__meta">Samantha Wu &middot; 5 min read</p>
+        </a>
+        <a class="article-teaser" href="#">
+          <div class="article-teaser__cover" style="background: var(--color-dark);" aria-hidden="true"></div>
+          <p class="spotlight__tag">Article</p>
+          <p class="article-teaser__title">How Upbringing Shapes Us &ndash; Literally</p>
+          <p class="article-teaser__summary">Childhood isn&rsquo;t just formative for the mind. New research traces how it reshapes the heart, lungs, and brain.</p>
+          <p class="article-teaser__meta">Annika Richard &middot; 4 min read</p>
+        </a>
+        <a class="article-teaser" href="#">
+          <div class="article-teaser__cover" style="background: var(--color-tan);" aria-hidden="true"></div>
+          <p class="spotlight__tag spotlight__tag--interview">Interview</p>
+          <p class="article-teaser__title">The Sound of Music: Neuroscience, Therapy, and Medicine</p>
+          <p class="article-teaser__summary">A Penn neuroscience grad on teaching his grandmother piano through dementia, and what music does that medicine can&rsquo;t.</p>
+          <p class="article-teaser__meta">with Kevin Bryan &middot; 9 min read</p>
+        </a>
+      </div>
+    </section>
   </main>
 
 {{FOOTER}}

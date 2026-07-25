@@ -8,6 +8,10 @@
 # local preview (python3 -m http.server 5500).
 /articles/
 /publications.html
+/interviews.html
+/essays.html
+/narratives.html
+/outreach.html
 
 # Full-resolution illustration masters (tens of MB each) — the site only
 # ever uses the small optimized copies in assets/images/carousel/ and

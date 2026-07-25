@@ -16,6 +16,11 @@
   /* One-off, explicitly requested — the backdrop behind section 3's
      illustration (.split-cta__illustration-wrap) only. */
   --color-illustration-bg: #0e1316;
+  /* One-off — matches the baked-in color of "Asterisk 2 (nav).png"
+     exactly (sampled from the asset itself), used only for screen 02's
+     .page-flash caption text. Lighter/warmer than --color-tan, so kept
+     separate rather than reusing that variable. */
+  --color-beige-nav: #FFE3C6;
 
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --font-body: "Newsreader", Georgia, serif;
@@ -517,12 +522,13 @@ ul { list-style: none; margin: 0; padding: 0; }
    own screen-01 animation starts from parse time with no JS gating at
    all, so anything added only on DOMContentLoaded would be too late to
    stop a brief flash of it. Set when the "Overview" nav link was
-   clicked to get here (see initOverviewSkipsSplash() in main.js) rather
-   than a fresh reload or the logo (initLogoSecretEntry()) — per
-   explicit request, only that one link should skip the splash. Hides
-   all 3 stacked full-screen layers instantly; initIntroReveal() in
-   main.js separately shifts the hero's own entrance to start right
-   away instead of still waiting out the (now invisible) splash. */
+   clicked to get here (see initNavPageFlash() in main.js) rather than a
+   fresh reload or the logo (initLogoSecretEntry()) — per explicit
+   request, only that one link should skip the splash, showing the
+   quick .page-flash (below) in its place instead. Hides all 3 stacked
+   full-screen layers instantly; initIntroReveal() in main.js separately
+   shifts the hero's own entrance to start right away instead of still
+   waiting out the (now invisible) splash. */
 html.skip-intro-splash .intro-splash,
 html.skip-intro-splash .intro-splash__asterisk-wrap,
 html.skip-intro-splash .intro-splash-layer--brown,
@@ -531,22 +537,133 @@ html.skip-intro-splash .intro-splash-layer--grey {
   opacity: 0;
   visibility: hidden;
 }
-/* The nav shouldn't fade+drop in when arriving via "Overview" either —
-   per explicit request, it should just already be there (matching every
-   OTHER page's header, which never carries .intro-reveal/--drop at all —
-   see templates/_header.html), instead of the jarring "header vanishes
-   for a beat, then drops back in" when it was already fully visible on
-   whatever page the user was just on. Forcing opacity/transform directly
-   (not touching `transition`) means there's simply no delta left for
-   .intro-reveal--drop's transition to ever animate, whether or not JS
-   later adds is-visible — and, unlike reaching for `transition: none`
-   here, it can't accidentally clobber body.intro-finished .site-header's
-   OWN, unrelated height transition (the Publications dropdown), which
-   already has to fight this exact shorthand-clobbering risk once (see
-   that rule's own comment) — no reason to reintroduce it. */
-html.skip-intro-splash .site-header.intro-reveal--drop {
+
+/* ===================================================================
+   Page flash — a quick, un-choreographed flash shown on arrival at a
+   page reached via the main nav (Overview/Publications/About Us/Get
+   Involved — see initNavPageFlash() in main.js), instead of the
+   elaborate homepage-only intro splash above. Same layout as that
+   splash's own caption (reuses .intro-splash__caption-line1/-line2
+   directly), but with each screen's colors INVERTED from the intro's
+   own cream-bg/colored-text convention: here each screen is a solid
+   colored bg with light/dark text on top (01 red bg/cream text, 02 blue
+   bg/beige text, 03 beige bg/brown text, 04 brown bg/blue text) — see
+   the 4 "Asterisk N (nav).png" assets, which come pre-colored to match
+   (unlike the intro splash's own asterisks 2-4, no CSS mask/recolor
+   needed here). html.show-page-flash is set synchronously by each
+   page's own inline <head>/<body> script (same early-execution
+   reasoning as html.skip-intro-splash above) reading the one-shot
+   sessionStorage["wfw-page-flash"] flag — see that script on each page
+   for which number it checks for.
+
+   Two layers, not one: .page-flash itself is a plain, ALWAYS-opaque
+   cream cover — shown instantly (not animated) the moment
+   html.show-page-flash is set, so the real page underneath is never
+   exposed even for a frame. .page-flash__color (its one child) is the
+   actual colored screen (bg + asterisk + caption), which fades in ON
+   TOP of that solid cream backdrop. Animating the OUTER element's own
+   opacity instead (an earlier pass) meant the real page showed faintly
+   through it during the fade — cream never being FULLY opaque until the
+   fade finished.
+=================================================================== */
+.page-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--color-cream);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+/* Opacity set directly (not via `animation`) — instant, so the cream
+   cover is fully opaque from frame 1. Only the SLIDE is animated here;
+   the fade-in lives on .page-flash__color below. Holds in place for the
+   first 900ms (.page-flash__color's own fade + hold), then slides up
+   and off over 900ms (900-1800ms) — same translateY(-100%) technique
+   and easing as the intro splash's own .intro-splash-slide. The
+   header's own drop-in below is timed to this animation's total 1.8s
+   length, so it starts the instant this finishes sliding away. */
+html.show-page-flash .page-flash {
   opacity: 1;
-  transform: none;
+  visibility: visible;
+  animation: page-flash-slide 0.9s cubic-bezier(0.33, 1, 0.68, 1) 900ms forwards;
+}
+@keyframes page-flash-slide {
+  to { transform: translateY(-100%); }
+}
+.page-flash__color {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  opacity: 0;
+}
+/* 450ms ease-in-out, not the original 200ms/ease — per explicit
+   follow-up feedback that the fade-in read as too abrupt. Softer/longer
+   also means the hold below shrinks to 450ms so the total (fade+hold)
+   still lands at 900ms, matching .page-flash's own slide delay above
+   without needing to touch that number too. */
+html.show-page-flash .page-flash__color {
+  animation: page-flash-color-fade 0.45s ease-in-out forwards;
+}
+@keyframes page-flash-color-fade {
+  to { opacity: 1; }
+}
+.page-flash__asterisk {
+  height: calc(var(--hero-asterisk-size) * 0.65);
+  width: auto;
+}
+/* Continuous jitter, not the intro splash's one-shot settle-to-still
+   (there's no "next screen" here to settle in time for) — reuses that
+   same jitter's early values (see intro-splash-asterisk-jitter-settle
+   above), just looped back to (0,0) for a seamless repeat. */
+html.show-page-flash .page-flash__asterisk {
+  animation: page-flash-asterisk-jitter 0.7s linear infinite;
+}
+@keyframes page-flash-asterisk-jitter {
+  0%     { transform: translate(0, 0); }
+  12.5%  { transform: translate(-0.6px, 0.4px); }
+  25%    { transform: translate(0.4px, -0.6px); }
+  37.5%  { transform: translate(-0.4px, -0.4px); }
+  50%    { transform: translate(0.6px, 0.3px); }
+  62.5%  { transform: translate(-0.5px, 0.5px); }
+  75%    { transform: translate(0.3px, -0.5px); }
+  87.5%  { transform: translate(-0.6px, 0.2px); }
+  100%   { transform: translate(0, 0); }
+}
+.page-flash__caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  text-align: center;
+}
+.page-flash--01 { background: var(--color-red); }
+.page-flash--02 { background: var(--color-grey); }
+/* Default --color-tan, NOT --color-tan-dark — that darker one-off is
+   reserved for the intro splash's own screen 03 (see its own comment),
+   not this unrelated inverted scheme. */
+.page-flash--03 { background: var(--color-tan); }
+.page-flash--04 { background: var(--color-dark); }
+.page-flash__caption--01 { color: var(--color-cream); }
+.page-flash__caption--02 { color: var(--color-beige-nav); }
+.page-flash__caption--03 { color: var(--color-dark); }
+.page-flash__caption--04 { color: var(--color-grey); }
+
+/* Nav bar: same fade+drop-in treatment as the homepage's own
+   .intro-reveal--drop (16px translateY, 0.45s ease-out), timed to start
+   the instant .page-flash above finishes sliding away (1.8s) rather
+   than the header just sitting there statically this whole time. */
+html.show-page-flash .site-header {
+  opacity: 0;
+  transform: translateY(-16px);
+  animation: page-flash-header-drop 0.45s ease-out 1.8s forwards;
+}
+@keyframes page-flash-header-drop {
+  to { opacity: 1; transform: none; }
 }
 
 /* ===================================================================
@@ -678,18 +795,25 @@ html.skip-intro-splash .site-header.intro-reveal--drop {
 .site-header.nav__dropdown-is-open {
   height: var(--nav-height-expanded);
 }
-/* The height transition itself lives here, scoped to body.intro-finished,
-   rather than on the base .site-header rule above — .site-header also
-   carries .intro-reveal--drop (its one-time page-load fade+drop-in), which
-   declares its OWN competing `transition` shorthand at equal specificity;
-   whichever rule is declared later in the file would silently win and
-   fully discard the other's transition (shorthand properties replace,
-   they don't merge). body.intro-finished bumps this rule's specificity
-   from (0,1,0) to (0,2,0), so it reliably wins regardless of file order —
-   and since body.intro-finished is only added once the intro sequence has
-   genuinely finished (see main.js), the intro's own drop-in animation is
-   completely unaffected. */
-body.intro-finished .site-header {
+/* The height transition itself lives here, scoped to body.header-ready
+   (set by initHeaderReady() in main.js once the header's own entrance
+   has genuinely finished — NOT body.intro-finished, which is timed to
+   protect the unrelated eyebrow lines' scroll-exit handoff and can stay
+   unset for several seconds after the header itself is already sitting
+   there fully visible; reusing it here left a real window where
+   hovering "Publications" opened the dropdown with an instant height
+   snap instead of animating), rather than on the base .site-header rule
+   above — .site-header also carries .intro-reveal--drop (its one-time
+   page-load fade+drop-in) OR the html.show-page-flash-scoped animation
+   (arrival via nav click), either of which declares its OWN competing
+   `transition`/`animation` at equal specificity; whichever rule is
+   declared later in the file would silently win and fully discard the
+   other's transition (shorthand properties replace, they don't merge).
+   body.header-ready bumps this rule's specificity from (0,1,0) to
+   (0,2,0), so it reliably wins regardless of file order — and since
+   body.header-ready is only added once the header's entrance has
+   genuinely finished, that entrance is completely unaffected. */
+body.header-ready .site-header {
   transition: height 0.5s cubic-bezier(0.33, 1, 0.68, 1);
 }
 /* Retract gets its own, more dramatically-decelerating curve than the
@@ -708,7 +832,7 @@ body.intro-finished .site-header {
    flicker before .nav__dropdown-is-open is ever removed, so by the time
    this selector starts matching again, it's because the mouse genuinely,
    sustainedly left — no need for a second layer of debounce here too. */
-body.intro-finished .site-header:not(.nav__dropdown-is-open) {
+body.header-ready .site-header:not(.nav__dropdown-is-open) {
   transition-duration: 0.65s;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -855,11 +979,6 @@ body.intro-finished .site-header:not(.nav__dropdown-is-open) {
   text-transform: uppercase;
   white-space: nowrap;
   transition: color 0.15s ease;
-}
-/* Echoes "Publications*" own trailing asterisk — each item IS a piece of
-   that "more information" the trigger's own asterisk points to. */
-.nav__dropdown-asterisk {
-  margin-right: 6px;
 }
 .nav__dropdown a:hover {
   color: var(--color-red);
@@ -2413,16 +2532,15 @@ a.diamond-cta {
 /* The site's one shared marquee-strip preset — originally designed and
    tuned against #get-involved alone (through several rounds of explicit
    follow-up feedback), then promoted to the universal style for every
-   .marquee-banner instance site-wide (get-involved, publications, and
-   the 4 build_articles.py-generated category strips on publications.html
-   — interviews/essays/narratives/outreach). Every instance's markup
-   cycles the same 3 faces per word — Kapakana, Instrument Serif,
-   Newsreader (only Newsreader rendered in caps) — see the HTML
-   comment above #get-involved's own track in index.html for the
-   word-span structure this relies on, buildMarqueeCycle() in
-   scripts/build_articles.py for how the generated category strips build
-   the identical structure, and centerMarqueeTracks() in main.js for how
-   each track's own Newsreader word gets centered independently. */
+   .marquee-banner instance on index.html (#get-involved, #publications).
+   publications.html used to have its own generated marquee strips too
+   (one per category), replaced by .section-eyebrow — see that page's own
+   CSS further down. Every instance's markup cycles the same 3 faces per
+   word — Kapakana, Instrument Serif, Newsreader (only Newsreader
+   rendered in caps) — see the HTML comment above #get-involved's own
+   track in index.html for the word-span structure this relies on, and
+   centerMarqueeTracks() in main.js for how each track's own Newsreader
+   word gets centered independently. */
 .marquee-banner {
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -3069,11 +3187,10 @@ span.split-cta__text-line {
      color, way too light/washed-out against dark brown to read as a
      deliberate "beige" text color. */
   color: var(--color-tan);
-  /* Just 1 row now (was 2) — NOT square-grid--rows-2's aspect-ratio
-     trick, since that's a container-level ratio and this footer's own
-     squareness instead comes from each checker's own aspect-ratio
-     below. */
-  grid-template-rows: 1fr;
+  /* NOT square-grid--rows-2's aspect-ratio trick, since that's a
+     container-level ratio and this footer's own squareness instead
+     comes from each checker's own aspect-ratio below. */
+  grid-template-rows: repeat(2, 1fr);
 }
 /* Plain aspect-ratio:1/1 divs have no intrinsic height otherwise — this
    is what makes the row come out truly square (matching column width),
@@ -3111,10 +3228,7 @@ span.split-cta__text-line {
   padding: 16px;
 }
 .site-footer__title {
-  /* Smaller than before (was 34%) — the footer is now 1 square tall
-     instead of 2, so there's half the vertical room for title + links
-     + inspo to fit in. */
-  width: 20%;
+  width: 30%;
   height: auto;
 }
 /* 18px, matching .hero__eyebrow's own size (not --text-body/--text-small
@@ -3125,7 +3239,7 @@ span.split-cta__text-line {
 .site-footer__links {
   display: flex;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 42px;
   font-size: 18px;
 }
 /* Same border-bottom-as-underline convention as .split-cta__link, but
@@ -3150,7 +3264,7 @@ span.split-cta__text-line {
   opacity: 0.5;
 }
 .site-footer__inspo {
-  margin-top: 6px;
+  margin-top: 12px;
   font-size: 18px;
 }
 .site-footer__copyright {
@@ -3726,6 +3840,145 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 }
 
 /* ===================================================================
+   Section eyebrow — the page-wide section-label convention on
+   publications.html (Volumes, Spotlight, More to read, and every
+   build_articles.py-generated category heading), replacing the
+   .marquee-banner strips that page used to use for the same job. A
+   plain rule-line + small-caps label reads lighter/more editorial,
+   appropriate for a page that's mostly listings rather than one big
+   banner moment per section.
+=================================================================== */
+.section-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.section-eyebrow span:first-child {
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-red);
+  white-space: nowrap;
+}
+.section-eyebrow__rule {
+  flex: 1;
+  height: 1px;
+  background: var(--color-tan-dark);
+}
+.section-eyebrow--secondary {
+  margin-top: 56px;
+}
+
+/* ===================================================================
+   Spotlight (publications.html only) — 1 lead article + a "more to
+   read" grid, sitting between the Volumes section above and the
+   per-category listings below. The "more to read" grid reuses
+   .article-teaser-grid/.article-teaser from the category listings
+   further down (same title/summary/meta treatment as every other
+   article card on the page), so only the lead + tag need their own
+   rules here.
+=================================================================== */
+.spotlight {
+  padding: 0 100px;
+  margin: 60px 0;
+}
+.spotlight__lead {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 40px;
+  align-items: stretch;
+}
+.spotlight__lead-art {
+  border-radius: 15px;
+  min-height: 340px;
+  position: relative;
+  overflow: hidden;
+}
+.spotlight__lead-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Bottom-up scrim so the label reads over whatever's directly behind
+   it, same purpose as .featured-carousel__scrim (that one's top-down,
+   for a top-left caption instead of this bottom-left one). */
+.spotlight__lead-art-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 45%);
+}
+.spotlight__lead-art-label {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  font-size: var(--text-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-tan);
+}
+.spotlight__lead-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.spotlight__tag {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-red);
+  margin: 0 0 14px;
+}
+.spotlight__tag--interview {
+  color: var(--color-grey);
+}
+.spotlight__lead-title {
+  font-family: var(--font-display);
+  /* Explicit — h2's own UA-default bold otherwise stacks on top of
+     Instrument Serif's already-heavier display cut, reading noticeably
+     thicker than every other headline on the site. */
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1.15;
+  margin: 0 0 10px;
+}
+.spotlight__lead-title a {
+  color: var(--color-dark);
+  text-decoration: none;
+}
+.spotlight__lead-title a:hover {
+  color: var(--color-red);
+}
+.spotlight__lead-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--color-dark);
+  opacity: 0.75;
+  margin: 0 0 16px;
+}
+.spotlight__teaser {
+  font-size: var(--text-body);
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+.spotlight__byline {
+  font-size: var(--text-small);
+  opacity: 0.6;
+}
+@media (max-width: 720px) {
+  .spotlight {
+    padding: 0 24px;
+  }
+  .spotlight__lead {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===================================================================
    Publications listing (generated) — one .marquee-banner (the site's
    existing section-label convention, see #publications on index.html)
    per article category, each followed by a grid of teaser cards.
@@ -3741,6 +3994,11 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 }
 .publications-category {
   padding: 0 100px;
+  /* Previously came from the marquee strip's own padding sitting above
+     each category (now replaced by .section-eyebrow, which carries no
+     top spacing of its own) — restoring it here instead so categories
+     still have breathing room between them. */
+  margin-top: 48px;
 }
 .article-teaser-grid {
   display: grid;

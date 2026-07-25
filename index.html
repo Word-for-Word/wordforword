@@ -16,11 +16,12 @@
        parse time with no JS gating, so anything added later (even on
        DOMContentLoaded) would let it flash on screen first. One-shot:
        removed the instant it's read, so only THIS specific navigation
-       (via the "Overview" nav link — see initOverviewSkipsSplash() in
-       main.js, which is what sets the flag before navigating here)
-       skips the splash. A fresh reload or the logo never set this flag,
-       so the splash plays normally for those. See the matching
-       html.skip-intro-splash rules in style.css.
+       (via the "Overview" nav link — see initNavPageFlash() in main.js,
+       which is what sets the flag before navigating here) skips the
+       splash, showing the quick screen-01 .page-flash below instead. A
+       fresh reload or the logo never set this flag, so the full splash
+       plays normally for those. See the matching html.skip-intro-splash/
+       html.show-page-flash rules in style.css.
 
        When the splash IS going to play, this also locks page scroll
        immediately (html.intro-scroll-locked, see style.css) — same
@@ -31,9 +32,9 @@
        in main.js removes this once the splash has genuinely finished
        sliding away. -->
   <script>
-    if (sessionStorage.getItem("wfw-skip-intro-splash")) {
-      sessionStorage.removeItem("wfw-skip-intro-splash");
-      document.documentElement.classList.add("skip-intro-splash");
+    if (sessionStorage.getItem("wfw-page-flash") === "01") {
+      sessionStorage.removeItem("wfw-page-flash");
+      document.documentElement.classList.add("skip-intro-splash", "show-page-flash");
     } else {
       document.documentElement.classList.add("intro-scroll-locked");
     }
@@ -72,7 +73,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=149" />
+  <link rel="stylesheet" href="css/style.css?v=161" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -194,7 +195,7 @@
         <span class="intro-splash__caption-line2">(04)</span>
       </p>
       <p class="intro-splash__caption intro-splash__caption--final">
-        <span class="intro-splash__caption-line1">Word for Word.</span>
+        <span class="intro-splash__caption-line1">word for word.</span>
         <span class="intro-splash__caption-line2">(00)</span>
       </p>
     </div>
@@ -210,6 +211,19 @@
        color. -->
   <div class="intro-splash-layer intro-splash-layer--brown" aria-hidden="true"></div>
   <div class="intro-splash-layer intro-splash-layer--grey" aria-hidden="true"></div>
+
+  <!-- Quick flash shown instead of the above when arriving via the
+       "Overview" nav link — see html.show-page-flash in style.css and
+       initNavPageFlash() in main.js. -->
+  <div class="page-flash" aria-hidden="true">
+    <div class="page-flash__color page-flash--01">
+      <img class="page-flash__asterisk" src="assets/images/Asterisk 1 (nav).png" alt="" />
+      <p class="page-flash__caption page-flash__caption--01">
+        <span class="intro-splash__caption-line1">overview.</span>
+        <span class="intro-splash__caption-line2">(<span class="intro-splash__caption--1-digits">01</span>)</span>
+      </p>
+    </div>
+  </div>
 
   <!-- ============ HEADER / NAV ============ -->
   <!-- Intro sequence (plays once on load, independent of scroll): everything
@@ -273,10 +287,10 @@
             <a href="publications.html">Publications*</a>
             <div class="nav__dropdown">
               <a href="index.html#publications"><span class="nav__dropdown-asterisk">*</span>Volumes</a>
-              <a href="publications.html#interviews"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
-              <a href="publications.html#essays"><span class="nav__dropdown-asterisk">*</span>Essays</a>
-              <a href="publications.html#narratives"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
-              <a href="publications.html#outreach"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
+              <a href="interviews.html"><span class="nav__dropdown-asterisk">*</span>Interviews</a>
+              <a href="essays.html"><span class="nav__dropdown-asterisk">*</span>Essays</a>
+              <a href="narratives.html"><span class="nav__dropdown-asterisk">*</span>Narratives</a>
+              <a href="outreach.html"><span class="nav__dropdown-asterisk">*</span>Outreach</a>
             </div>
           </li>
           <li><a href="about.html">About Us</a></li>
@@ -989,26 +1003,31 @@
   <!-- ============ FOOTER ============ -->
   <!-- The <footer> itself IS the grid (square-grid square-grid--4col —
        same utility classes as section 1's #overview), not a wrapper
-       around a separate grid div. GENUINELY 4 independent squares (col
-       1-4), same as any other 1-row square-grid on the page — squares 1
-       & 4 are checker tiles, squares 2 & 3 are plain dark squares with
-       no content of their own. .site-footer__center is a SEPARATE
-       element placed in the SAME grid cells as squares 2-3 (grid-column:
-       2/span 2) — CSS grid allows overlapping placement, and since it
-       comes later in DOM order it paints on top of them. It holds all
-       the actual content (title/links/etc.) and reveals on its OWN
-       delay, strictly AFTER all 4 squares (see initRevealOnScroll's
-       footerCenter override in main.js) — so the footer visibly
-       animates in as 4 plain tiles first, THEN the content fades in on
-       top, rather than the content being tangled into the tile-by-tile
-       sequence itself (impossible to get looking clean when 1 of the "4
-       tiles" is actually a merged double-wide cell full of text). -->
+       around a separate grid div. GENUINELY 8 independent squares (2
+       rows x col 1-4) — squares 1 & 4 in each row are checker tiles,
+       squares 2 & 3 are plain dark squares with no content of their
+       own. .site-footer__center is a SEPARATE element placed in the
+       SAME grid cells as squares 2-3 across BOTH rows (grid-column:
+       2/span 2, grid-row: 1/span 2) — CSS grid allows overlapping
+       placement, and since it comes later in DOM order it paints on
+       top of them. It holds all the actual content (title/links/etc.)
+       and reveals on its OWN delay, strictly AFTER all 8 squares (see
+       initRevealOnScroll's footerCenter override in main.js) — so the
+       footer visibly animates in as plain tiles first, THEN the
+       content fades in on top, rather than the content being tangled
+       into the tile-by-tile sequence itself (impossible to get looking
+       clean when the center cell is actually a merged double-wide,
+       double-tall cell full of text). -->
   <footer id="about" class="site-footer square-grid square-grid--4col">
     <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
     <div class="square square--dark" style="grid-column: 2; grid-row: 1;" aria-hidden="true"></div>
     <div class="square square--dark" style="grid-column: 3; grid-row: 1;" aria-hidden="true"></div>
     <div class="square square--checker" style="grid-column: 4; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-    <div class="square site-footer__center" style="grid-column: 2 / span 2; grid-row: 1;">
+    <div class="square square--checker" style="grid-column: 1; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 2; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 3; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square site-footer__center" style="grid-column: 2 / span 2; grid-row: 1 / span 2;">
       <img class="site-footer__title" src="assets/images/Footer Title.png" alt="Word for Word*" />
       <ul class="site-footer__links">
         <li><a href="https://www.instagram.com/pennword4word/?hl=en" target="_blank" rel="noopener">Instagram</a></li>
@@ -1033,6 +1052,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/main.js?v=85" defer></script>
 </body>
 </html>
