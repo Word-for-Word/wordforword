@@ -3726,14 +3726,21 @@ body.intro-finished .hero__title-exit.is-visible {
    previous approach (0.2s fade start + a spin at 1.5s) read as "the
    asterisk is already visible" well before the spin ever kicked in,
    since the plain transition had a full 1.3s head start on it.
-   Exiting is unchanged (smooth 1.6s fade+slide, matching the
-   title/eyebrows' own exit) — only the ENTERING side changes below. */
+   Exiting is unchanged (smooth fade+slide, matching the title/eyebrows'
+   own exit duration) — only the ENTERING side changes below.
+   Duration here is a SEPARATE, hardcoded copy of
+   .intro-reveal--slide-slow's own (this system doesn't use that shared
+   class at all) — keep it in sync by hand if that duration ever changes
+   again; it was left at the OLD 1.6s once already after that duration
+   was cut to 0.8s, which was the actual cause of a real reported bug:
+   re-entering the hero via scroll read as noticeably SLOWER than the
+   initial page-load reveal, even though "it's the same hero." */
 body.intro-finished .hero__wordmark-asterisk-wrap {
   animation: none;
   opacity: 1;
   transform: none;
-  transition: opacity 1.6s cubic-bezier(0.33, 1, 0.68, 1),
-              transform 1.6s cubic-bezier(0.33, 1, 0.68, 1);
+  transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1),
+              transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
   transition-delay: 0s;
 }
 body.intro-finished .hero__wordmark-asterisk-wrap:not(.is-visible) {
@@ -3757,7 +3764,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap:not(.is-visible) {
 body.intro-finished .hero__wordmark-asterisk-wrap.is-visible {
   opacity: 1;
   transform: none;
-  transition-delay: 1.95s;
+  transition-delay: 1.15s;
 }
 /* Replays the exact pop-in spin the asterisk played on the very first
    page load (hero-asterisk-intro — see .hero__wordmark-asterisk-wrap's
@@ -3767,20 +3774,24 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-visible {
    every scroll tick it's already visible for), and removed-then-re-
    added there each time (forcing a reflow in between) so the animation
    genuinely restarts even on the 2nd/3rd/etc. re-entry, not just the
-   first. Delay is 1.95s — word 2's own 0.35s start delay + its full
-   1.6s transition duration — so the asterisk pops only once word 2 has
-   actually FINISHED animating in, not merely started (tried syncing it
-   to word 2's START instead; explicit follow-up feedback was that this
-   fired too early — the pop needs to wait for word 2 to actually
-   settle). Gated entirely in JS behind prefers-reduced-motion (see
-   initHeroEyebrowExit()), same as everywhere else motion is optional on
-   this page — .is-respinning is simply never added for those users,
-   rather than relying on this rule's specificity to lose to the
+   first. Delay is 1.15s — word 2's own 0.35s start delay + its full
+   0.8s transition duration (was 1.95s = 0.35s + 1.6s, back when that
+   duration was still 1.6s — left stale after it got cut to 0.8s, which
+   made scroll re-entry visibly slower than the initial page-load
+   reveal despite being "the same hero," a real reported bug) — so the
+   asterisk pops only once word 2 has actually FINISHED animating in,
+   not merely started (tried syncing it to word 2's START instead;
+   explicit follow-up feedback was that this fired too early — the pop
+   needs to wait for word 2 to actually settle). Gated entirely in JS
+   behind prefers-reduced-motion (see initHeroEyebrowExit()), same as
+   everywhere else motion is optional on this page — .is-respinning is
+   simply never added for those users, rather than relying on this
+   rule's specificity to lose to the
    reduced-motion override further down (it wouldn't: 3 classes here
    beats that rule's 1). */
 body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   animation: hero-asterisk-intro 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 1.95s;
+  animation-delay: 1.15s;
 }
 /* Nav bar: fades in while dropping down from just above its resting spot. */
 .intro-reveal--drop {
