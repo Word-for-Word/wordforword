@@ -4110,14 +4110,17 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
    existing section-label convention, see #publications on index.html)
    per article category, each followed by a grid of teaser cards.
 =================================================================== */
-/* Unlike index.html's own <main> (whose first child, .hero, is
-   min-height:100vh and vertically centers its own content — so the fixed
-   .site-header just overlaps its empty top margin), this page's first
-   child is a plain .marquee-banner sitting flush at the top: without
-   this, it renders directly UNDERNEATH the fixed header instead of below
-   it. Same 150px/120px values as .article-page's own top clearance. */
+/* No top clearance needed here (unlike .article-page's own 150px/120px,
+   which really does sit flush under the fixed header) — publications.html
+   now has its own .hero (hero--compact, see style.css) directly above
+   <main>, which already provides both the header clearance AND its own
+   margin-bottom spacing before this starts. Stacking padding-top here
+   on TOP of that (padding and a sibling's margin never collapse) left
+   the gap below the hero much bigger than the gap above it, reading as
+   badly off-center overall even with the hero's own content correctly
+   centered within itself. */
 .publications-main {
-  padding-top: 150px;
+  padding-top: 0;
 }
 .publications-category {
   padding: 0 100px;
