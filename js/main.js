@@ -53,9 +53,9 @@ const HAS_ELABORATE_SPLASH = !!document.querySelector(".intro-splash");
 // already gone.
 //
 // Was 2400 briefly, tuned against .intro-reveal--slide-slow's OLD 1.6s
-// duration — when that duration got cut to 0.8s (see that rule's own
-// comment; a separate, explicitly temporary change), 2400 started
-// landing pieces so early that several finished their ENTIRE transition
+// duration — when that duration got cut to 0.8s (its own permanent
+// speed now, see that rule's own comment), 2400 started landing pieces
+// so early that several finished their ENTIRE transition
 // before the flash even cleared (confirmed live via getAnimations():
 // the earliest piece's endTime was 1620ms, 180ms before the flash's own
 // ~1800ms clear point) — reading as "no delay/animation at all," the
