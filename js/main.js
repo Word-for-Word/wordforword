@@ -776,7 +776,7 @@ function positionHeroAsterisk() {
   // else about the positioning (anchor glyph, wrap, offsets) is meant to
   // work exactly like the homepage's.
   const isCompact = asteriskWrap.classList.contains("hero__wordmark-asterisk-wrap--compact");
-  const extraRight = isCompact ? 8 : 0;
+  const extraRight = isCompact ? 4 : 0;
   const extraUp = isCompact ? -6 : 0;
   asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp}px`;
   asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight}px`;
