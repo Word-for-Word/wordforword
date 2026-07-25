@@ -63,10 +63,21 @@
        bytes got there. Placed as the very first thing after
        __pageLoadStart, before even the external font/CDN requests
        below, so it starts as early as anything on the page possibly
-       can. -->
+       can.
+
+       fetchPriority = "high" (set before .src, so it applies to the
+       actual request) is what's new here — without it, this fetch still
+       competes for bandwidth/scheduling against the font CSS, font
+       files, PostHog, and the Lenis CDN script that all start moments
+       later, any of which can push it back on a slow connection.
+       Starting EARLY (the Image() trick above) doesn't guarantee
+       finishing FAST enough to beat that screen's own fixed ~350ms
+       display window — only fetchPriority actually affects the race
+       itself, not just its starting line. -->
   <script>
     for (const n of [2, 3, 4]) {
       const img = new Image();
+      img.fetchPriority = "high";
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
