@@ -1081,7 +1081,23 @@ function initRevealOnScroll() {
       { once: true, passive: true }
     );
   } else {
-    checkAll();
+    // Still shouldn't beat THIS page's own hero to the punch, if it has
+    // one (publications.html/about.html/get-involved.html all do) —
+    // reading the (already-corrected — initIntroReveal() runs before
+    // this, in the same DOMContentLoaded handler) --intro-delay values
+    // directly means this stays in sync automatically if that timing
+    // ever changes again, rather than needing a second hardcoded number
+    // kept in step with it by hand. 0 (checkAll() runs immediately) on
+    // any page with no .intro-reveal elements at all (category/article
+    // pages) — nothing there to wait for either.
+    const introEls = document.querySelectorAll(".intro-reveal");
+    let maxHeroDelay = 0;
+    for (const el of introEls) {
+      const delay = parseFloat(el.style.getPropertyValue("--intro-delay")) || 0;
+      if (delay > maxHeroDelay) maxHeroDelay = delay;
+    }
+    const HERO_REVEAL_DURATION_MS = 800; // matches .intro-reveal--slide-slow's own duration
+    setTimeout(checkAll, introEls.length ? maxHeroDelay + HERO_REVEAL_DURATION_MS : 0);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
   }
