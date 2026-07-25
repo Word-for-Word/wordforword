@@ -1316,6 +1316,14 @@ main {
      Centering the row itself within the extra space is what actually
      centers the whole hero block vertically. */
   align-content: center;
+  /* align-content:center splits the leftover space evenly across the
+     section's FULL height — but the fixed .site-header (--nav-height,
+     70px) visually overlaps that top portion, eating into it, so the
+     genuinely VISIBLE gap above the title ends up much smaller than the
+     gap below (nothing overlaps that side). Reserving real space for
+     the header up front, before the remaining height gets centered
+     within, is what actually makes the two visible gaps comparable. */
+  padding-top: calc(var(--nav-height) + 40px);
 }
 .hero__wordmark-wrap--compact {
   /* Wider than the homepage's own wrap (clamp(220px, 22vw, 380px)) —
