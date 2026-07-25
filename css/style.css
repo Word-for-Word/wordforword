@@ -983,6 +983,26 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
 .nav__dropdown a:hover {
   color: var(--color-red);
 }
+/* The dropdown item matching the CURRENT page (e.g. "Interviews" while
+   on interviews.html — see initNavHighlight() in main.js) gets its own
+   underline, in ADDITION to "Publications*"'s own .nav__indicator above
+   (that one always points at "Publications" itself for this whole page
+   family, category pages included — see that function's own comment).
+   Applied to .nav__dropdown-text specifically, not the whole link, so
+   the underline excludes the leading .nav__dropdown-asterisk span —
+   same reasoning as .nav__link-asterisk being excluded from
+   "Publications*"'s own indicator. A native text-decoration here
+   (rather than a second JS-measured .nav__indicator-style element) —
+   sizes to exactly the text with no measurement needed, and
+   currentColor means it automatically follows this link's own existing
+   color transition (dark -> red on hover), no separate hover rule
+   required. */
+.nav__dropdown a.is-active .nav__dropdown-text {
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
 
 /* Dims the page behind the header while the dropdown is open — same
    .nav__dropdown-is-open class as .site-header's own height rule

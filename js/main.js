@@ -811,24 +811,35 @@ function initHeroAsteriskPosition() {
 // real separate page, not a same-page section) with a static underline
 // under that link only.
 function initNavHighlight() {
-  const navLinks = Array.from(document.querySelectorAll(".nav__links a"));
+  const topLevelLinks = Array.from(document.querySelectorAll(".nav__links > li > a"));
+  const dropdownLinks = Array.from(document.querySelectorAll(".nav__dropdown a"));
   const indicator = document.querySelector(".nav__indicator");
-  if (!navLinks.length || !indicator) return;
+  if (!topLevelLinks.length || !indicator) return;
 
   const currentFile = location.pathname.split("/").pop() || "index.html";
-  // Article pages live under articles/<slug>.html, which never matches a
-  // literal nav href — fall back to highlighting "Publications*" for
-  // those rather than the default first-link fallback below.
+  // Article pages (articles/<slug>.html, never matching a literal nav
+  // href), publications.html itself, and every category page under the
+  // dropdown (interviews.html, essays.html, ...) all count as
+  // "Publications*" for the TOP-LEVEL indicator — the dropdown's own
+  // matching sub-link (if any) gets its own SEPARATE underline below,
+  // in ADDITION to this one, not instead of it (see that block's own
+  // comment for why "Volumes" never qualifies here).
   const isArticlePage = location.pathname.includes("/articles/");
-  const activeLink =
-    navLinks.find((link) => link.getAttribute("href") === currentFile) ||
-    // Article pages' own nav links carry a "../" prefix (see BASE in
-    // scripts/build_articles.py), so this can't be a strict equality
-    // check against "publications.html" the way currentFile's match
-    // above is.
-    (isArticlePage && navLinks.find((link) => link.getAttribute("href").endsWith("publications.html"))) ||
-    navLinks[0];
-  activeLink.classList.add("is-active");
+  const isPublicationsFamily =
+    isArticlePage || currentFile === "publications.html" || dropdownLinks.some((link) => link.getAttribute("href") === currentFile);
+  const activeTopLink =
+    (isPublicationsFamily && topLevelLinks.find((link) => link.getAttribute("href").endsWith("publications.html"))) ||
+    topLevelLinks.find((link) => link.getAttribute("href") === currentFile) ||
+    topLevelLinks[0];
+  activeTopLink.classList.add("is-active");
+
+  // The dropdown's own sub-link matching the CURRENT page (e.g.
+  // "Interviews" while on interviews.html) gets its own underline too —
+  // see .nav__dropdown a.is-active in style.css. "Volumes" never matches
+  // since its own href is an in-page anchor on index.html
+  // (index.html#publications), not a distinct currentFile of its own.
+  const activeDropdownLink = dropdownLinks.find((link) => link.getAttribute("href") === currentFile);
+  if (activeDropdownLink) activeDropdownLink.classList.add("is-active");
 
   // getBoundingClientRect() (viewport-relative, then subtracted against
   // the indicator's own container) rather than offsetLeft/offsetWidth —
@@ -844,9 +855,14 @@ function initNavHighlight() {
   // real rendered geometry, independent of the offsetParent chain.
   const placeIndicator = () => {
     const containerRect = indicator.parentElement.getBoundingClientRect();
-    const linkRect = activeLink.getBoundingClientRect();
+    const linkRect = activeTopLink.getBoundingClientRect();
+    // Excludes the trailing .nav__link-asterisk (only "Publications*"
+    // has one) from the indicator's own width — per explicit request,
+    // the underline should never extend under the asterisk itself.
+    const asterisk = activeTopLink.querySelector(".nav__link-asterisk");
+    const width = asterisk ? asterisk.getBoundingClientRect().left - linkRect.left : linkRect.width;
     indicator.style.left = `${linkRect.left - containerRect.left}px`;
-    indicator.style.width = `${linkRect.width}px`;
+    indicator.style.width = `${width}px`;
   };
 
   placeIndicator();
