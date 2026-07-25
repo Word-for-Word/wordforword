@@ -1303,7 +1303,7 @@ main {
   /* Homepage's own .hero is min-height:100vh — deliberately shorter
      here so a bit of <main>'s own first section is always visible at
      the bottom of the viewport, rather than the hero alone filling it. */
-  min-height: 55vh;
+  min-height: 65vh;
   /* align-items:center (inherited from the base .hero rule) only
      centers each child WITHIN the grid's single implicit row — it says
      nothing about where that row itself sits if the row's own content

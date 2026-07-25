@@ -771,13 +771,13 @@ function positionHeroAsterisk() {
   // The reusable --compact hero (see its own comment in style.css —
   // publications.html today, about.html/get-involved.html potentially
   // later) carries an extra modifier class for a small nudge (right +
-  // up) on top of the shared positioning above — kept as an addition
+  // down) on top of the shared positioning above — kept as an addition
   // here rather than a fork of this whole function, since everything
   // else about the positioning (anchor glyph, wrap, offsets) is meant to
   // work exactly like the homepage's.
   const isCompact = asteriskWrap.classList.contains("hero__wordmark-asterisk-wrap--compact");
   const extraRight = isCompact ? 8 : 0;
-  const extraUp = isCompact ? 6 : 0;
+  const extraUp = isCompact ? -16 : 0;
   asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp}px`;
   asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight}px`;
   asteriskWrap.style.right = "auto";
