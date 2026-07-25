@@ -3592,8 +3592,11 @@ span.split-cta__text-line {
    for the same reason — more travel to actually see happening. */
 .intro-reveal--slide-slow {
   transform: translateY(36px);
-  transition: opacity 1.6s cubic-bezier(0.33, 1, 0.68, 1),
-              transform 1.6s cubic-bezier(0.33, 1, 0.68, 1);
+  /* TEMPORARY TEST — was 1.6s/1.6s, per explicit request to try the
+     hero title/eyebrows fading+sliding in faster. Easy revert: put
+     1.6s back in both places below (nothing else here changed). */
+  transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1),
+              transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
   transition-delay: var(--intro-delay, 0ms);
 }
 .intro-reveal--slide-slow.is-visible {
