@@ -137,16 +137,32 @@ function initHeaderReady() {
     if (e.target === header) markReady();
   };
 
-  const hasEntrance =
-    header.classList.contains("intro-reveal--drop") ||
-    document.documentElement.classList.contains("show-page-flash");
-  if (!hasEntrance) {
+  const hasIntroReveal = header.classList.contains("intro-reveal--drop");
+  const hasPageFlash = document.documentElement.classList.contains("show-page-flash");
+  if (!hasIntroReveal && !hasPageFlash) {
     markReady();
     return;
   }
   header.addEventListener("transitionend", onDone);
   header.addEventListener("animationend", onDone);
-  setTimeout(markReady, 3000);
+
+  // Must never fire before the entrance it's covering for can actually
+  // finish — a fixed 3000ms guess used to fire well before the homepage's
+  // own .intro-reveal--drop transition (gated on --intro-delay, up to
+  // ~4870ms) even STARTS. Since body.header-ready's own .site-header rule
+  // declares its own `transition` shorthand (for `height`) at HIGHER
+  // specificity than .intro-reveal--drop's, adding it early doesn't just
+  // race harmlessly — it silently REPLACES the opacity/transform
+  // transition outright (shorthand properties replace, not merge; see
+  // that rule's own comment), snapping the header to fully visible with
+  // no animation ever having played. Reading the header's own (already
+  // elapsed-time-corrected, see initIntroReveal()) --intro-delay here
+  // instead means this stays correct if that delay ever changes, rather
+  // than needing a second hardcoded number kept in sync with it by hand.
+  const introDelay = hasIntroReveal ? parseFloat(header.style.getPropertyValue("--intro-delay")) || 0 : 0;
+  const pageFlashEnd = hasPageFlash ? 2250 : 0; // 1.8s delay + 0.45s duration, see page-flash-header-drop
+  const SAFETY_BUFFER_MS = 500;
+  setTimeout(markReady, Math.max(introDelay + 450, pageFlashEnd) + SAFETY_BUFFER_MS);
 }
 
 function initPublicationsDropdown() {
