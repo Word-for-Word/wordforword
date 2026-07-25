@@ -3973,12 +3973,19 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
    + page background for now (no footer, per explicit request), as
    placeholders for the "Learn more" / "Get involved" links to actually
    lead somewhere instead of nowhere. min-height keeps the empty page
-   from collapsing to the header's own height; same 150px top clearance
-   convention as .publications-main/.article-page below.
+   from collapsing to the header's own height.
 =================================================================== */
 .static-page {
   min-height: 100vh;
-  padding-top: 150px;
+  /* No top clearance needed here (unlike .article-page's own 150px,
+     which really does sit flush under the fixed header) — both pages
+     now have their own .hero (hero--compact, copied from
+     publications.html) directly above <main>, which already provides
+     both the header clearance AND its own margin-bottom spacing before
+     this starts. Stacking padding-top here on TOP of that (padding and
+     a sibling's margin never collapse) would reproduce the exact same
+     bug fixed on .publications-main — see that rule's own comment. */
+  padding-top: 0;
 }
 
 /* ===================================================================
