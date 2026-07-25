@@ -1059,15 +1059,32 @@ function initRevealOnScroll() {
     ticking = true;
     requestAnimationFrame(checkAll);
   };
-  window.addEventListener(
-    "scroll",
-    () => {
-      checkAll();
-      window.addEventListener("scroll", onScroll, { passive: true });
-      window.addEventListener("resize", onScroll, { passive: true });
-    },
-    { once: true, passive: true }
-  );
+  // The "wait for the user's first scroll" deferral above this function
+  // exists so the homepage's own elaborate intro sequence isn't
+  // competing with square-grid content fading in simultaneously just
+  // because it happened to already be in the viewport — but that
+  // reasoning is specific to pages that HAVE such an intro (only
+  // index.html ever does). On any other page (publications.html,
+  // about.html, get-involved.html, category/article pages), there's no
+  // load-owning sequence to protect, so content already in view on
+  // arrival (e.g. publications.html's Volumes cards, now visible without
+  // scrolling since the hero got shorter) should just reveal immediately
+  // instead of sitting there inert until the user scrolls at all.
+  if (HAS_ELABORATE_SPLASH) {
+    window.addEventListener(
+      "scroll",
+      () => {
+        checkAll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll, { passive: true });
+      },
+      { once: true, passive: true }
+    );
+  } else {
+    checkAll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+  }
 }
 
 // The hero eyebrow lines, the "Word for Word" title pieces, AND the hero
