@@ -40,24 +40,31 @@ const SKIP_INTRO_SPLASH = document.documentElement.classList.contains("skip-intr
 // a fraction of that time.
 const HAS_ELABORATE_SPLASH = !!document.querySelector(".intro-splash");
 // Subtracted from every --intro-delay AND the final anchor timeout in
-// initIntroReveal(), on top of the normal elapsed-time correction —
-// chosen so the EARLIEST --intro-delay in index.html (3220ms, the
-// title's first word) lands just after the .page-flash screen (see
-// style.css) finishes its own ~1.8s fade/hold/slide-away, not while
-// it's still covering the page. Was 3120 (landing at ~100ms) back when
-// skipping meant an instant hide with nothing to wait for — now that
-// arriving via "Overview" shows that quick flash first, starting the
-// title that early meant it was visibly mid-animation by the time the
-// flash finished sliding away. The whole staggered choreography (title
-// -> eyebrows -> header) shifts as one block, preserving its existing
-// relative timing exactly — though the header's own entrance is now
+// initIntroReveal(), on top of the normal elapsed-time correction.
+// Chosen so the EARLIEST --intro-delay in index.html (3220ms, the
+// title's first word) lands a bit BEFORE the .page-flash screen (see
+// style.css) finishes its own ~1.8s fade/hold/slide-away, not well
+// after it — that element is fully hidden under the flash's own opaque
+// cover the whole time regardless (see .page-flash's own comment: it
+// never lets the real page show through, even mid-fade), so starting
+// its 1.6s transition-slow slide a little early just means MORE of that
+// transition is still visibly left to play once the flash actually
+// clears, instead of it only starting its motion after the flash is
+// already gone. Was 1300 (landing ~120ms after the flash cleared) —
+// per explicit follow-up feedback that the whole sequence read as too
+// slow to fully reveal, especially the LAST-arriving pieces (the
+// eyebrows/asterisk, ~1.8s behind the earliest word): bumping this
+// shifts the entire staggered choreography earlier as one block
+// (preserving its existing relative timing exactly), so every piece
+// lands closer to the flash's own clear point without changing how
+// spaced-out they are from each other. The header's own entrance is
 // separately driven by the html.show-page-flash CSS animation instead
 // (fixed to start right at that same ~1.8s mark), so this offset's own
-// effect on the header specifically is moot; only title/eyebrows still
-// depend on it. Applies equally to any OTHER page with its own hero
-// content (see HAS_ELABORATE_SPLASH above) — same reasoning, no
-// elaborate splash there either.
-const SKIP_INTRO_SPLASH_OFFSET_MS = !HAS_ELABORATE_SPLASH || SKIP_INTRO_SPLASH ? 1300 : 0;
+// effect on the header specifically is moot; only title/eyebrows/
+// asterisk still depend on it. Applies equally to any OTHER page with
+// its own hero content (see HAS_ELABORATE_SPLASH above) — same
+// reasoning, no elaborate splash there either.
+const SKIP_INTRO_SPLASH_OFFSET_MS = !HAS_ELABORATE_SPLASH || SKIP_INTRO_SPLASH ? 2400 : 0;
 
 // Always land at the top on a refresh/reload — without this, the browser's
 // own scroll-restoration silently re-applies whatever scroll position was
