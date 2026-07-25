@@ -86,30 +86,34 @@
 
   <!-- ============ HERO ============ -->
   <!-- Same wrap/placeholder/for/asterisk system as index.html's own
-       3-part "Word for Word" lockup (see that section's own comments) —
-       recomposed here as a 2-part "Our Publications" title: the script
-       image ("Our", filling "for"'s old role) sits above the single
-       serif word ("Publications", filling both "Word"s' combined role)
-       instead of overlapping between two flanking words. Reuses
-       .hero__wordmark-word--2 (permanent nudge + scroll-exit re-entry
-       stagger, synced to the asterisk's respin) and
-       .hero__wordmark-d-anchor (asterisk position anchor, see
-       positionHeroAsterisk() in main.js) verbatim on the final "s" —
-       both are shared, page-agnostic selectors, so reusing them here
-       makes the asterisk positioning and scroll-exit timing work
-       exactly as they do on the homepage with no new JS. -->
-  <section class="hero">
+       3-part "Word for Word" lockup (see that section's own comments),
+       using the reusable --compact modifiers (see their own comment in
+       style.css) for a shorter, smaller-scale hero — recomposed here as
+       a 2-part "Our Publications" title: the script image ("Our",
+       filling "for"'s old role) sits above the single serif word
+       ("Publications", filling both "Word"s' combined role) instead of
+       overlapping between two flanking words. --publications (on the
+       word itself) layers JUST the stroke treatment on top of
+       --compact's sizing — that part is specific to this page, not
+       part of the reusable style. Reuses .hero__wordmark-word--2
+       (permanent nudge + scroll-exit re-entry stagger, synced to the
+       asterisk's respin) and .hero__wordmark-d-anchor (asterisk
+       position anchor, see positionHeroAsterisk() in main.js) verbatim
+       on the final "s" — both are shared, page-agnostic selectors, so
+       reusing them here makes the asterisk positioning and scroll-exit
+       timing work exactly as they do on the homepage with no new JS. -->
+  <section class="hero hero--compact">
     <p class="hero__eyebrow">
       <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4630ms;">Volumes</span>
     </p>
-    <div class="hero__wordmark-wrap hero__wordmark-wrap--publications">
-      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--publications" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--publications"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3700ms;">Publication<span class="hero__wordmark-d-anchor">s</span></span></span>
+    <div class="hero__wordmark-wrap hero__wordmark-wrap--compact">
+      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact" aria-hidden="true">
+        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--publications"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3700ms;">Publication<span class="hero__wordmark-d-anchor">s</span></span></span>
       </div>
-      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--publications" aria-hidden="true">
-        <img class="hero__wordmark-for hero__wordmark-for--publications hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;" src="{{BASE}}assets/images/Publications Title.png" alt="" />
+      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact" aria-hidden="true">
+        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;" src="{{BASE}}assets/images/Publications Title.png" alt="" />
       </div>
-      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--publications" style="--intro-delay: 4630ms;" aria-hidden="true">
+      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 4630ms;" aria-hidden="true">
         <img class="hero__wordmark-asterisk" src="{{BASE}}assets/images/Asterisk - Default.png" alt="" />
       </div>
     </div>

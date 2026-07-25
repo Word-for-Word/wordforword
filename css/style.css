@@ -1280,68 +1280,102 @@ main {
 .hero__eyebrow-line { display: block; }
 
 /* ===================================================================
-   Hero — publications.html's own variant: same wrap/placeholder/for/
-   asterisk system as above, recomposed for a 2-part "Our Publications"
-   title (script image + one serif word) instead of the homepage's
-   3-part "Word for Word" (word/script/word). See that section's HTML
-   comment in templates/publications.html for the full reasoning.
+   Hero — "compact" variant: a shorter, smaller-scale hero for secondary
+   pages that still want a hero moment without it dominating the whole
+   viewport the way the homepage's own does. First built for
+   publications.html's "Our Publications" title; saved here as a
+   reusable style (not a publications-only one) for about.html/
+   get-involved.html to adopt later — NOT overview/index.html, which
+   keeps its own full-viewport treatment. Same wrap/placeholder/for/
+   asterisk system as the homepage's hero above, just recomposed for a
+   2-part title (script image + one serif word) instead of its 3-part
+   "Word for Word" (word/script/word), at smaller scale throughout. See
+   templates/publications.html's own HTML comment for the full
+   reasoning on that recomposition.
+
+   .hero__wordmark-word--publications (further down) layers the stroke
+   treatment on TOP of this — that part IS publications-specific (per
+   its own explicit request), not part of this reusable style, so a
+   future about/get-involved hero can pick up --compact's sizing without
+   inheriting it.
 =================================================================== */
-.hero__wordmark-wrap--publications {
+.hero--compact {
+  /* Homepage's own .hero is min-height:100vh — deliberately shorter
+     here so a bit of <main>'s own first section is always visible at
+     the bottom of the viewport, rather than the hero alone filling it.
+     align-items:center (inherited from the base .hero rule) still
+     centers every child within THIS shorter height, so the title/
+     eyebrows stay horizontally AND vertically centered in the section,
+     just within less vertical room. */
+  min-height: 55vh;
+}
+.hero__wordmark-wrap--compact {
   /* Wider than the homepage's own wrap (clamp(220px, 22vw, 380px)) —
-     "Publications" is a much longer word than either "Word", so the
-     word's own font-size below is scaled down and the wrap widened to
-     match, rather than letting a long word overflow a wrap sized for a
-     4-letter one. */
+     a long single word (e.g. "Publications") needs more room than
+     either "Word" did, so the word's own font-size below is scaled
+     down and the wrap widened to match, rather than letting it overflow
+     a wrap sized for a 4-letter word. */
   width: clamp(280px, 40vw, 560px);
   aspect-ratio: 560 / 340;
 }
-.hero__wordmark-placeholder--publications {
+.hero__wordmark-placeholder--compact {
   /* The homepage's own space-between only makes sense splitting height
      between 2 words — a single word here just centers instead. Stays at
-     that plain center (no extra translateY) so "Publications" lines up
-     with the eyebrows' own vertical middle, same as the homepage's
-     title does with ITS eyebrows — the overlap with "Our" below comes
-     entirely from "Our" moving down into it (see
-     .hero__wordmark-for-wrap--publications), not from shifting
-     "Publications" itself out of that center. */
+     that plain center (no extra translateY) so the word lines up with
+     the eyebrows' own vertical middle, same as the homepage's title
+     does with ITS eyebrows — overlap with the image above (see
+     .hero__wordmark-for-wrap--compact) comes entirely from THAT moving
+     down into it, not from shifting this word out of center. */
   justify-content: center;
-  /* Per explicit request: "Publications" sits ON TOP of "Our" (not
-     underneath it, the homepage's own for/word stacking order). */
+  /* Sits ON TOP of the image above it (not underneath, the homepage's
+     own for/word stacking order) — per explicit request for the
+     publications composition; kept here since any 2-part compact title
+     following the same "word overlapping an image above it" layout
+     would want the same stacking. */
   z-index: 2;
 }
-.hero__wordmark-word--publications {
-  /* Scaled down from the homepage's own clamp(104px, 14.85vw, 192px) to
-     fit a 12-letter word in a similarly-proportioned wrap. */
+.hero__wordmark-word--compact {
+  /* Scaled down from the homepage's own clamp(104px, 14.85vw, 192px) —
+     this variant's whole point is smaller hero text. */
   font-size: clamp(56px, 8vw, 104px);
+}
+.hero__wordmark-for-wrap--compact {
+  /* The homepage's own centers "for" through the middle of both words —
+     here the image instead sits above the single word, overlapping
+     down into it (per explicit request, for publications: into its
+     bottom third) rather than centering through it. */
+  align-items: flex-start;
+  transform: translateY(13%);
+  /* Sits BEHIND the word (z-index: 2 above) — homepage's own for-wrap
+     is on top of the placeholder since "for" bridges/overlaps both
+     words there; here it's the reverse per explicit request. */
+  z-index: 1;
+}
+.hero__wordmark-for--compact {
+  /* Smaller than the homepage's own 48% — this is a lead-in flourish
+     above the headline word here, not a same-scale overlay bridging two
+     words. */
+  width: 30%;
+}
+.hero__wordmark-asterisk-wrap--compact {
+  /* Homepage's own asterisk (var(--hero-asterisk-size)) is sized to
+     balance against ITS much bigger hero text — proportionally too
+     large next to this variant's smaller word, per explicit request. */
+  width: calc(var(--hero-asterisk-size) * 0.55);
+}
+.hero__wordmark-word--publications {
   /* Per explicit request: a stroke OUTSIDE each letter, not eating into
      the fill — paint-order draws the stroke first and the fill on top,
      so the fill covers the stroke's inner half entirely and only the
      outer half ever shows. Without this (the default paint order, fill
      then stroke), the stroke's inner half oversits the fill from
      outside in, reading as thin/hollowed-out letters instead of a solid
-     letter with a clean outline. */
+     letter with a clean outline. Split from .hero__wordmark-word
+     --compact above (this page also carries that class) so the stroke
+     itself — a publications-specific choice — doesn't tag along
+     automatically wherever --compact's sizing gets reused. */
   -webkit-text-stroke: 4px var(--color-cream);
   paint-order: stroke;
-}
-.hero__wordmark-for-wrap--publications {
-  /* The homepage's own centers "for" through the middle of both words —
-     here "Our" instead sits above the single word. Overlap with
-     "Publications" (per explicit request: more of it, into its bottom
-     third) comes entirely from pulling "Our" DOWN toward it — not from
-     moving "Publications" itself, which needs to stay centered with the
-     eyebrows (see .hero__wordmark-placeholder--publications). */
-  align-items: flex-start;
-  transform: translateY(13%);
-  /* Sits BEHIND "Publications" (z-index: 2 above) — homepage's own
-     for-wrap is on top of the placeholder since "for" bridges/overlaps
-     both words there; here it's the reverse per explicit request. */
-  z-index: 1;
-}
-.hero__wordmark-for--publications {
-  /* Smaller than the homepage's own 48% — "Our" is a lead-in flourish
-     above the headline word here, not a same-scale overlay bridging two
-     words. */
-  width: 30%;
 }
 
 /* ===================================================================
