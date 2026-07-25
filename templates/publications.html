@@ -84,6 +84,40 @@
   </div>
 {{HEADER}}
 
+  <!-- ============ HERO ============ -->
+  <!-- Same wrap/placeholder/for/asterisk system as index.html's own
+       3-part "Word for Word" lockup (see that section's own comments) —
+       recomposed here as a 2-part "Our Publications" title: the script
+       image ("Our", filling "for"'s old role) sits above the single
+       serif word ("Publications", filling both "Word"s' combined role)
+       instead of overlapping between two flanking words. Reuses
+       .hero__wordmark-word--2 (permanent nudge + scroll-exit re-entry
+       stagger, synced to the asterisk's respin) and
+       .hero__wordmark-d-anchor (asterisk position anchor, see
+       positionHeroAsterisk() in main.js) verbatim on the final "s" —
+       both are shared, page-agnostic selectors, so reusing them here
+       makes the asterisk positioning and scroll-exit timing work
+       exactly as they do on the homepage with no new JS. -->
+  <section class="hero">
+    <p class="hero__eyebrow">
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4630ms;">Volumes</span>
+    </p>
+    <div class="hero__wordmark-wrap hero__wordmark-wrap--publications">
+      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--publications" aria-hidden="true">
+        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--publications"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3700ms;">Publication<span class="hero__wordmark-d-anchor">s</span></span></span>
+      </div>
+      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--publications" aria-hidden="true">
+        <img class="hero__wordmark-for hero__wordmark-for--publications hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;" src="{{BASE}}assets/images/Publications Title.png" alt="" />
+      </div>
+      <div class="hero__wordmark-asterisk-wrap" style="--intro-delay: 4630ms;" aria-hidden="true">
+        <img class="hero__wordmark-asterisk" src="{{BASE}}assets/images/Asterisk - Default.png" alt="" />
+      </div>
+    </div>
+    <p class="hero__eyebrow hero__eyebrow--right">
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4630ms;">Articles</span>
+    </p>
+  </section>
+
   <main class="publications-main">
     <!-- ============ VOLUMES ============ -->
     <!-- Same grid as index.html's own #publications section, pulled

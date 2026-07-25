@@ -1260,6 +1260,49 @@ main {
 .hero__eyebrow-line { display: block; }
 
 /* ===================================================================
+   Hero — publications.html's own variant: same wrap/placeholder/for/
+   asterisk system as above, recomposed for a 2-part "Our Publications"
+   title (script image + one serif word) instead of the homepage's
+   3-part "Word for Word" (word/script/word). See that section's HTML
+   comment in templates/publications.html for the full reasoning.
+=================================================================== */
+.hero__wordmark-wrap--publications {
+  /* Wider than the homepage's own wrap (clamp(220px, 22vw, 380px)) —
+     "Publications" is a much longer word than either "Word", so the
+     word's own font-size below is scaled down and the wrap widened to
+     match, rather than letting a long word overflow a wrap sized for a
+     4-letter one. */
+  width: clamp(280px, 40vw, 560px);
+  aspect-ratio: 560 / 340;
+}
+.hero__wordmark-placeholder--publications {
+  /* The homepage's own space-between only makes sense splitting height
+     between 2 words — a single word here just centers instead. */
+  justify-content: center;
+}
+.hero__wordmark-word--publications {
+  /* Scaled down from the homepage's own clamp(104px, 14.85vw, 192px) to
+     fit a 12-letter word in a similarly-proportioned wrap. */
+  font-size: clamp(56px, 8vw, 104px);
+  /* Per explicit request: a stroke outline around each letter instead
+     of a plain solid fill. */
+  -webkit-text-stroke: 4px var(--color-cream);
+}
+.hero__wordmark-for-wrap--publications {
+  /* The homepage's own centers "for" through the middle of both words —
+     here "Our" instead sits above the single word, so top-align + nudge
+     up past the wrap's own top edge rather than centering through it. */
+  align-items: flex-start;
+  transform: translateY(-22%);
+}
+.hero__wordmark-for--publications {
+  /* Smaller than the homepage's own 48% — "Our" is a lead-in flourish
+     above the headline word here, not a same-scale overlay bridging two
+     words. */
+  width: 30%;
+}
+
+/* ===================================================================
    Square grid — the site's signature motif: rows of perfect squares.
    The CONTAINER's aspect-ratio (columns : rows) sets its total height
    from its width, and grid-auto-rows: 1fr divides that height evenly —
