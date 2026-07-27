@@ -622,6 +622,21 @@ function initIntroReveal() {
   }, Math.max(0, 6650 - elapsed));
 }
 
+// Resolves once a real <img> has either loaded or failed — .complete is
+// already true for images the browser finished (or never started, e.g.
+// no src) BEFORE this runs, so those resolve instantly; anything still
+// in flight is awaited via its own load/error event. Failure resolves
+// (doesn't reject) deliberately: a single missing/broken asset should
+// never be able to hold the splash hostage forever — see
+// initIntroSplashHold()'s own hard timeout for the matching reasoning.
+function whenImageSettled(img) {
+  if (img.complete) return Promise.resolve();
+  return new Promise((resolve) => {
+    img.addEventListener("load", resolve, { once: true });
+    img.addEventListener("error", resolve, { once: true });
+  });
+}
+
 // Keeps the intro splash lingering on its final "00" logo screen until
 // the page is ACTUALLY ready, instead of sliding away on a fixed
 // 2480ms timer regardless — that fixed timer is what let a slow
@@ -634,11 +649,15 @@ function initIntroReveal() {
 //      same way every other intro timing on this page is) — so on a
 //      normal connection this behaves EXACTLY as before, no added
 //      delay.
-//   2. Real readiness: fonts finished loading (avoids revealing the
-//      title in a fallback font and then visibly swapping the instant
-//      the splash clears) — capped at a hard 8s timeout so a
-//      genuinely broken/never-loading resource can't hold the splash
-//      forever.
+//   2. Real readiness: fonts AND every <img> the hero itself reveals
+//      (wordmark "for", hero asterisk, nav logo) finished loading —
+//      avoids revealing the title in a fallback font/missing image and
+//      then visibly popping in the instant the splash clears (exactly
+//      the "skips a step" symptom on a slow connection: fonts.ready can
+//      resolve fine while these plain <img> loads are still pending,
+//      since they're a completely separate load path). Capped at a
+//      hard 8s timeout so a genuinely broken/never-loading resource
+//      can't hold the splash forever.
 // DOMContentLoaded itself isn't part of the readiness race here: this
 // function only runs from inside that event's own handler, so by
 // construction it's already true by the time this code executes.
@@ -656,8 +675,12 @@ function initIntroSplashHold() {
   const minVisualTime = new Promise((resolve) => {
     setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed));
   });
+  const heroImages = document.querySelectorAll(".hero img, .nav__logo img");
   const readiness = Promise.race([
-    document.fonts ? document.fonts.ready : Promise.resolve(),
+    Promise.all([
+      document.fonts ? document.fonts.ready : Promise.resolve(),
+      ...Array.from(heroImages).map(whenImageSettled),
+    ]),
     new Promise((resolve) => setTimeout(resolve, READY_TIMEOUT_MS)),
   ]);
 

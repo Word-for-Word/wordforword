@@ -31,15 +31,21 @@
      scale). Anywhere text needs to be smaller than paragraph copy
      (nav, captions, meta, footer, card sub-text), use --text-small —
      never a one-off rem value or an opacity fade on --text-body. */
-  --text-body: 24px;
-  --text-small: 15px;
+  /* clamp()'d, not a fixed px value: the min end is what these actually
+     shrink to on a real phone (checked against 320-430px viewports),
+     the preferred vw component is what makes them keep scaling smoothly
+     in between rather than jumping only at breakpoints, and the max end
+     pins them back to the original desktop value so nothing above
+     720px changes. */
+  --text-body: clamp(18px, 5vw, 24px);
+  --text-small: clamp(12.5px, 3.2vw, 15px);
   /* The marquee strips' own unique size (see .marquee-banner) — a
      deliberate third value roughly midway between --text-body and the
      marquees' old 40px display size, promoted to a shared root token so
      other spots (e.g. .square__role, the Get Involved roles grid's
      default role-name text) can reuse the exact same size on request,
      not just the marquees themselves. */
-  --marquee-text-size: 32px;
+  --marquee-text-size: clamp(21px, 6.5vw, 32px);
 
   --page-margin: 10px;
   /* Logo is 52px tall, centered 38px from the top (see --nav-item-center
@@ -910,8 +916,9 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    not a hamburger-menu redesign. */
 @media (max-width: 720px) {
   .nav__links {
-    gap: 14px;
-    font-size: 11px;
+    gap: 6px;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
   }
   .site-header__clip {
     padding: 0 16px;
@@ -1841,16 +1848,11 @@ main {
      wrong on a script face especially). */
   font-weight: 400;
 }
-/* 32px (--marquee-text-size, shared with the marquee banners elsewhere
-   — scoped here rather than changed at its source so those are
-   unaffected) doesn't leave room for longer role names once their own
-   square shrinks at phone widths — confirmed live: "Columnist" clipped
-   to "olumnist" at 320px. */
-@media (max-width: 720px) {
-  .square__role {
-    font-size: 22px;
-  }
-}
+/* --marquee-text-size is now itself a clamp() (see :root), so it already
+   shrinks smoothly at phone widths — no separate fixed-px override
+   needed here anymore (the old 22px pin is exactly this clamp's own
+   minimum, so removing it changes nothing at 720px and below, just
+   restores smooth scaling in between). */
 .square__role--light { color: var(--color-tan); }
 /* Font-treatment variants for the roles grid — each role in that section
    uses a different display face, not the shared --font-body default. */
@@ -2043,7 +2045,7 @@ main {
 .image-mosaic__caption--headline {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 40px;
+  font-size: clamp(26px, 8vw, 40px);
   transition: color 0.3s ease-out;
   cursor: pointer;
 }
@@ -2619,7 +2621,7 @@ a.diamond-cta {
   color: var(--color-tan);
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 40px;
+  font-size: clamp(26px, 8vw, 40px);
   max-width: 70%;
   /* Both a real link now (see index.html) — same red-on-hover affordance
      as .image-mosaic__caption--headline. Deliberately NO base-rule
@@ -2932,7 +2934,7 @@ a.diamond-cta {
    title against the 24px body copy below it. */
 .split-cta__title {
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: clamp(26px, 8vw, 40px);
   font-weight: 400;
   margin: 0 0 16px;
 }
@@ -3568,12 +3570,120 @@ span.split-cta__text-line {
   /* Dropping to 2 columns changes each grid's effective row count (spans
      reflow), so the 4-column aspect-ratio math no longer applies — fall
      back to per-item squares instead of a container-driven height. */
-  .square-grid--4col { grid-template-columns: repeat(2, 1fr); aspect-ratio: auto; }
+  /* grid-auto-rows:1fr (the base rule, above) only means "divide the
+     container's own definite height evenly" on desktop, where
+     .square-grid--rows-N's aspect-ratio gives the grid a real height.
+     Once that's aspect-ratio:auto (indefinite height, sizes to content
+     instead), 1fr on an indefinite container falls back to sizing every
+     implicit row to the SAME value — the tallest single row's content
+     demand, applied uniformly to ALL of them — confirmed live: with an
+     8-row grid, one row needing 280px of text made every other row
+     (checkers included) 280px tall too, each with 75px+ of dead cream
+     space below its own much-shorter square content. auto sizes each
+     row independently, purely from what's actually in IT. */
+  .square-grid--4col { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; aspect-ratio: auto; }
   .square-grid--rows-1, .square-grid--rows-2, .square-grid--rows-4 { aspect-ratio: auto; }
   .square { aspect-ratio: 1 / 1; }
-  .hero { grid-template-columns: 1fr; text-align: center; padding: 48px 32px; }
-  .hero__eyebrow--right { text-align: center; margin: 0 auto; }
+  /* A strict square is too short to hold real paragraph copy once its
+     own column narrows this far — confirmed live: "Through interviews…"
+     was getting its last line clipped by .square's own overflow:hidden
+     at 430px. These variants (all genuine content, not a repeating
+     pattern/photo) size to their content instead of a forced 1:1 —
+     listed by variant class rather than :has(.square__body) so
+     .square--deco's SVG arc text ("Still curious?") is included too.
+     min-height is just a floor so a short line (e.g. "Applications
+     open in the spring.") doesn't look like a thin sliver. Deliberately
+     does NOT include .square--checker or .square--inset: a checker's
+     pattern is mask-sized as a % of its OWN box, so a non-square box
+     visibly stretches the diamonds into ovals — those two need to stay
+     real squares, which is why the row remap right below pairs every
+     text square with ANOTHER text square (both flex to whatever height
+     their own copy needs, independent of the other) rather than with a
+     checker/inset (which would otherwise get stretched by the grid's
+     default row-fill behavior, or leave a gap if it didn't). */
+  .square--pad-lg, .square--text-gap-30, .square--content-left, .square--deco, .square--role-reveal {
+    aspect-ratio: auto;
+    min-height: 160px;
+  }
+  /* #overview's 11 children carry inline grid-column/grid-row values
+     written for the 4-column desktop grid (columns 3 and 4 included).
+     Once the grid above drops to 2 explicit columns, those column-3/4
+     placements don't reflow into column 1/2 — CSS grid instead invents
+     new IMPLICIT columns 3/4 to honor them, so half these tiles (and
+     the "Learn more" diamond inside one of them) were rendering
+     squeezed into extra columns that overlap columns 1/2 rather than
+     stacking two-per-row underneath. !important is required: an inline
+     style attribute always wins over an external stylesheet rule of
+     any specificity UNLESS that external rule is also !important.
+
+     Rows are grouped by content type, not strict source order: pairing
+     a content-driven square (auto height, above) with a checker/inset
+     (forced 1:1) left the fixed-height one stranded at the top of a
+     taller row with dead cream space below it — grid's default stretch
+     can't reconcile "fill the row" with "keep this a perfect square" at
+     the same time, so it just keeps the square and leaves the gap.
+     Pairing content-with-content and decorative-with-decorative avoids
+     that mismatch entirely: children 2+3 (the two text squares) share
+     row 1, child 1 (checker) moves down to pair with child 4 (inset
+     image) — both real squares, no mismatch — and 6+8 (text-gap +
+     deco, both flexible) share a row while 7+9 and 10+11 (all
+     decorative) keep their own matched pairs. */
+  #overview > *:nth-child(2) { grid-column: 1 !important; grid-row: 1 !important; }
+  #overview > *:nth-child(3) { grid-column: 2 !important; grid-row: 1 !important; }
+  #overview > *:nth-child(1) { grid-column: 1 !important; grid-row: 2 !important; }
+  #overview > *:nth-child(4) { grid-column: 2 !important; grid-row: 2 !important; }
+  #overview > *:nth-child(5) { grid-column: 1 / span 2 !important; grid-row: 3 / span 3 !important; }
+  #overview > *:nth-child(6) { grid-column: 1 !important; grid-row: 6 !important; }
+  #overview > *:nth-child(8) { grid-column: 2 !important; grid-row: 6 !important; }
+  #overview > *:nth-child(7) { grid-column: 1 !important; grid-row: 7 !important; }
+  #overview > *:nth-child(9) { grid-column: 2 !important; grid-row: 7 !important; }
+  #overview > *:nth-child(10) { grid-column: 1 !important; grid-row: 8 !important; }
+  #overview > *:nth-child(11) { grid-column: 2 !important; grid-row: 8 !important; }
+  /* .image-mosaic (child 5 above) has no aspect-ratio of its own — on
+     desktop its height comes entirely from spanning 3 rows of the
+     aspect-ratio-locked 4-col grid. That grid is aspect-ratio:auto here,
+     so without its own ratio the mosaic would collapse to ~0 height
+     (its <img> is position:absolute and contributes no intrinsic
+     height). Desktop's proportions were 2 columns wide by 3 of those
+     same-width rows tall, i.e. width:height of 2:3 — reproduced
+     directly so it keeps the same shape, just recomputed for a
+     2-column mobile width instead of a 4-column desktop one. */
+  .image-mosaic { aspect-ratio: 2 / 3; }
+  /* align-content:center (default is stretch): with only 1 explicit
+     column, the grid's 3 auto-sized rows would otherwise stretch to
+     fill the whole min-height:100vh container, leaving each row's
+     content vertically centered in its own third of the screen —
+     spreading title/eyebrow/eyebrow far apart instead of them reading
+     as one neatly stacked block. Packs the rows (title + both eyebrow
+     lines) together instead, with just `gap` between them. */
+  .hero { grid-template-columns: 1fr; align-content: center; gap: 28px; text-align: center; padding: 48px 32px; }
+  /* DOM order is eyebrow-left, wordmark, eyebrow-right (desktop reads
+     left-to-right across the 3-column grid), so stacking to 1 column
+     without reordering put an eyebrow line ABOVE the title. Per
+     explicit request: title on top, both eyebrow lines stacked neatly
+     below it, in their original left-then-right reading order. */
+  .hero__eyebrow { order: 2; text-align: center; margin: 0 auto; }
+  /* .hero__wordmark-wrap's base rule (way above) hard-codes
+     grid-column: 2 for the desktop 3-column layout. .hero only has ONE
+     explicit column here, so that stale "2" was creating an IMPLICIT
+     2nd column instead of reflowing into the single real one — same
+     bug as #overview's tiles, just on the hero. Pin it back to the one
+     column that actually exists. */
+  /* margin:0 auto — .hero__wordmark-wrap's width comes from a clamp(),
+     always narrower than the full grid track at this breakpoint, so
+     without auto margins it just sits flush against the track's start
+     (left) edge instead of centered, even though .hero itself has
+     text-align:center (that only centers TEXT/inline content, not a
+     block-level grid item's own box within its cell). */
+  .hero__wordmark-wrap { order: 1; grid-column: 1; margin: 0 auto; }
+  .hero__eyebrow--right { order: 3; text-align: center; margin: 0 auto; }
   .split-cta { grid-template-columns: 1fr; }
+  /* .split-cta__text's 120px left padding is tuned for sitting beside
+     .split-cta__deco in the desktop 2-column layout above — once that
+     collapses to a single stacked column here, the same fixed 120px
+     eats over a third of a 320px viewport's width, crushing "What
+     else?" and the paragraph lines into an unnecessarily narrow strip. */
+  .split-cta__text { padding-left: 32px; padding-right: 32px; }
   .publications__grid { grid-template-columns: repeat(2, 1fr); }
   /* Same reasoning as .square-grid--4col above — 4 narrow columns with
      side checkers squeezed thin doesn't hold up on mobile, so stack to
