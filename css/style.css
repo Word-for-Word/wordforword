@@ -859,7 +859,7 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
      (values >1 in the 2nd/4th slots) is what gives a plain transition a
      genuine bounce/wobble feel with no keyframes needed — it overshoots
      past the resting tilt, then settles back. */
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .nav__logo:hover img {
   transform: rotate(-14deg);
