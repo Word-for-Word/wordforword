@@ -1022,11 +1022,26 @@ function initRevealOnScroll() {
     footerCenter.style.setProperty("--reveal-delay", `${thirdSquareDelay}ms`);
   }
 
+  // Section 3's illustration tiles are 2 rows (row 1: the full-height
+  // pair, DOM index 0-1; row 2: the half-height pair below, index 2-3 —
+  // see the HTML comment above .split-cta__illustration-tiles). Per
+  // explicit request, row 2 should just naturally follow row 1 once
+  // triggered, not need its OWN extra scroll to bring its (physically
+  // lower, so later-entering-the-viewport) rect into view — checkAll()
+  // below has row 2 piggyback on row 1's own scroll state instead of
+  // checking its own rect. Their own --reveal-delay stagger (computed
+  // above) is what actually spaces the two rows apart visually once
+  // they share the same is-visible moment.
+  const splitCtaTiles = document.querySelectorAll(".split-cta__illustration-tile");
+  const splitCtaRow1 = splitCtaTiles[0];
+  const splitCtaRow2 = new Set([splitCtaTiles[2], splitCtaTiles[3]].filter(Boolean));
+
   let ticking = false;
   const checkAll = () => {
     const vh = window.innerHeight;
+    const splitCtaRow1Rect = splitCtaRow1 ? splitCtaRow1.getBoundingClientRect() : null;
     for (const el of targets) {
-      const rect = el.getBoundingClientRect();
+      const rect = splitCtaRow1Rect && splitCtaRow2.has(el) ? splitCtaRow1Rect : el.getBoundingClientRect();
       const inView = rect.top < vh * 0.9 && rect.bottom > vh * 0.1;
       const farAway = rect.bottom < -vh * 1.5 || rect.top > vh * 2.5;
       // Guarded with contains() now — calling classList.add()/remove()
