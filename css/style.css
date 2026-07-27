@@ -902,6 +902,37 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+/* Nothing here scales with viewport at all otherwise — 4 links at
+   32px gaps plus the logo's own fixed 32px/52px (see .nav__logo/
+   .nav__logo img) simply don't fit a narrow phone width, confirmed
+   live: "OVERVIEW" overlapping the logo at 600px, clipped off the left
+   edge entirely by 375px. Small enough to still read as the same nav,
+   not a hamburger-menu redesign. */
+@media (max-width: 720px) {
+  .nav__links {
+    gap: 14px;
+    font-size: 11px;
+  }
+  .site-header__clip {
+    padding: 0 16px;
+  }
+  .nav__logo {
+    left: 16px;
+  }
+  .nav__logo img {
+    height: 36px;
+  }
+  /* .nav__links is centered within .nav's own FULL left:0/right:0 span
+     (see .nav's own comment on why it can't just be narrowed), so
+     "OVERVIEW" (the first, leftmost link) can still land under the
+     logo even after the sizing fixes above — confirmed live: 38px of
+     overlap remained at 375px. Reserving real space on the left (logo's
+     own 16px position + 36px width + a small gap) shifts the centered
+     group's available area to actually start clear of it. */
+  .nav {
+    padding-left: 60px;
+  }
+}
 /* Solid palette color, no opacity dimming — hover swaps to the brand
    accent red instead of just fading, so the interaction stays on the
    5-color palette rather than inventing a faded shade. */
@@ -1153,6 +1184,18 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
      inter-section gap uses the same value. */
   margin-bottom: 60px;
 }
+/* 100px fixed padding leaves almost nothing for the 3-column grid at
+   phone widths — confirmed live: at 320px, 100px+100px is already 62%
+   of the entire viewport before the hero's own content starts. See the
+   matching overrides on .hero__wordmark-wrap/.hero__wordmark-word below
+   — the wordmark's own hard 220px/104px floors need to come down too,
+   or this padding fix alone just moves the overflow instead of
+   resolving it. */
+@media (max-width: 720px) {
+  .hero {
+    padding: 0 24px;
+  }
+}
 /* Every section-level child gets a uniform gap via flex's own gap
    property, rather than each section carrying its own one-off margin
    (they previously ranged from 32px to 64px depending on the section) —
@@ -1175,6 +1218,15 @@ main {
      contribute to a parent's size). Without this the wrap collapses to
      0 height. */
   aspect-ratio: 1328 / 1408;
+}
+/* The 220px floor above is wider than the ENTIRE remaining content
+   width at phone sizes once .hero's own padding + the 2 eyebrow columns
+   are accounted for — confirmed live: visibly clipped/overlapping the
+   eyebrow text by 375px. */
+@media (max-width: 720px) {
+  .hero__wordmark-wrap {
+    width: clamp(140px, 45vw, 380px);
+  }
 }
 /* Each word is two nested elements on purpose: the OUTER span (.hero__wordmark-word)
    holds the permanent resting-position nudge as a transform, and the
@@ -1204,6 +1256,15 @@ main {
   line-height: 1;
   letter-spacing: -0.02em;
   display: block;
+}
+/* Same fixed-floor problem as .hero__wordmark-wrap right above — a
+   104px minimum doesn't actually shrink with the viewport until well
+   past most phone widths, reported as "text sizes don't change to
+   accommodate new screen sizes." */
+@media (max-width: 720px) {
+  .hero__wordmark-word {
+    font-size: clamp(56px, 20vw, 192px);
+  }
 }
 .hero__wordmark-word .intro-reveal { display: inline-block; }
 .hero__wordmark-word--1 { transform: translateY(-6px); }
@@ -1448,6 +1509,19 @@ main {
   align-items: center;
   overflow: hidden;
   position: relative;
+  /* Grid items default to min-width/min-height:auto — for a text-
+     bearing cell, that resolves to the text's own intrinsic minimum
+     size, which can force its ENTIRE grid track (shared by every other
+     cell in that row/column) wider or taller than the aspect-ratio-
+     driven "equal division" this whole system depends on, once a
+     narrow viewport gives each 1fr share less room than the text needs
+     (a well-known CSS grid "blowout" — confirmed live: at 320px, the
+     image-mosaic's own 2-column track measured 220px wide instead of
+     its fair 150px share, forced there by a sibling cell's text). This
+     lets a cell's own overflow:hidden above actually clip long text
+     instead of the shared track growing to avoid ever needing to. */
+  min-width: 0;
+  min-height: 0;
   filter: brightness(1);
   /* Quick-ish on the way out (leaving hover) — this is the transition
      used whenever filter changes AWAY from whatever :hover declares. */
@@ -1563,6 +1637,22 @@ main {
    stay at the base .square 40px instead. */
 .square--pad-lg {
   padding: 70px;
+}
+/* Padding is a hard floor min-width:0 (see .square's own comment) can't
+   shrink below — content can shrink to nothing, but padding always
+   stays. 40px/70px (80px/140px total) already exceeds a 4-column
+   grid's own fair share of a narrow viewport before any text even
+   enters the picture (confirmed live: at 320px, a 300px-wide grid's
+   1fr share is only 75px/column — .square--pad-lg's 140px floor alone
+   is nearly double that), forcing the grid to blow out past its own
+   container width rather than actually fitting 4 across. */
+@media (max-width: 720px) {
+  .square {
+    padding: 16px;
+  }
+  .square--pad-lg {
+    padding: 20px;
+  }
 }
 /* Horizontal-only left-align — just align-items + text-align, NOT the
    rest of .square--content-left's bundle (justify-content:flex-start
@@ -1751,6 +1841,16 @@ main {
      wrong on a script face especially). */
   font-weight: 400;
 }
+/* 32px (--marquee-text-size, shared with the marquee banners elsewhere
+   — scoped here rather than changed at its source so those are
+   unaffected) doesn't leave room for longer role names once their own
+   square shrinks at phone widths — confirmed live: "Columnist" clipped
+   to "olumnist" at 320px. */
+@media (max-width: 720px) {
+  .square__role {
+    font-size: 22px;
+  }
+}
 .square__role--light { color: var(--color-tan); }
 /* Font-treatment variants for the roles grid — each role in that section
    uses a different display face, not the shared --font-body default. */
@@ -1887,6 +1987,11 @@ main {
 .image-mosaic {
   position: relative;
   overflow: hidden;
+  /* Same grid-blowout fix as .square's own comment — this cell's own
+     caption/CTA content has an intrinsic minimum width that was forcing
+     its 2-column track wider than its fair share at narrow viewports. */
+  min-width: 0;
+  min-height: 0;
 }
 .image-mosaic__photo {
   position: absolute;
@@ -2118,8 +2223,20 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
      needs to clear (51+93.6) plus a modest margin: 130*√2≈184px, safely
      over the ~145px minimum with just enough breathing room, not the
      loose oversized gap 160px left. */
-  width: 130px;
-  height: 130px;
+  /* clamp(), not a flat 130px — the OLD flat value + flex-shrink:0
+     (below) meant this simply didn't fit once its own square shrank
+     enough at narrow viewports (see .square--pad-lg's own padding fix
+     above) — reported as "shrinking itself and its square an absurd
+     amount," which was really the diamond staying rigidly fixed while
+     everything around it shrank instead. Both width and height share
+     the SAME clamp() (not independent values) so it stays a true
+     square at every size — flex-shrink:0 still matters here even with
+     a responsive size: it's what stops flexbox's own default
+     shrink-the-main-axis-only behavior from squashing just the height
+     once its column runs out of room, independent of whatever this
+     clamp() itself resolves to. */
+  width: clamp(70px, 20vw, 130px);
+  height: clamp(70px, 20vw, 130px);
   /* Bumped back up from 6px — that read as too tight against the arc
      text above it. */
   margin-top: 16px;
