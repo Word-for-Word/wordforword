@@ -3570,12 +3570,31 @@ span.split-cta__text-line {
    after the first. */
 .publication-card {
   transform: translateY(24px);
-  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
-  transition-delay: 0s, 0s;
+  /* Same hover-glow mechanism as .square:hover (see that rule's own
+     comment) — filter added to this rule's own transition list (not
+     just the shared one above, which this — declared later, equal
+     specificity — already fully replaces per that shared rule's own
+     shorthand-clobbering warning) so leaving hover has a transition to
+     animate through at all. */
+  filter: brightness(1);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out, filter 0.3s ease-out;
+  transition-delay: 0s, 0s, 0s;
 }
 .publication-card.is-visible {
   transform: none;
-  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms);
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0s;
+}
+/* Per explicit request: same brighten-on-hover feedback as the square
+   tiles. Redeclares opacity/transform's own transitions alongside
+   filter's slower "entering" one (:hover and .is-visible are equal
+   specificity — whichever is declared later wins the WHOLE shorthand,
+   same clobbering trap as everywhere else in this file), so hovering a
+   card mid-reveal (or already revealed) doesn't lose its fade/slide
+   transition outright. */
+.publication-card:hover {
+  filter: brightness(1.07);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out, filter 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0s;
 }
 
 /* Intro sequence — title, then both eyebrow blocks (in sync with each
