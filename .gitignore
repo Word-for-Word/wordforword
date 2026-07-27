@@ -18,4 +18,7 @@
 # assets/images/articles/. Keep the originals as local masters only;
 # don't bloat git history with them.
 /assets/images/ILLUST *.png
+# Same reasoning — 5768x2944, 18.8MB. assets/images/Slogan.jpg (3600px
+# wide, ~1.4MB) is the actual web-used copy, committed normally.
+/assets/images/Slogan.png
 

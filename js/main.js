@@ -1024,15 +1024,30 @@ function initRevealOnScroll() {
 
   // Section 3's illustration tiles are 2 rows (row 1: the full-height
   // pair, DOM index 0-1; row 2: the half-height pair below, index 2-3 —
-  // see the HTML comment above .split-cta__illustration-tiles). Per
-  // explicit request, row 2 should just naturally follow row 1 once
+  // see the HTML comment above .split-cta__illustration-tiles), not 4
+  // independently-staggered siblings — the generic per-parent loop above
+  // still gives them 0/200/400/600ms (indexed by DOM order among all 4),
+  // which reads as an ODD, uneven stagger once both rows reveal at the
+  // same triggered moment (see the piggyback below): row 1's own two
+  // tiles arrive 200ms apart from EACH OTHER, then row 2's own two tiles
+  // ALSO arrive 200ms apart from each other, rather than each row
+  // reading as one clean beat. Override: both tiles in a row share ONE
+  // delay — row 1 together, row 2 together 300ms later.
+  const splitCtaTiles = document.querySelectorAll(".split-cta__illustration-tile");
+  if (splitCtaTiles.length === 4) {
+    splitCtaTiles[0].style.setProperty("--reveal-delay", "0ms");
+    splitCtaTiles[1].style.setProperty("--reveal-delay", "0ms");
+    splitCtaTiles[2].style.setProperty("--reveal-delay", "300ms");
+    splitCtaTiles[3].style.setProperty("--reveal-delay", "300ms");
+  }
+
+  // Per explicit request, row 2 should just naturally follow row 1 once
   // triggered, not need its OWN extra scroll to bring its (physically
   // lower, so later-entering-the-viewport) rect into view — checkAll()
   // below has row 2 piggyback on row 1's own scroll state instead of
-  // checking its own rect. Their own --reveal-delay stagger (computed
-  // above) is what actually spaces the two rows apart visually once
-  // they share the same is-visible moment.
-  const splitCtaTiles = document.querySelectorAll(".split-cta__illustration-tile");
+  // checking its own rect. The --reveal-delay override above is what
+  // actually spaces the two rows apart visually once they share the
+  // same is-visible moment.
   const splitCtaRow1 = splitCtaTiles[0];
   const splitCtaRow2 = new Set([splitCtaTiles[2], splitCtaTiles[3]].filter(Boolean));
 
