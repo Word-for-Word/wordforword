@@ -3943,6 +3943,42 @@ span.split-cta__text-line {
    gently into motion instead of jumping straight to visible. */
 .hero__title-exit {
   transition-timing-function: ease-in, cubic-bezier(0.33, 1, 0.68, 1);
+  /* Pivot for the squash-and-stretch keyframes below — anchored to the
+     baseline (bottom) so a taller/shorter scaleY reads as the letters
+     growing up out of their own baseline, not swelling from the middle. */
+  transform-origin: 50% 100%;
+}
+/* Squash-and-stretch entrance, per explicit request: elongated (taller/
+   narrower than normal) while still below its resting spot, then
+   overshoots slightly PAST resting position while briefly squashed
+   (shorter/wider) before settling to plain scale(1). A plain 2-point
+   ease can't produce this — the "squash" only reads as a squash because
+   the shape visibly passes through past-normal on its way to normal, so
+   this needs real keyframes, not just an overshooting timing-function.
+   animation (not transition) is what drives transform here: per spec, a
+   CSS animation on a property always wins over a transition targeting
+   that SAME property on the same element (unlike two animations
+   fighting over one property, which IS engine-dependent — see the hero
+   asterisk's own comment elsewhere in this file for that distinction),
+   so this can coexist with .intro-reveal--slide-slow's own
+   transform-transition below it without needing to strip transform back
+   out of that shared rule's transition list.
+   Scoped to body:not(.intro-finished) so this ONLY plays for the
+   one-time page-load entrance — once intro-finished, scrolling the hero
+   out and back keeps using the existing plain slide (translateY
+   -100px/none) below, unchanged, matching how title/eyebrow re-entry has
+   always been deliberately simpler than the full intro replay (contrast
+   the hero asterisk, which WAS redesigned to replay its own pop on
+   re-entry — a past explicit choice for that element specifically, not
+   extended here since it wasn't asked for). */
+@keyframes hero-title-squash-stretch {
+  0% { transform: translateY(36px) scaleY(1.18) scaleX(0.93); }
+  60% { transform: translateY(-3px) scaleY(0.96) scaleX(1.03); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+body:not(.intro-finished) .hero__title-exit.is-visible {
+  animation: hero-title-squash-stretch 0.8s ease-out forwards;
+  animation-delay: var(--intro-delay, 0ms);
 }
 /* Scroll-linked exit for the hero eyebrow lines (independent of the
    one-time page-load intro above): initHeroEyebrowExit() toggles
