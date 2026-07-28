@@ -3972,12 +3972,26 @@ span.split-cta__text-line {
    re-entry — a past explicit choice for that element specifically, not
    extended here since it wasn't asked for). */
 @keyframes hero-title-squash-stretch {
-  0% { transform: translateY(36px) scaleY(1.18) scaleX(0.93); }
-  60% { transform: translateY(-3px) scaleY(0.96) scaleX(1.03); }
+  0% { transform: translateY(40px) scaleY(1.2) scaleX(0.92); }
+  82% { transform: translateY(-4px) scaleY(0.95) scaleX(1.04); }
   100% { transform: translateY(0) scaleY(1) scaleX(1); }
 }
+/* ease-in (not ease-out): this element's OPACITY fade is ALSO ease-in
+   (see .hero__title-exit's own timing-function override above) — slow
+   to rise, then most of the fade happens late in the 0.8s window.
+   ease-out on the transform (tried first) front-loaded the ENTIRE
+   slide+stretch into roughly the first third of that same window, so by
+   the time opacity had risen enough to actually see anything, the slide
+   had already finished off-screen (invisible) and all that was left to
+   watch was the squash settling in place — reported live as "it doesn't
+   slide anymore." Matching both curves means the slide is still
+   actively happening in the SAME later stretch of time where opacity
+   has made it visible enough to see it happen. Squash keyframe moved
+   from 60%->82% for the same reason: keeps translateY traveling for
+   most of the duration instead of arriving early and leaving nothing
+   but a static squash-recovery for the back half. */
 body:not(.intro-finished) .hero__title-exit.is-visible {
-  animation: hero-title-squash-stretch 0.8s ease-out forwards;
+  animation: hero-title-squash-stretch 0.8s ease-in forwards;
   animation-delay: var(--intro-delay, 0ms);
 }
 /* Scroll-linked exit for the hero eyebrow lines (independent of the
