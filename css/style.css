@@ -3943,55 +3943,49 @@ span.split-cta__text-line {
    gently into motion instead of jumping straight to visible. */
 .hero__title-exit {
   transition-timing-function: ease-in, cubic-bezier(0.33, 1, 0.68, 1);
-  /* Pivot for the squash-and-stretch keyframes below — anchored to the
-     baseline (bottom) so a taller/shorter scaleY reads as the letters
-     growing up out of their own baseline, not swelling from the middle. */
+}
+/* Squash-and-stretch entrance, per explicit request — REDESIGNED after
+   two failed attempts on .hero__title-exit itself:
+   1st attempt put the whole thing (slide + scale) into one @keyframes
+   animation on .hero__title-exit, replacing .intro-reveal--slide-slow's
+   transition for that element's transform entirely (an animation always
+   wins over a transition on the same property). Reported live as "not
+   sliding" — the animation's own easing didn't line up with this
+   element's ease-in opacity fade, so most of the position change landed
+   in the same early stretch of time opacity was still near-invisible.
+   2nd attempt re-timed that SAME single animation (matching easing,
+   smaller scale). Still reported as not sliding — turns out the real
+   issue wasn't the timing curve at all: a big simultaneous scale swing
+   on the SAME element visually swallows a real, correctly-timed slide
+   happening underneath it. Splitting scale onto a SEPARATE wrapper
+   element fixes this structurally instead of by re-tuning numbers
+   forever: .hero__title-exit keeps using .intro-reveal--slide-slow's
+   ORIGINAL, already-proven transition for the slide, completely
+   untouched. The scale-only animation below runs on its OWN element
+   (.hero__wordmark-word / .hero__wordmark-for-wrap) — a different
+   element's `transform` doesn't compete with this one's, and nested
+   transforms simply compose visually (the outer scales while the inner
+   independently slides), so neither can ever bury the other again. */
+@keyframes hero-title-squash-stretch {
+  0% { transform: scaleY(1.12) scaleX(0.94); }
+  70% { transform: scaleY(0.97) scaleX(1.02); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+/* .hero__wordmark-word/--for-wrap carry their own copy of the SAME
+   --intro-delay inline value as the .hero__title-exit they wrap (see
+   index.html) — a custom property set on a child isn't visible to a
+   rule targeting its ancestor, so the delay has to be duplicated onto
+   the wrapper directly rather than read through it. :has() is what
+   triggers this off the INNER element's .is-visible (added by
+   initIntroReveal() in main.js) without main.js needing to know or care
+   that this wrapper-level animation exists at all. */
+.hero__wordmark-word,
+.hero__wordmark-for-wrap {
   transform-origin: 50% 100%;
 }
-/* Squash-and-stretch entrance, per explicit request: elongated (taller/
-   narrower than normal) while still below its resting spot, then
-   overshoots slightly PAST resting position while briefly squashed
-   (shorter/wider) before settling to plain scale(1). A plain 2-point
-   ease can't produce this — the "squash" only reads as a squash because
-   the shape visibly passes through past-normal on its way to normal, so
-   this needs real keyframes, not just an overshooting timing-function.
-   animation (not transition) is what drives transform here: per spec, a
-   CSS animation on a property always wins over a transition targeting
-   that SAME property on the same element (unlike two animations
-   fighting over one property, which IS engine-dependent — see the hero
-   asterisk's own comment elsewhere in this file for that distinction),
-   so this can coexist with .intro-reveal--slide-slow's own
-   transform-transition below it without needing to strip transform back
-   out of that shared rule's transition list.
-   Scoped to body:not(.intro-finished) so this ONLY plays for the
-   one-time page-load entrance — once intro-finished, scrolling the hero
-   out and back keeps using the existing plain slide (translateY
-   -100px/none) below, unchanged, matching how title/eyebrow re-entry has
-   always been deliberately simpler than the full intro replay (contrast
-   the hero asterisk, which WAS redesigned to replay its own pop on
-   re-entry — a past explicit choice for that element specifically, not
-   extended here since it wasn't asked for). */
-@keyframes hero-title-squash-stretch {
-  0% { transform: translateY(40px) scaleY(1.2) scaleX(0.92); }
-  82% { transform: translateY(-4px) scaleY(0.95) scaleX(1.04); }
-  100% { transform: translateY(0) scaleY(1) scaleX(1); }
-}
-/* ease-in (not ease-out): this element's OPACITY fade is ALSO ease-in
-   (see .hero__title-exit's own timing-function override above) — slow
-   to rise, then most of the fade happens late in the 0.8s window.
-   ease-out on the transform (tried first) front-loaded the ENTIRE
-   slide+stretch into roughly the first third of that same window, so by
-   the time opacity had risen enough to actually see anything, the slide
-   had already finished off-screen (invisible) and all that was left to
-   watch was the squash settling in place — reported live as "it doesn't
-   slide anymore." Matching both curves means the slide is still
-   actively happening in the SAME later stretch of time where opacity
-   has made it visible enough to see it happen. Squash keyframe moved
-   from 60%->82% for the same reason: keeps translateY traveling for
-   most of the duration instead of arriving early and leaving nothing
-   but a static squash-recovery for the back half. */
-body:not(.intro-finished) .hero__title-exit.is-visible {
-  animation: hero-title-squash-stretch 0.8s ease-in forwards;
+body:not(.intro-finished) .hero__wordmark-word:has(> .hero__title-exit.is-visible),
+body:not(.intro-finished) .hero__wordmark-for-wrap:has(> .hero__title-exit.is-visible) {
+  animation: hero-title-squash-stretch 0.8s cubic-bezier(0.33, 1, 0.68, 1) forwards;
   animation-delay: var(--intro-delay, 0ms);
 }
 /* Scroll-linked exit for the hero eyebrow lines (independent of the

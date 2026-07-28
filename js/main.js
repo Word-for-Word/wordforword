@@ -575,7 +575,19 @@ function initIntroReveal() {
   // frame 1, never actually playing its pop-in. Correcting only its
   // --intro-delay, without ever touching its classList, avoids that.
   const asteriskWrap = document.querySelector(".hero__wordmark-asterisk-wrap");
-  const timedEls = asteriskWrap ? [...introEls, asteriskWrap] : Array.from(introEls);
+  // Same reasoning as the asterisk wrap above, for the same reason: the
+  // hero title's squash-and-stretch (.hero__wordmark-word/--for-wrap,
+  // see style.css) carries its own COPY of its inner .hero__title-exit's
+  // --intro-delay (a CSS custom property set on a child isn't visible to
+  // a rule targeting its ancestor, so it has to be duplicated in the
+  // HTML rather than read through it) — left uncorrected, it would start
+  // counting down from page-parse time while its inner element's copy
+  // gets the elapsed-time correction below, drifting the two out of sync
+  // by however long THIS page load actually took.
+  const squashStretchWraps = document.querySelectorAll(".hero__wordmark-word, .hero__wordmark-for-wrap");
+  const timedEls = asteriskWrap
+    ? [...introEls, asteriskWrap, ...squashStretchWraps]
+    : [...introEls, ...squashStretchWraps];
 
   // + SKIP_INTRO_SPLASH_OFFSET_MS: 0 normally (no-op); when the splash
   // itself was skipped, this folds the "start earlier" shift into the
