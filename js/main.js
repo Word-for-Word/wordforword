@@ -103,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initIntroScrollLock();
   initHeroAsteriskPosition();
   initRevealOnScroll();
+  initSection4CarouselGate();
   initMosaicReveal();
   initSplitCtaReveal();
   initHeroEyebrowExit();
@@ -1029,7 +1030,26 @@ function initRevealOnScroll() {
   // visibility, but must NEVER get a --reveal-delay from the stagger
   // loop (that's what caused the old per-logo cascade).
   const singleUnitTargets = document.querySelectorAll(".partners");
-  const targets = [...staggeredTargets, ...singleUnitTargets];
+  // .featured-carousel__mask is EXCLUDED from checkAll()'s own viewport
+  // check below (though it stays in staggeredTargets so the stagger loop
+  // right below still gives it a normal --reveal-delay among its own 8
+  // siblings) — see initSection4CarouselGate() further down, which is
+  // what actually adds is-visible to these now. Section 4's carousel
+  // sits directly beneath that section's own square-grid with no gap, so
+  // on most viewport heights BOTH are "in view" per this function's own
+  // generous 10%-90% window at the same scroll position — confirmed
+  // live: the carousel's tiles (0-600ms stagger among themselves) could
+  // start fading in while the GRID's own later tiles (also 0-600ms, but
+  // a SEPARATE, unrelated stagger) were still mid-cascade, reading as
+  // "the carousel appeared before the row above it finished" even though
+  // it's visually below. Gating the carousel on the grid's own LAST tile
+  // actually finishing (a real transitionend chain, not two independent
+  // viewport checks racing) is what the DOM order visually implies should
+  // happen regardless of how fast/slow the user scrolls past both.
+  const viewportTargets = Array.from(staggeredTargets).filter(
+    (el) => !el.classList.contains("featured-carousel__mask")
+  );
+  const targets = [...viewportTargets, ...singleUnitTargets];
   if (!targets.length) return;
 
   // Stagger is normalized to a shared TOTAL cascade span per group
@@ -1341,6 +1361,36 @@ function initHeroEyebrowExit() {
   );
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
+}
+
+// Gates section 4's carousel masks on that SAME section's own square-
+// grid tiles genuinely finishing first — see the comment on
+// viewportTargets inside initRevealOnScroll() for why this exists (the
+// carousel sits directly below the grid with no gap, so both can be
+// "in view" per that function's own check at the same scroll position,
+// letting the carousel's independent stagger start before the grid's
+// own later tiles had finished theirs). Same doneCount-over-transitionend
+// pattern as initMosaicReveal() below. Each mask still gets is-visible
+// added just once (matches REVEAL_RETRIGGER_ENABLED = false everywhere
+// else) — this only needs to fire the first time the grid finishes.
+function initSection4CarouselGate() {
+  const gridTiles = document.querySelectorAll(".square-grid--flush-bottom .square");
+  const carouselMasks = document.querySelectorAll(".featured-carousel__mask");
+  if (!gridTiles.length || !carouselMasks.length) return;
+
+  let doneCount = 0;
+  for (const tile of gridTiles) {
+    tile.addEventListener(
+      "transitionend",
+      (e) => {
+        if (e.propertyName !== "opacity") return;
+        doneCount += 1;
+        if (doneCount < gridTiles.length) return;
+        for (const mask of carouselMasks) mask.classList.add("is-visible");
+      },
+      { once: true }
+    );
+  }
 }
 
 // Chains the image-mosaic's scrim + caption reveal onto the mask tiles
