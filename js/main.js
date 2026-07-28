@@ -991,6 +991,17 @@ function initLuxuryScroll() {
 // reset buffer easy to reason about in plain pixels: a tile only
 // resets once it's a full viewport-height past whichever edge it
 // exited — comfortably lenient, not "reset the instant it's offscreen."
+// TEMPORARY per explicit request: scrolling far enough away from an
+// already-revealed tile/mask/card and back should NOT re-trigger its
+// fade-in — once revealed, stays revealed. Flip back to `true` to
+// restore the original re-trigger-on-re-entry behavior. Scoped to just
+// this one flag (not a removed farAway branch) so reverting is a
+// one-line change. Does NOT touch the hero's own scroll exit/re-entry
+// (initHeroEyebrowExit() below) — that's a separate system entirely and
+// was never part of this one, which is exactly why the hero keeps
+// re-triggering while everything else now doesn't.
+const REVEAL_RETRIGGER_ENABLED = false;
+
 function initRevealOnScroll() {
   // .split-cta__illustration-tile (not .split-cta itself — see the CSS
   // comment above this same selector list) is what gives section 3's
@@ -1100,7 +1111,7 @@ function initRevealOnScroll() {
       // "waits for the whole section to finish, then a big pause."
       if (inView) {
         if (!el.classList.contains("is-visible")) el.classList.add("is-visible");
-      } else if (farAway) {
+      } else if (farAway && REVEAL_RETRIGGER_ENABLED) {
         if (el.classList.contains("is-visible")) el.classList.remove("is-visible");
       }
     }

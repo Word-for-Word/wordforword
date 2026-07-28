@@ -3375,6 +3375,7 @@ span.split-cta__text-line {
    for free with zero JS/selector changes.
 =================================================================== */
 .quote-block {
+  position: relative;
   text-align: center;
   /* No max-width (was 700px, sized for a short line of text) — per
      explicit request, this now spans the same width as the homepage's
@@ -3391,6 +3392,58 @@ span.split-cta__text-line {
   width: 100%;
   height: auto;
   border-radius: 15px;
+}
+/* Centers the text card over the Slogan artwork without stretching it —
+   this wrapper spans the full image so it can center its child on both
+   axes, but carries no size/background of its own (see
+   .quote-block__overlay-text for the actual visible rectangle, sized to
+   its own content). Its opacity transition is separate from — and
+   delayed past — .quote-block's own image reveal above: both start from
+   the SAME .is-visible trigger, but this one's transition-delay is
+   pinned to .quote-block img's own 0.7s reveal duration (see .is-visible
+   below) so the text card only starts fading in once the photo has
+   genuinely finished, reading as a deliberate second step rather than
+   both popping in together. */
+.quote-block__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+  transition-delay: 0s;
+}
+.quote-block.is-visible .quote-block__overlay {
+  opacity: 1;
+  /* .quote-block itself (the image) doesn't start ITS OWN 0.7s reveal
+     until --reveal-delay elapses (a per-instance stagger value set by
+     initRevealOnScroll() in main.js, based on this section's position
+     among main's children — not always 0). This has to add that same
+     --reveal-delay on top of the image's 0.7s duration, or the overlay
+     starts counting down from the same instant as the image and can
+     finish fading in before the image itself is even done. */
+  transition-delay: calc(var(--reveal-delay, 0ms) + 0.7s);
+}
+.quote-block__overlay-text {
+  margin: 0;
+  padding: 28px 40px;
+  background: var(--color-cream);
+  color: var(--color-dark);
+  border-radius: 15px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  /* -2% per explicit request. */
+  letter-spacing: -0.02em;
+  /* "Slightly reduced" from a display face's own natural (looser) line
+     metrics — matches .spotlight__lead-title's own line-height for the
+     same reason (a big display face reads too airy at its default
+     metrics once it wraps to more than one line). */
+  line-height: 1.15;
+}
+.quote-block__overlay-text em {
+  font-style: italic;
 }
 
 /* ===================================================================
