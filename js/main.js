@@ -1525,31 +1525,50 @@ function initHeroEyebrowExit() {
 // checkAll() calls classList.add("is-visible"), regardless of whether a
 // transition/paint ever follows it.
 //
-// Reveals the carousel the MOMENT every grid tile has is-visible, with
-// NO extra buffer on top — an earlier version added the slowest tile's
-// own --reveal-delay plus its full 700ms transition duration before
-// revealing the carousel, on top of the wait for is-visible itself,
-// stacking up to ~1.3s of additional delay. Reported live as "appears
-// abnormally late — should appear the same as any other tiles." The
-// carousel's own masks have their own independent fade-in regardless
-// (see .featured-carousel__mask's own --reveal-delay stagger, computed
-// by initRevealOnScroll() same as any other group) — this gate's only
-// job is to stop that fade from STARTING before the grid's last tile
-// has, not to also wait for the grid's own fade to fully settle first.
+// checkAll() (in initRevealOnScroll()) adds is-visible to every
+// qualifying tile in ONE synchronous pass per scroll event — once the
+// user has scrolled far enough for the whole grid to be "in view" at
+// once, all 8 tiles get is-visible in that same instant, regardless of
+// each one's own --reveal-delay. is-visible landing on a tile does NOT
+// mean it has started fading in yet — that's gated by transition-delay:
+// var(--reveal-delay), which can be up to 600ms later. A PREVIOUS
+// version of this gate waited for is-visible alone (no further buffer)
+// and revealed the carousel the instant all 8 tiles had it — which, per
+// the above, can be near-instantly, well before row 2's tiles (the
+// larger --reveal-delay values) have even started fading in. Reported
+// live as "carousel appears too early — even before the second row of
+// its own section."
+//
+// A version before THAT waited for is-visible PLUS the slowest tile's
+// own --reveal-delay PLUS its full 700ms transition duration — reported
+// live as the opposite, "abnormally late."
+//
+// This gate's actual job is narrower than either of those: only stop
+// the carousel's own fade from STARTING before the grid's slowest tile
+// has ALSO started (so it never visibly precedes any grid tile), without
+// also waiting for that tile's fade to fully finish first. Waiting for
+// is-visible PLUS the slowest —reveal-delay (not also its 700ms
+// transition) is exactly that — the carousel starts fading in at the
+// same moment the grid's last tile does, reading as one continuous
+// cascade instead of arriving early or arriving after a pause.
 function initSection4CarouselGate() {
   const gridTiles = document.querySelectorAll(".square-grid--flush-bottom .square");
   const carouselMasks = document.querySelectorAll(".featured-carousel__mask");
   if (!gridTiles.length || !carouselMasks.length) return;
 
   const pending = new Set(gridTiles);
+  let maxDelay = 0;
 
   for (const tile of gridTiles) {
     const mo = new MutationObserver(() => {
       if (!tile.classList.contains("is-visible")) return;
       mo.disconnect();
       pending.delete(tile);
+      maxDelay = Math.max(maxDelay, parseFloat(tile.style.getPropertyValue("--reveal-delay")) || 0);
       if (pending.size > 0) return;
-      for (const mask of carouselMasks) mask.classList.add("is-visible");
+      setTimeout(() => {
+        for (const mask of carouselMasks) mask.classList.add("is-visible");
+      }, maxDelay);
     });
     mo.observe(tile, { attributes: true, attributeFilter: ["class"] });
   }
