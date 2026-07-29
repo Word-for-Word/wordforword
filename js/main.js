@@ -102,21 +102,45 @@ document.addEventListener("DOMContentLoaded", () => {
   initIntroSplashHold();
   initIntroScrollLock();
   initHeroAsteriskPosition();
-  initRevealOnScroll();
-  initSection4CarouselGate();
-  initMosaicReveal();
-  initSplitCtaReveal();
-  initHeroEyebrowExit();
-  initMarqueeAsterisks();
-  initMarqueeCentering();
-  initCustomCursor();
-  initRoleTapReveal();
-  initFeaturedCarousel();
-  initCarouselReveal();
-  initLogoSecretEntry();
-  initNavPageFlash();
-  initHeaderReady();
-  initPublicationsDropdown();
+  // Everything below is deferred one frame past the block above, per a
+  // reported live symptom on a slow machine: the homepage's intro splash
+  // showed its final "00" screen's text missing, then abruptly appearing
+  // late. All ~19 init calls used to run synchronously in this one
+  // DOMContentLoaded handler — a single long task blocking the main
+  // thread for however long that whole block takes to execute. On a
+  // fast machine that's imperceptible; on a slow one, if DOMContentLoaded
+  // itself happens to fire close to the splash's own final cut-in time
+  // (not unlikely — MIN_VISUAL_MS/the splash sequence both sit around
+  // 2-2.5s, a plausible real DOMContentLoaded time on a slow load too),
+  // this block's own execution can itself be the long task that delays
+  // the browser from ever painting that final frame on schedule, then
+  // "catches up" all at once once the block finishes — exactly the
+  // "missing, then abruptly appears" symptom, self-inflicted by this
+  // handler's own synchronous weight rather than anything external.
+  // None of the functions below touch the splash/hero entrance sequence
+  // itself (they're scroll-reveal setup, decorative marquee/cursor bits,
+  // the section-4 carousel, nav dropdown, etc.) — nothing a user could
+  // even reach yet, since html.intro-scroll-locked blocks scrolling and
+  // the splash visually covers the whole page for several seconds
+  // regardless. Deferring them by one frame costs nothing perceptible
+  // and gives the browser a chance to paint in between.
+  requestAnimationFrame(() => {
+    initRevealOnScroll();
+    initSection4CarouselGate();
+    initMosaicReveal();
+    initSplitCtaReveal();
+    initHeroEyebrowExit();
+    initMarqueeAsterisks();
+    initMarqueeCentering();
+    initCustomCursor();
+    initRoleTapReveal();
+    initFeaturedCarousel();
+    initCarouselReveal();
+    initLogoSecretEntry();
+    initNavPageFlash();
+    initHeaderReady();
+    initPublicationsDropdown();
+  });
 });
 
 // Manages .nav__dropdown-is-open on .site-header via real JS state (a
@@ -650,6 +674,111 @@ function whenImageSettled(img) {
   });
 }
 
+// Cut-in delays for screens 01/02/03/04/final — MUST match the
+// .intro-splash__asterisk--N/.intro-splash__caption--N animation-delay
+// values in style.css exactly (0/720/1140/1560/1980ms). Duplicated here
+// (rather than read from computed style) because replaySkippedSplashScreens()
+// below needs these as plain numbers to schedule its own JS-driven
+// replacement sequence — see that function for why.
+const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
+
+// Fixes a real "skips steps" bug, confirmed via CDP network throttling:
+// screens 01-04 are driven by the plain, ungated CSS animation-delay
+// values above (see their own comment in style.css for why this is
+// deliberate — screen 01 must appear as early as physically possible,
+// before even fonts/CSS are guaranteed loaded, so nothing here can wait
+// on JS/DOMContentLoaded to KICK OFF the sequence). The catch: those
+// delays are measured against the page's shared document timeline
+// (same clock as navigation start), not "whenever THIS element's style
+// happens to first resolve." On a normal connection those are the same
+// moment for all practical purposes, so this is invisible. On a slow
+// enough connection, though, render-blocking resources (this stylesheet
+// included) can take longer to arrive than the ENTIRE fixed sequence
+// (1980ms) — and once they finally do, the browser doesn't replay the
+// animation from 01; it resolves straight to wherever the CURRENT
+// document-time places it (typically the final "00" screen), because
+// that's genuinely already "in the past" relative to the timeline this
+// animation was always scheduled against. Screens 01-04 can end up
+// having never been painted even once. Confirmed empirically: under a
+// throttled connection, the very first real paint already showed "00",
+// with zero intermediate frames — and separately, that a FRESH
+// `animation` value assigned via JS starts its OWN delay clock from
+// the moment it's assigned (not the document timeline), which is
+// exactly the lever this function pulls.
+//
+// Detects that specific situation (elapsed time already past the whole
+// sequence by the time this runs) and, ONLY then, replays it for real:
+// resets every screen to invisible, then reassigns each one's SAME named
+// keyframes (intro-splash-asterisk-cut/-hide, see style.css) via inline
+// style instead of leaving them to the static CSS rule — since a freshly
+// assigned `animation` value's delay counts from right now, this
+// guarantees every screen gets its full, genuine dwell time regardless
+// of how late this code itself started running. Returns the extra time
+// (ms, from now) initIntroSplashHold() needs to keep waiting before the
+// splash is allowed to slide away, so the replay can't get cut off
+// mid-sequence by that function's own (now-irrelevant, already-elapsed)
+// minimum-visual-time math; returns 0 when nothing was skipped, i.e. the
+// normal/fast path is left completely untouched.
+function replaySkippedSplashScreens(splash, elapsed) {
+  const sequenceEndMs = SPLASH_SCREEN_CUT_DELAYS_MS[SPLASH_SCREEN_CUT_DELAYS_MS.length - 1];
+  if (elapsed < sequenceEndMs) return 0;
+
+  const screens = [1, 2, 3, 4, "final"].map((n) => ({
+    asterisk: document.querySelector(`.intro-splash__asterisk--${n}`),
+    caption: document.querySelector(`.intro-splash__caption--${n}`),
+  }));
+  if (!screens.every((s) => s.asterisk && s.caption)) return 0;
+
+  for (const { asterisk, caption } of screens) {
+    asterisk.style.animation = "none";
+    caption.style.animation = "none";
+    asterisk.style.opacity = "0";
+    caption.style.opacity = "0";
+  }
+  // Double rAF (same idiom as initIntroReveal(), same reason) — guarantees
+  // that opacity:0 reset above has genuinely painted at least once before
+  // the fresh animations below start, so a same-frame reset+reassign can't
+  // coalesce and skip straight back to the end again.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      splash.style.animation = "none";
+      splash.style.backgroundColor = "var(--color-cream)";
+      screens.forEach(({ asterisk, caption }, i) => {
+        const cutDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i];
+        const hideDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i + 1]; // undefined for "final" — correctly leaves it with no hide, same as the CSS original
+        const anim =
+          hideDelay != null
+            ? `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards, intro-splash-asterisk-hide 0.01s steps(1) ${hideDelay}ms forwards`
+            : `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards`;
+        asterisk.style.animation = anim;
+        caption.style.animation = anim;
+      });
+      // Mirrors .intro-splash's own bg-red crossfade, at the same relative
+      // moment (the final screen's own cut time) and the same duration.
+      setTimeout(() => {
+        splash.style.transition = "background-color 0.15s ease";
+        splash.style.backgroundColor = "var(--color-red)";
+        // Clears the `animation: none` this function set on the
+        // CONTAINER itself (not its children) further up, now that the
+        // replay is done. An inline style always wins over ANY
+        // stylesheet rule, regardless of specificity or which class
+        // gets added later — leaving "none" here would permanently
+        // block .intro-splash.is-ready-to-slide's own `animation` (the
+        // actual slide-away, added later by initIntroSplashHold() once
+        // the page is ready) from EVER applying, freezing the splash on
+        // this screen forever instead of just this one. Harmless to
+        // clear now: the base .intro-splash rule's own bg-cream/bg-red
+        // keyframes reapplying at this exact moment resolve to the same
+        // red this line already just set directly, so there's nothing
+        // to visibly flash.
+        splash.style.animation = "";
+      }, sequenceEndMs);
+    });
+  });
+
+  return sequenceEndMs;
+}
+
 // Keeps the intro splash lingering on its final "00" logo screen until
 // the page is ACTUALLY ready, instead of sliding away on a fixed
 // 2480ms timer regardless — that fixed timer is what let a slow
@@ -661,7 +790,9 @@ function whenImageSettled(img) {
 //   1. The original minimum visual time (2480ms, elapsed-corrected the
 //      same way every other intro timing on this page is) — so on a
 //      normal connection this behaves EXACTLY as before, no added
-//      delay.
+//      delay. If replaySkippedSplashScreens() above had to kick in, this
+//      also folds in however much MORE time that replay itself needs to
+//      finish, so the slide-away can't cut it off mid-sequence.
 //   2. Real readiness: fonts AND every <img> the hero itself reveals
 //      (wordmark "for", hero asterisk, nav logo) finished loading —
 //      avoids revealing the title in a fallback font/missing image and
@@ -685,8 +816,9 @@ function initIntroSplashHold() {
   const READY_TIMEOUT_MS = 8000;
 
   const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
+  const replayHoldMs = replaySkippedSplashScreens(splash, elapsed);
   const minVisualTime = new Promise((resolve) => {
-    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed));
+    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed, replayHoldMs));
   });
   const heroImages = document.querySelectorAll(".hero img, .nav__logo img");
   const readiness = Promise.race([
@@ -1123,7 +1255,27 @@ function initRevealOnScroll() {
     const splitCtaRow1Rect = splitCtaRow1 ? splitCtaRow1.getBoundingClientRect() : null;
     for (const el of targets) {
       const rect = splitCtaRow1Rect && splitCtaRow2.has(el) ? splitCtaRow1Rect : el.getBoundingClientRect();
-      const inView = rect.top < vh * 0.9 && rect.bottom > vh * 0.1;
+      // Was `rect.top < vh * 0.9 && rect.bottom > vh * 0.1` — the lower
+      // bound excluded anything that had ALREADY scrolled fully past the
+      // top of the viewport, not just anything not yet reached. checkAll()
+      // only runs on real "scroll" events (not a continuous per-frame
+      // loop), so a single fast scroll (a trackpad flick, Lenis's own
+      // inertia, a scrollbar-track jump, etc.) can carry an element clean
+      // through this "currently entering" window between two sampled
+      // positions — it never gets marked, and since
+      // REVEAL_RETRIGGER_ENABLED is false there's nothing to retry it
+      // later. Confirmed live: a fast scroll into section 4 left the
+      // square-grid's first row (already scrolled past, rect.bottom well
+      // above 0) stuck at opacity:0 forever — which permanently broke
+      // initSection4CarouselGate() below, since that gate waits on EVERY
+      // grid tile's own transitionend before ever revealing the carousel,
+      // and a tile that never became is-visible never fires one. Dropping
+      // the lower bound means "has scrolled at least this far" is enough,
+      // in either direction — an element already passed gets marked
+      // visible the next time checkAll() runs (even from that same fast
+      // scroll's own trailing "scroll" event), instead of staying invisible
+      // until the user happens to scroll back up over it again.
+      const inView = rect.top < vh * 0.9;
       const farAway = rect.bottom < -vh * 1.5 || rect.top > vh * 2.5;
       // Guarded with contains() now — calling classList.add()/remove()
       // for a token that's already (not) present still fires a genuine
@@ -1369,74 +1521,107 @@ function initHeroEyebrowExit() {
 // carousel sits directly below the grid with no gap, so both can be
 // "in view" per that function's own check at the same scroll position,
 // letting the carousel's independent stagger start before the grid's
-// own later tiles had finished theirs). Same doneCount-over-transitionend
-// pattern as initMosaicReveal() below. Each mask still gets is-visible
-// added just once (matches REVEAL_RETRIGGER_ENABLED = false everywhere
-// else) — this only needs to fire the first time the grid finishes.
+// own later tiles had finished theirs).
+//
+// Deterministic (MutationObserver + setTimeout), NOT transitionend —
+// an earlier version counted each tile's own "transitionend" and waited
+// for all 8. Reported live as "carousel doesn't appear" on a slow
+// machine: under real main-thread congestion, a style change and its
+// own computed-style read can land in the same recalc with no paint in
+// between, so the opacity transition never actually STARTS — and a
+// transition that never starts never fires transitionend. REVEAL_
+// RETRIGGER_ENABLED is false, so nothing ever retries that tile, and
+// this gate's doneCount could get stuck below gridTiles.length forever,
+// permanently hiding the carousel. MutationObserver instead watches the
+// class attribute directly — that mutation is real and synchronous the
+// instant checkAll() calls classList.add("is-visible"), regardless of
+// whether a transition/paint ever follows it. Once every tile has
+// is-visible, wait the slowest tile's own --reveal-delay (set by
+// initRevealOnScroll()'s stagger math) plus GRID_TRANSITION_MS (must
+// match .square's own opacity transition duration) before revealing the
+// carousel — same "computed wait, not an event to catch" fix already
+// used for initSplitCtaReveal()'s illustration/text handoff, for the
+// exact same reliability reason (see that function's own comment).
 function initSection4CarouselGate() {
   const gridTiles = document.querySelectorAll(".square-grid--flush-bottom .square");
   const carouselMasks = document.querySelectorAll(".featured-carousel__mask");
   if (!gridTiles.length || !carouselMasks.length) return;
 
-  let doneCount = 0;
+  const GRID_TRANSITION_MS = 700;
+  const pending = new Set(gridTiles);
+  let maxDelay = 0;
+
   for (const tile of gridTiles) {
-    tile.addEventListener(
-      "transitionend",
-      (e) => {
-        if (e.propertyName !== "opacity") return;
-        doneCount += 1;
-        if (doneCount < gridTiles.length) return;
+    const mo = new MutationObserver(() => {
+      if (!tile.classList.contains("is-visible")) return;
+      mo.disconnect();
+      pending.delete(tile);
+      maxDelay = Math.max(maxDelay, parseFloat(tile.style.getPropertyValue("--reveal-delay")) || 0);
+      if (pending.size > 0) return;
+      setTimeout(() => {
         for (const mask of carouselMasks) mask.classList.add("is-visible");
-      },
-      { once: true }
-    );
+      }, maxDelay + GRID_TRANSITION_MS);
+    });
+    mo.observe(tile, { attributes: true, attributeFilter: ["class"] });
   }
 }
 
-// Chains the image-mosaic's scrim + caption reveal onto the mask tiles
-// actually finishing, rather than a guessed delay: the mosaic spans 3
-// grid rows and can easily be taller than the viewport, so the 6 masks
-// (already handled individually by initRevealOnScroll's own observer)
-// don't all enter view at once — how long "all tiles done" takes depends
-// on how fast/far the user scrolls, not a fixed number of milliseconds
-// from the first one appearing. Listening for each mask's own
-// transitionend is what makes "once all tiles fade in" true regardless.
+// Reveals `targets` in sync with `tile` itself starting to fade in —
+// per explicit request that overlay content (captions, scrims) should
+// feel like part of its tile's own reveal, not a separate step arriving
+// after the tile (or a whole group of tiles) finishes. Deliberately NOT
+// "transitionstart", despite that reading as the obvious event to use:
+// initSplitCtaReveal() already hit this exact wall (see its own comment)
+// — transitionstart/transitionrun has a long history of unreliable
+// support (Safari in particular), so an earlier version of THIS reveal
+// system very likely never fired its intended early trigger at all.
+// Same fix here: read the tile's own --reveal-delay (set deterministically
+// by initRevealOnScroll()'s stagger math) the moment checkAll() adds
+// is-visible to it, then schedule `targets` on that exact same delay —
+// deterministic on every browser, no event-support gamble.
+function revealWithTile(tile, targets) {
+  if (!tile || !targets.length) return;
+  const mo = new MutationObserver(() => {
+    if (!tile.classList.contains("is-visible")) return;
+    mo.disconnect();
+    const delay = parseFloat(tile.style.getPropertyValue("--reveal-delay")) || 0;
+    setTimeout(() => {
+      // Double rAF (same idiom as initIntroReveal()/initSplitCtaReveal(),
+      // same reason) — guarantees targets' opacity:0 starting state has
+      // genuinely painted at least once before flipping to is-visible, so
+      // a 0ms (or coalesced-into-the-same-frame) delay can't skip the
+      // transition outright.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          for (const el of targets) el.classList.add("is-visible");
+        });
+      });
+    }, delay);
+  });
+  mo.observe(tile, { attributes: true, attributeFilter: ["class"] });
+}
+
+// Masks are a 2-col x 3-row grid in DOM/source order, so index 4/5 are
+// the bottom row — the exact 2 tiles the scrim and both captions (all
+// bottom-anchored, see their own CSS) visually sit over. Pairing each
+// piece of overlay content with that specific tile (rather than the
+// mosaic's own "all 6 masks, then scrim, then captions" chain this
+// replaced) is what makes the shadow/caption feel like it arrives WITH
+// its tile instead of as an afterthought once the whole grid is done.
 function initMosaicReveal() {
   const mosaics = document.querySelectorAll(".image-mosaic");
   if (!mosaics.length) return;
 
-  const PAUSE_MS = 0; // was a deliberate 150ms "beat" between handoffs — removed so the caption ("Read our latest issue!") triggers as soon as its prerequisite genuinely finishes, not later
-
   for (const mosaic of mosaics) {
     const masks = mosaic.querySelectorAll(".image-mosaic__mask");
     const scrim = mosaic.querySelector(".image-mosaic__scrim");
-    const captions = mosaic.querySelectorAll(".image-mosaic__caption");
-    if (!masks.length || !scrim) continue;
+    const captionLeft = mosaic.querySelector(".image-mosaic__caption--left");
+    const captionRight = mosaic.querySelector(".image-mosaic__caption--right");
+    if (masks.length < 6 || !scrim) continue;
 
-    let doneCount = 0;
-    for (const mask of masks) {
-      mask.addEventListener(
-        "transitionend",
-        (e) => {
-          if (e.propertyName !== "opacity") return;
-          doneCount += 1;
-          if (doneCount < masks.length) return;
-          setTimeout(() => scrim.classList.add("is-visible"), PAUSE_MS);
-        },
-        { once: true }
-      );
-    }
-
-    scrim.addEventListener(
-      "transitionend",
-      (e) => {
-        if (e.propertyName !== "opacity") return;
-        setTimeout(() => {
-          for (const cap of captions) cap.classList.add("is-visible");
-        }, PAUSE_MS);
-      },
-      { once: true }
-    );
+    const [bottomLeft, bottomRight] = [masks[4], masks[5]];
+    revealWithTile(bottomLeft, [scrim, captionLeft].filter(Boolean));
+    revealWithTile(bottomRight, [captionRight].filter(Boolean));
   }
 }
 
@@ -1945,15 +2130,20 @@ function initFeaturedCarousel() {
   });
 }
 
-// Same 3-step reveal chain as initMosaicReveal() (masks finish -> scrim
-// fades in -> caption fades in), just extended with the 2 nav buttons
-// as a 4th thing that reveals alongside the title/edition — all 3 wait
-// on the SAME scrim transitionend, not chained to each other, since
-// there's no ordering between them that matters. Only wired up for
-// .featured-carousel__slide--first: the other 3 slides have no masks/
-// scrim.mosaic-reveal to chain from (see the HTML comment above the
-// carousel) since they're never scrolled into view, only clicked into.
-const CAROUSEL_SCRIM_TRIGGER_MASK_COUNT = 4;
+// Same "overlay content arrives with its own tile" fix as
+// initMosaicReveal() above (see revealWithTile()'s own comment for the
+// full reasoning), applied to section 4's carousel. Masks are a 4-col x
+// 2-row grid in DOM/source order, so index 0 is the top-left tile —
+// directly under .featured-carousel__title/--edition (both top-left-
+// anchored, see their own CSS) — and index 7 is the bottom-right tile,
+// under .featured-carousel__number (bottom-right-anchored). The scrim
+// darkens top-down (see its own CSS gradient), matching the top row, so
+// it reveals alongside that same top-left tile. Nav buttons aren't tied
+// to any tile position (persistent controls, not photo-relative) — kept
+// grouped with title/edition since that's the trigger they always
+// shared. Only wired up for .featured-carousel__slide--first: the other
+// 3 slides have no masks/scrim to pair with (see the HTML comment above
+// the carousel) since they're never scrolled into view, only clicked into.
 function initCarouselReveal() {
   const slide = document.querySelector(".featured-carousel__slide--first");
   if (!slide) return;
@@ -1963,37 +2153,12 @@ function initCarouselReveal() {
   // Title/edition/number now live outside any slide (see the HTML
   // comment above the carousel) — queried at the document level, not
   // scoped to `slide`, since they're no longer its descendants.
-  const rest = [
-    ...document.querySelectorAll(".featured-carousel__title, .featured-carousel__edition, .featured-carousel__number"),
-    ...document.querySelectorAll(".featured-carousel__nav"),
-  ];
-  if (!masks.length || !scrim) return;
+  const title = document.querySelector(".featured-carousel__title");
+  const edition = document.querySelector(".featured-carousel__edition");
+  const number = document.querySelector(".featured-carousel__number");
+  const navButtons = document.querySelectorAll(".featured-carousel__nav");
+  if (masks.length < 8 || !scrim) return;
 
-  // Was masks.length (waits for all 8) — per explicit request, the
-  // words/gradient should start appearing once HALF the tiles (4) have
-  // revealed, not the last one, so they feel woven into the tile
-  // cascade instead of arriving as an afterthought once it's all done.
-  const triggerCount = Math.min(CAROUSEL_SCRIM_TRIGGER_MASK_COUNT, masks.length);
-  let doneCount = 0;
-  for (const mask of masks) {
-    mask.addEventListener(
-      "transitionend",
-      (e) => {
-        if (e.propertyName !== "opacity") return;
-        doneCount += 1;
-        if (doneCount < triggerCount) return;
-        scrim.classList.add("is-visible");
-      },
-      { once: true }
-    );
-  }
-
-  scrim.addEventListener(
-    "transitionend",
-    (e) => {
-      if (e.propertyName !== "opacity") return;
-      for (const el of rest) el.classList.add("is-visible");
-    },
-    { once: true }
-  );
+  revealWithTile(masks[0], [scrim, title, edition, ...navButtons].filter(Boolean));
+  revealWithTile(masks[7], [number].filter(Boolean));
 }
