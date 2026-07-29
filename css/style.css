@@ -376,9 +376,26 @@ ul { list-style: none; margin: 0; padding: 0; }
     intro-splash-asterisk-cut 0.01s steps(1) 1560ms forwards,
     intro-splash-asterisk-hide 0.01s steps(1) 1980ms forwards;
 }
+/* NOT animation-delay/steps(1) like screens 1-4 above — this is the
+   screen the splash actually LINGERS on (initIntroSplashHold() holds it
+   here until the page is genuinely ready), so it's the most-seen, most
+   noticed screen, and a raw document-timeline animation has no way to
+   guarantee the asterisk and caption change in the exact same instant —
+   it just hopes the browser paints them together at 1980ms, which a
+   busy main thread can't be relied on to do. initFinalSplashScreenCut()
+   in main.js instead sets BOTH elements' .is-cut in the same synchronous
+   statement block, scheduled via a single setTimeout whose delay is
+   elapsed-corrected the same way --intro-delay is everywhere else — by
+   construction, JS can't paint one without the other, and a slow load
+   just fires it sooner (even instantly, if already past 1980ms) rather
+   than ever risking one lagging behind the other. */
 .intro-splash__asterisk--final,
 .intro-splash__caption--final {
-  animation: intro-splash-asterisk-cut 0.01s steps(1) 1980ms forwards;
+  opacity: 0;
+}
+.intro-splash__asterisk--final.is-cut,
+.intro-splash__caption--final.is-cut {
+  opacity: 1;
 }
 /* Trial variant: screens 01-04 all sit on cream now (see .intro-splash
    above), varying by asterisk/caption color instead — red / blue

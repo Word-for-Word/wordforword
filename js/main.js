@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLuxuryScroll();
   initIntroReveal();
   initIntroSplashHold();
+  initFinalSplashScreenCut();
   initIntroScrollLock();
   initHeroAsteriskPosition();
   // Everything below is deferred one frame past the block above, per a
@@ -723,7 +724,11 @@ function replaySkippedSplashScreens(splash, elapsed) {
   const sequenceEndMs = SPLASH_SCREEN_CUT_DELAYS_MS[SPLASH_SCREEN_CUT_DELAYS_MS.length - 1];
   if (elapsed < sequenceEndMs) return 0;
 
-  const screens = [1, 2, 3, 4, "final"].map((n) => ({
+  // "final" is NOT included here — it no longer uses this animation-
+  // delay/steps(1) system at all (see initFinalSplashScreenCut() and its
+  // own CSS comment). That function is independently elapsed-corrected,
+  // so it needs no coordination with this replay mechanism.
+  const screens = [1, 2, 3, 4].map((n) => ({
     asterisk: document.querySelector(`.intro-splash__asterisk--${n}`),
     caption: document.querySelector(`.intro-splash__caption--${n}`),
   }));
@@ -745,11 +750,8 @@ function replaySkippedSplashScreens(splash, elapsed) {
       splash.style.backgroundColor = "var(--color-cream)";
       screens.forEach(({ asterisk, caption }, i) => {
         const cutDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i];
-        const hideDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i + 1]; // undefined for "final" — correctly leaves it with no hide, same as the CSS original
-        const anim =
-          hideDelay != null
-            ? `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards, intro-splash-asterisk-hide 0.01s steps(1) ${hideDelay}ms forwards`
-            : `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards`;
+        const hideDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i + 1]; // always defined now — screen 4 (last in this array) hides at index 4's value (1980), same as the CSS original
+        const anim = `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards, intro-splash-asterisk-hide 0.01s steps(1) ${hideDelay}ms forwards`;
         asterisk.style.animation = anim;
         caption.style.animation = anim;
       });
@@ -777,6 +779,37 @@ function replaySkippedSplashScreens(splash, elapsed) {
   });
 
   return sequenceEndMs;
+}
+
+// The final "00" screen's asterisk + caption used to share
+// screens 1-4's animation-delay/steps(1) system (see style.css's own
+// removed rule) — mathematically synced (identical selector, identical
+// delay/duration), but still just two independent CSS animations each
+// hoping the browser paints them together at the 1980ms mark on the
+// shared document timeline. Reported live as a slight desync on a slow
+// machine. This is the MOST-seen screen (initIntroSplashHold() holds
+// the splash here, sometimes for several extra seconds, until the page
+// is genuinely ready), so it gets a stronger guarantee than "should be
+// fine": setting BOTH elements' is-cut class in the same synchronous
+// statement block makes a desync impossible BY CONSTRUCTION, not just
+// unlikely — there's no point between two adjacent classList.add()
+// calls in the same script execution for the browser to paint one
+// without the other. The delay itself is elapsed-corrected the same way
+// --intro-delay is in initIntroReveal(), so a slow load doesn't need a
+// separate replay path the way screens 1-4 do (see
+// replaySkippedSplashScreens) — Math.max(0, ...) just fires immediately
+// if 1980ms has already passed by the time this runs.
+function initFinalSplashScreenCut() {
+  const asterisk = document.querySelector(".intro-splash__asterisk--final");
+  const caption = document.querySelector(".intro-splash__caption--final");
+  if (!asterisk || !caption) return;
+
+  const FINAL_CUT_MS = SPLASH_SCREEN_CUT_DELAYS_MS[SPLASH_SCREEN_CUT_DELAYS_MS.length - 1];
+  const elapsed = Date.now() - (window.__pageLoadStart || Date.now()) + SKIP_INTRO_SPLASH_OFFSET_MS;
+  setTimeout(() => {
+    asterisk.classList.add("is-cut");
+    caption.classList.add("is-cut");
+  }, Math.max(0, FINAL_CUT_MS - elapsed));
 }
 
 // Keeps the intro splash lingering on its final "00" logo screen until
