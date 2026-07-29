@@ -11,8 +11,11 @@
   /* One-off, explicitly requested addition — NOT part of the 5-color
      brand swatch above. Used only by the intro splash's cream-bg
      variant (screens 01-04), for asterisk/caption 03 ("darker beige,"
-     between --color-tan and --color-dark). */
-  --color-tan-dark: #DBB388;
+     between --color-tan and --color-dark). Darkened ~10% from the
+     original #DBB388 per explicit follow-up request — safe to darken
+     directly (not via a scoped override) since this variable is a
+     one-off used ONLY by splash screen 03, nowhere else on the site. */
+  --color-tan-dark: #C5A17A;
   /* One-off, explicitly requested — the backdrop behind section 3's
      illustration (.split-cta__illustration-wrap) only. */
   --color-illustration-bg: #0e1316;
@@ -21,6 +24,14 @@
      .page-flash caption text. Lighter/warmer than --color-tan, so kept
      separate rather than reusing that variable. */
   --color-beige-nav: #FFE3C6;
+  /* Splash screen 02's own darkened variant of --color-grey (~10%
+     darker), per explicit request. NOT a replacement for --color-grey
+     itself — that variable is shared across ~10 other things sitewide
+     (squares, page-flash, publication cards, etc.), so darkening it
+     globally would have darkened all of those too. Scoped to just the
+     2 splash-02 rules that use it (see .intro-splash__caption--2/
+     .intro-splash__asterisk--2 below) instead. */
+  --color-grey-splash-dark: #8B8E99;
 
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --font-body: "Newsreader", Georgia, serif;
@@ -394,7 +405,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 .intro-splash__asterisk--2 {
   -webkit-mask-image: url("../assets/images/Asterisk 2.png");
   mask-image: url("../assets/images/Asterisk 2.png");
-  background-color: var(--color-grey);
+  background-color: var(--color-grey-splash-dark);
 }
 .intro-splash__asterisk--3 {
   -webkit-mask-image: url("../assets/images/Asterisk 3.png");
@@ -472,7 +483,7 @@ ul { list-style: none; margin: 0; padding: 0; }
   padding: 0 1.7px;
 }
 .intro-splash__caption--1 { color: var(--color-red); }
-.intro-splash__caption--2 { color: var(--color-grey); }
+.intro-splash__caption--2 { color: var(--color-grey-splash-dark); }
 .intro-splash__caption--3 { color: var(--color-tan-dark); }
 .intro-splash__caption--4 { color: var(--color-dark); }
 .intro-splash__caption--final { color: var(--color-cream); }
@@ -1274,8 +1285,12 @@ main {
   }
 }
 .hero__wordmark-word .intro-reveal { display: inline-block; }
-.hero__wordmark-word--1 { transform: translateY(-6px); }
-.hero__wordmark-word--2 { transform: translateY(-3px); }
+/* --squash-base mirrors this same element's own `transform` as a custom
+   property, read by @keyframes hero-title-squash-stretch further down —
+   see that keyframes block for why a plain `transform` here isn't enough
+   on its own. */
+.hero__wordmark-word--1 { transform: translateY(-6px); --squash-base: translateY(-6px); }
+.hero__wordmark-word--2 { transform: translateY(-3px); --squash-base: translateY(-3px); }
 
 /* "for" overlay — absolutely centered over both words (not a flex
    item), so it sits on top of/overlaps them like the original combined
@@ -1292,6 +1307,8 @@ main {
      carries .intro-reveal--slide-slow, which animates its own
      transform for the slide-in. */
   transform: translate(5px, 7px);
+  /* See .hero__wordmark-word--1's own --squash-base comment. */
+  --squash-base: translate(5px, 7px);
 }
 .hero__wordmark-for {
   width: 48%;
@@ -1441,6 +1458,9 @@ main {
      bottom third) rather than centering through it. */
   align-items: flex-start;
   transform: translateY(13%);
+  /* Overrides the base .hero__wordmark-for-wrap's own --squash-base
+     the same way it overrides that rule's `transform` above. */
+  --squash-base: translateY(13%);
   /* Sits BEHIND the word (z-index: 2 above) — homepage's own for-wrap
      is on top of the placeholder since "for" bridges/overlaps both
      words there; here it's the reverse per explicit request. */
@@ -3943,33 +3963,51 @@ span.split-cta__text-line {
    gently into motion instead of jumping straight to visible. */
 .hero__title-exit {
   transition-timing-function: ease-in, cubic-bezier(0.33, 1, 0.68, 1);
+  /* Title pieces travel further to reach their resting spot than the
+     shared .intro-reveal--slide-slow default (36px) — per explicit
+     request for more visible motion on the title specifically, without
+     touching the eyebrow lines/nav/"for" wrap that also share that
+     class. Equal specificity (single class) to .intro-reveal--slide-slow,
+     but this rule sits later in the cascade, so it wins for `transform`
+     alone; transition timing/duration still come from the shared rule.
+     80px read as still not enough travel, bumped to 140px. */
+  transform: translateY(140px);
 }
-/* Squash-and-stretch entrance, per explicit request — REDESIGNED after
-   two failed attempts on .hero__title-exit itself:
-   1st attempt put the whole thing (slide + scale) into one @keyframes
-   animation on .hero__title-exit, replacing .intro-reveal--slide-slow's
-   transition for that element's transform entirely (an animation always
-   wins over a transition on the same property). Reported live as "not
-   sliding" — the animation's own easing didn't line up with this
-   element's ease-in opacity fade, so most of the position change landed
-   in the same early stretch of time opacity was still near-invisible.
-   2nd attempt re-timed that SAME single animation (matching easing,
-   smaller scale). Still reported as not sliding — turns out the real
-   issue wasn't the timing curve at all: a big simultaneous scale swing
-   on the SAME element visually swallows a real, correctly-timed slide
-   happening underneath it. Splitting scale onto a SEPARATE wrapper
-   element fixes this structurally instead of by re-tuning numbers
-   forever: .hero__title-exit keeps using .intro-reveal--slide-slow's
-   ORIGINAL, already-proven transition for the slide, completely
-   untouched. The scale-only animation below runs on its OWN element
-   (.hero__wordmark-word / .hero__wordmark-for-wrap) — a different
-   element's `transform` doesn't compete with this one's, and nested
-   transforms simply compose visually (the outer scales while the inner
-   independently slides), so neither can ever bury the other again. */
+/* Squash-and-stretch entrance, per explicit request. Scale is split onto
+   the OUTER wrapper (.hero__wordmark-word / .hero__wordmark-for-wrap)
+   rather than .hero__title-exit itself, so it composes with (rather than
+   competes against) that element's own slide+fade transition — nested
+   transforms on different elements never fight over the same property.
+   First version of this keyframe had a mid-point overshoot (squash past
+   1, then spring back) — reported as reading like a bounce when the
+   intent was a smooth ease into the resting scale. Fixed by dropping the
+   overshoot keyframe entirely: this is now a straight 0%->100% interpolation
+   (squashed -> normal) riding the SAME easeOutCubic curve as the slide,
+   so it decelerates into place with no spring-back. Scale amounts toned
+   down from 1.18/0.9 after that fix read as too strong a stretch.
+   Both keyframes prepend var(--squash-base) — each of this animation's
+   target elements (.hero__wordmark-word--1/--2, .hero__wordmark-for-wrap)
+   already carries its own static positioning nudge as a plain `transform`
+   (e.g. translateY(-6px)), which an `animation` on the SAME property
+   completely overrides for as long as it's in effect (a `transform`
+   declared elsewhere never blends with an active animation on the same
+   element). That's invisible while the animation is scoped to
+   body:not(.intro-finished) below AND body.intro-finished hasn't fired
+   yet — but body.intro-finished fires on its own, independently-timed
+   ~6.65s countdown, well after this animation's own delay+duration has
+   already finished and it's just sitting on its `forwards`-held 100%
+   frame. The instant body.intro-finished DOES fire, the `:not()` below
+   stops matching, the animation (and the static nudge it was masking)
+   disappears, and the element's REAL static transform applies for the
+   first time — reading as an abrupt unexplained shift, seconds after
+   the entrance visually looked done. Composing --squash-base (a copy of
+   that same static nudge, set as a custom property alongside it — see
+   e.g. .hero__wordmark-word--1) into both keyframes means the animation's
+   own held end-state is pixel-identical to the static resting transform
+   underneath it, so losing the animation later is a genuine no-op. */
 @keyframes hero-title-squash-stretch {
-  0% { transform: scaleY(1.12) scaleX(0.94); }
-  70% { transform: scaleY(0.97) scaleX(1.02); }
-  100% { transform: scaleY(1) scaleX(1); }
+  0% { transform: var(--squash-base, none) scaleY(1.1) scaleX(0.95); }
+  100% { transform: var(--squash-base, none) scaleY(1) scaleX(1); }
 }
 /* .hero__wordmark-word/--for-wrap carry their own copy of the SAME
    --intro-delay inline value as the .hero__title-exit they wrap (see
