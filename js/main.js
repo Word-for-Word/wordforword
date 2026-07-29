@@ -730,12 +730,14 @@ function initSplashScreens() {
   // force-hidden via the html.skip-intro-splash CSS rule, so there's
   // nothing for this to usefully schedule.
   if (SKIP_INTRO_SPLASH) return;
+  const splash = document.querySelector(".intro-splash");
   const screens = [1, 2, 3, 4, "final"].map((n) => ({
     asterisk: document.querySelector(`.intro-splash__asterisk--${n}`),
     caption: document.querySelector(`.intro-splash__caption--${n}`),
   }));
-  if (!screens.every((s) => s.asterisk && s.caption)) return;
+  if (!splash || !screens.every((s) => s.asterisk && s.caption)) return;
 
+  const lastMomentIndex = SPLASH_SCREEN_CUT_DELAYS_MS.length - 1;
   const elapsed = (document.timeline.currentTime || 0) + SKIP_INTRO_SPLASH_OFFSET_MS;
   for (const [i, momentMs] of SPLASH_SCREEN_CUT_DELAYS_MS.entries()) {
     const prev = screens[i - 1];
@@ -748,6 +750,12 @@ function initSplashScreens() {
         }
         next.asterisk.classList.add("is-cut");
         next.caption.classList.add("is-cut");
+        // The cream->red background crossfade happens at this SAME
+        // moment (landing on the final/00 screen) — see the CSS
+        // comment on .intro-splash for why this is a plain inline style
+        // set here, in the same callback, rather than a second
+        // independently-timed CSS animation.
+        if (i === lastMomentIndex) splash.style.backgroundColor = "var(--color-red)";
       },
       Math.max(0, momentMs - elapsed)
     );

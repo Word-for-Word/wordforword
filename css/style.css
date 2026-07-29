@@ -219,40 +219,33 @@ ul { list-style: none; margin: 0; padding: 0; }
      way.
 
      intro-splash-slide is NOT in this unconditional list — see
-     .intro-splash.is-ready-to-slide below. Everything else here (the
-     01-04 asterisk flip-through, landing on 00, the cream->red
-     crossfade) is a pure fixed-delay animation and always plays on
-     schedule regardless of how the page is actually loading — it's
+     .intro-splash.is-ready-to-slide below. The 01-04 asterisk flip-
+     through and landing on 00 are driven by initSplashScreens() in
+     main.js, not CSS — see that function's own comment for why. It's
      only the SLIDE-AWAY that's held back until initIntroSplashHold() in
      main.js confirms the page is genuinely ready, so a slow connection
      lingers on the "00" logo screen instead of clearing to reveal a
-     still-blank page underneath (see that function's own comment). */
-  animation:
-    intro-splash-bg-cream 0.15s ease 0ms forwards,
-    intro-splash-bg-red 0.15s ease 1980ms forwards;
+     still-blank page underneath (see that function's own comment).
+     The cream->red background crossfade used to be a separate CSS
+     animation timed against the document timeline (intro-splash-bg-
+     cream/-red, now removed) — a SECOND independent thing racing the
+     same clock initSplashScreens() reads, which could drift from it
+     under load the exact same way screens 1-4 could once drift from
+     each other (see that function's comment): reported live as a
+     "flash of nothing" right before screen 00, i.e. the background
+     already having turned red while the final asterisk/caption hadn't
+     cut in yet, or vice versa. initSplashScreens() now sets
+     splash.style.backgroundColor directly, in the SAME synchronous
+     callback as the final screen's own cut-in — one JS-owned state
+     change instead of two independently-timed ones. */
 }
 /* Added by initIntroSplashHold() once BOTH the minimum visual time
    (2480ms — matching the original fixed slide delay this replaces) AND
    real readiness (fonts loaded, DOM parsed) are satisfied, whichever is
-   later — see that function for the exact race/timeout. Re-declares
-   bg-cream/bg-red at 0ms alongside the slide (not just the slide alone)
-   because `animation` is a single shorthand property: this higher-
-   specificity rule (2 classes vs. the base rule's 1) replaces the WHOLE
-   value, not just adds to it — omitting them here would silently drop
-   the already-completed red crossfade, snapping the background back to
-   the base rule's plain `background: var(--color-cream)` for a visible
-   red-to-cream flash at the exact moment the slide starts. Redeclaring
-   them at 0ms just re-confirms the same already-reached end values with
-   no visible change, while guaranteeing the shorthand doesn't drop
-   them. */
+   later — see that function for the exact race/timeout. */
 .intro-splash.is-ready-to-slide {
-  animation:
-    intro-splash-slide 1s cubic-bezier(0.33, 1, 0.68, 1) 0ms forwards,
-    intro-splash-bg-cream 0.15s ease 0ms forwards,
-    intro-splash-bg-red 0.15s ease 0ms forwards;
+  animation: intro-splash-slide 1s cubic-bezier(0.33, 1, 0.68, 1) 0ms forwards;
 }
-@keyframes intro-splash-bg-cream { to { background-color: var(--color-cream); } }
-@keyframes intro-splash-bg-red   { to { background-color: var(--color-red); } }
 /* Smaller than the hero asterisk (0.65x) — this one's just a splash
    decoration, not meant to read at full hero size. Buzzes continuously
    through ALL FOUR numbered asterisks (1/2/3/4 — this is one shared
