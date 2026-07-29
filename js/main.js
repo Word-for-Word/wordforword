@@ -1511,44 +1511,45 @@ function initHeroEyebrowExit() {
 // letting the carousel's independent stagger start before the grid's
 // own later tiles had finished theirs).
 //
-// Deterministic (MutationObserver + setTimeout), NOT transitionend —
-// an earlier version counted each tile's own "transitionend" and waited
-// for all 8. Reported live as "carousel doesn't appear" on a slow
-// machine: under real main-thread congestion, a style change and its
-// own computed-style read can land in the same recalc with no paint in
-// between, so the opacity transition never actually STARTS — and a
-// transition that never starts never fires transitionend. REVEAL_
-// RETRIGGER_ENABLED is false, so nothing ever retries that tile, and
-// this gate's doneCount could get stuck below gridTiles.length forever,
-// permanently hiding the carousel. MutationObserver instead watches the
-// class attribute directly — that mutation is real and synchronous the
-// instant checkAll() calls classList.add("is-visible"), regardless of
-// whether a transition/paint ever follows it. Once every tile has
-// is-visible, wait the slowest tile's own --reveal-delay (set by
-// initRevealOnScroll()'s stagger math) plus GRID_TRANSITION_MS (must
-// match .square's own opacity transition duration) before revealing the
-// carousel — same "computed wait, not an event to catch" fix already
-// used for initSplitCtaReveal()'s illustration/text handoff, for the
-// exact same reliability reason (see that function's own comment).
+// Deterministic (MutationObserver), NOT transitionend — an earlier
+// version counted each tile's own "transitionend" and waited for all 8.
+// Reported live as "carousel doesn't appear" on a slow machine: under
+// real main-thread congestion, a style change and its own computed-
+// style read can land in the same recalc with no paint in between, so
+// the opacity transition never actually STARTS — and a transition that
+// never starts never fires transitionend. REVEAL_RETRIGGER_ENABLED is
+// false, so nothing ever retries that tile, and this gate's doneCount
+// could get stuck below gridTiles.length forever, permanently hiding
+// the carousel. MutationObserver instead watches the class attribute
+// directly — that mutation is real and synchronous the instant
+// checkAll() calls classList.add("is-visible"), regardless of whether a
+// transition/paint ever follows it.
+//
+// Reveals the carousel the MOMENT every grid tile has is-visible, with
+// NO extra buffer on top — an earlier version added the slowest tile's
+// own --reveal-delay plus its full 700ms transition duration before
+// revealing the carousel, on top of the wait for is-visible itself,
+// stacking up to ~1.3s of additional delay. Reported live as "appears
+// abnormally late — should appear the same as any other tiles." The
+// carousel's own masks have their own independent fade-in regardless
+// (see .featured-carousel__mask's own --reveal-delay stagger, computed
+// by initRevealOnScroll() same as any other group) — this gate's only
+// job is to stop that fade from STARTING before the grid's last tile
+// has, not to also wait for the grid's own fade to fully settle first.
 function initSection4CarouselGate() {
   const gridTiles = document.querySelectorAll(".square-grid--flush-bottom .square");
   const carouselMasks = document.querySelectorAll(".featured-carousel__mask");
   if (!gridTiles.length || !carouselMasks.length) return;
 
-  const GRID_TRANSITION_MS = 700;
   const pending = new Set(gridTiles);
-  let maxDelay = 0;
 
   for (const tile of gridTiles) {
     const mo = new MutationObserver(() => {
       if (!tile.classList.contains("is-visible")) return;
       mo.disconnect();
       pending.delete(tile);
-      maxDelay = Math.max(maxDelay, parseFloat(tile.style.getPropertyValue("--reveal-delay")) || 0);
       if (pending.size > 0) return;
-      setTimeout(() => {
-        for (const mask of carouselMasks) mask.classList.add("is-visible");
-      }, maxDelay + GRID_TRANSITION_MS);
+      for (const mask of carouselMasks) mask.classList.add("is-visible");
     });
     mo.observe(tile, { attributes: true, attributeFilter: ["class"] });
   }
