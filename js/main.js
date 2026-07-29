@@ -675,11 +675,10 @@ function whenImageSettled(img) {
   });
 }
 
-// Cut-in delays for screens 01/02/03/04/final, index-matched to the
-// names array in initSplashScreens() below. Screen N's hide time is
-// screen N+1's own cut time (a deliberate no-gap flash-straight-into-
-// each-other look, per earlier explicit request); "final" has no hide
-// at all — it's what the splash lingers on.
+// Transition moments for screens 01/02/03/04/final — moment[i] is BOTH
+// "screen i cuts in" AND "screen i-1 hides" (a deliberate no-gap flash-
+// straight-into-each-other look, per earlier explicit request — there
+// is no separate "hide time," each screen's hide IS the next one's cut).
 const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 
 // Drives ALL 5 intro-splash screens (1/2/3/4/final) through ONE unified
@@ -700,50 +699,57 @@ const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 // the final screen's text rendering on top of screen 4, overlapping.
 //
 // Reading document.timeline.currentTime ONCE here and scheduling every
-// screen's cut AND hide off that SAME snapshot removes the possibility
-// entirely — there is only one JS-owned notion of "now" for the whole
-// sequence, and each screen's own state change is one classList.add/
-// remove call, not a competing animation the renderer has to catch up
-// on independently. On a very slow load, every delay clamps to 0 via
-// Math.max and the whole sequence fires in one rapid, deterministic
-// burst ending on "final" — visually abrupt in that specific case, but
-// never overlapping, which is what actually got reported as broken.
+// TRANSITION off that same snapshot removes the possibility entirely —
+// there is only one JS-owned notion of "now" for the whole sequence.
+// Scheduled per TRANSITION MOMENT, not per screen's cut/hide separately:
+// an earlier version scheduled each screen's cut and each screen's hide
+// as their OWN independent setTimeout calls — even when both happened
+// to share the identical computed delay (screen N's hide === screen
+// N+1's cut, by design), those are still two separate timer tasks, and
+// nothing guarantees a browser can't process a paint between two
+// "simultaneously due" timers, especially under load. Reported live as
+// a brief blank flash right before screen 00. Grouping "hide the
+// previous screen" and "cut the next one" into ONE callback per moment
+// closes that gap the same way pairing asterisk+caption in one screen's
+// own callback already did — there's no point inside one synchronous
+// callback for the browser to paint a frame in the middle of it.
+//
+// On a very slow load, every moment's delay clamps to 0 via Math.max
+// and the whole sequence fires in one rapid, deterministic burst ending
+// on "final" — visually abrupt in that specific case, but never
+// overlapping or gapping, which is what actually got reported as broken.
 //
 // Trade-off, deliberately accepted: screen 1 no longer appears before
 // DOMContentLoaded (it used to, as pure CSS, independent of JS) — on a
 // connection so slow that DOMContentLoaded itself is delayed, the cream
 // background now just shows a bit longer first. Chosen over the
-// alternative (visibly overlapping screens under load) per explicit
-// feedback that the latter is the higher-priority failure mode.
+// alternative (visibly overlapping/gapping screens under load) per
+// explicit feedback that the latter is the higher-priority failure mode.
 function initSplashScreens() {
   // Same guard as initIntroSplashHold() — the whole splash is already
   // force-hidden via the html.skip-intro-splash CSS rule, so there's
   // nothing for this to usefully schedule.
   if (SKIP_INTRO_SPLASH) return;
-  const screens = [1, 2, 3, 4, "final"].map((n, i) => ({
+  const screens = [1, 2, 3, 4, "final"].map((n) => ({
     asterisk: document.querySelector(`.intro-splash__asterisk--${n}`),
     caption: document.querySelector(`.intro-splash__caption--${n}`),
-    cutAt: SPLASH_SCREEN_CUT_DELAYS_MS[i],
-    hideAt: SPLASH_SCREEN_CUT_DELAYS_MS[i + 1], // undefined for "final" — never hides
   }));
   if (!screens.every((s) => s.asterisk && s.caption)) return;
 
   const elapsed = (document.timeline.currentTime || 0) + SKIP_INTRO_SPLASH_OFFSET_MS;
-  for (const { asterisk, caption, cutAt, hideAt } of screens) {
+  for (const [i, momentMs] of SPLASH_SCREEN_CUT_DELAYS_MS.entries()) {
+    const prev = screens[i - 1];
+    const next = screens[i];
     setTimeout(
       () => {
-        asterisk.classList.add("is-cut");
-        caption.classList.add("is-cut");
+        if (prev) {
+          prev.asterisk.classList.remove("is-cut");
+          prev.caption.classList.remove("is-cut");
+        }
+        next.asterisk.classList.add("is-cut");
+        next.caption.classList.add("is-cut");
       },
-      Math.max(0, cutAt - elapsed)
-    );
-    if (hideAt == null) continue;
-    setTimeout(
-      () => {
-        asterisk.classList.remove("is-cut");
-        caption.classList.remove("is-cut");
-      },
-      Math.max(0, hideAt - elapsed)
+      Math.max(0, momentMs - elapsed)
     );
   }
 }
