@@ -337,63 +337,56 @@ ul { list-style: none; margin: 0; padding: 0; }
    in/out at the EXACT same timestamps as its own asterisk — sharing one
    selector list per phase keeps the two locked together with no risk
    of drifting apart if the timing ever changes. */
-/* Screen 01 holds 720ms instead of the other screens' 420ms (+300ms) —
-   a first-time visitor's very first frame of the site, so it gets a
-   bit longer to register before flipping onward. Every timestamp AFTER
-   it (screens 02-04, the final/00 logo screen, the slide-up, the
-   brown/grey cascade layers, and the hero title's own --intro-delay
-   values in index.html) is shifted by that same +300ms to preserve
-   their existing relative timing.
-   EXPERIMENTAL: each screen's own hide now fires at EXACTLY the next
-   screen's cut time (was 70ms earlier than it, a deliberate blank beat
-   of plain background between swaps) — per explicit request, to see
-   what removing that pause looks like: screens now flash straight into
-   each other with no gap. The "final" cut-in time (1980ms) is
-   unchanged, so nothing downstream (MIN_VISUAL_MS, --intro-delay
-   values, etc.) needed to shift. Easy full revert: 650/1070/1490/1910
-   back in the 4 hide times below. */
+/* All 5 screens (1/2/3/4/final) are driven by ONE unified JS mechanism —
+   initSplashScreens() in main.js — via a plain .is-cut opacity toggle,
+   not animation-delay/steps(1) per screen. That WAS the system here
+   (each screen's own cut/hide scheduled against the document timeline),
+   and it held up fine for the general "connection is slow" case this
+   whole file's comments describe at length. It did NOT hold up under
+   real, sustained CPU throttling: confirmed live (6x CPU throttle via
+   CDP) that a LATER screen's own cut-in could render AFTER an EARLIER
+   screen's hide had already been superseded by the (JS-driven, elapsed-
+   corrected) final screen's own cut — i.e. document.timeline.currentTime
+   already reported "we're well past everything," while the renderer
+   itself hadn't yet caught up repainting an EARLIER screen's own CSS
+   animation to match that same current time. Two independent screens
+   each racing the SAME document timeline can drift from each other
+   under exactly the load conditions ("my computer is slow") this was
+   supposed to survive.
+   initSplashScreens() schedules every screen's cut AND hide via
+   setTimeout, all read against the SAME document.timeline.currentTime
+   snapshot at once, each one flipping its own is-cut in a single
+   synchronous statement — there's no remaining path for two screens to
+   disagree about where "now" is, because there's only one JS-owned
+   answer to that question. Trade-off, deliberately accepted: screen 1
+   no longer appears before DOMContentLoaded (previously guaranteed by
+   being pure CSS, independent of JS entirely) — on a connection so slow
+   that DOMContentLoaded itself is meaningfully delayed, the cream
+   background now shows a bit longer before the sequence starts, rather
+   than screen 1 alone appearing early. Chosen over the alternative
+   (visibly overlapping/glitching screens under load) per explicit
+   feedback that the latter is the higher-priority failure mode. */
 .intro-splash__asterisk--1,
-.intro-splash__caption--1 {
-  animation:
-    intro-splash-asterisk-cut 0.01s steps(1) 0ms forwards,
-    intro-splash-asterisk-hide 0.01s steps(1) 720ms forwards;
-}
 .intro-splash__asterisk--2,
-.intro-splash__caption--2 {
-  animation:
-    intro-splash-asterisk-cut 0.01s steps(1) 720ms forwards,
-    intro-splash-asterisk-hide 0.01s steps(1) 1140ms forwards;
-}
 .intro-splash__asterisk--3,
-.intro-splash__caption--3 {
-  animation:
-    intro-splash-asterisk-cut 0.01s steps(1) 1140ms forwards,
-    intro-splash-asterisk-hide 0.01s steps(1) 1560ms forwards;
-}
 .intro-splash__asterisk--4,
-.intro-splash__caption--4 {
-  animation:
-    intro-splash-asterisk-cut 0.01s steps(1) 1560ms forwards,
-    intro-splash-asterisk-hide 0.01s steps(1) 1980ms forwards;
-}
-/* NOT animation-delay/steps(1) like screens 1-4 above — this is the
-   screen the splash actually LINGERS on (initIntroSplashHold() holds it
-   here until the page is genuinely ready), so it's the most-seen, most
-   noticed screen, and a raw document-timeline animation has no way to
-   guarantee the asterisk and caption change in the exact same instant —
-   it just hopes the browser paints them together at 1980ms, which a
-   busy main thread can't be relied on to do. initFinalSplashScreenCut()
-   in main.js instead sets BOTH elements' .is-cut in the same synchronous
-   statement block, scheduled via a single setTimeout whose delay is
-   elapsed-corrected the same way --intro-delay is everywhere else — by
-   construction, JS can't paint one without the other, and a slow load
-   just fires it sooner (even instantly, if already past 1980ms) rather
-   than ever risking one lagging behind the other. */
 .intro-splash__asterisk--final,
+.intro-splash__caption--1,
+.intro-splash__caption--2,
+.intro-splash__caption--3,
+.intro-splash__caption--4,
 .intro-splash__caption--final {
   opacity: 0;
 }
+.intro-splash__asterisk--1.is-cut,
+.intro-splash__asterisk--2.is-cut,
+.intro-splash__asterisk--3.is-cut,
+.intro-splash__asterisk--4.is-cut,
 .intro-splash__asterisk--final.is-cut,
+.intro-splash__caption--1.is-cut,
+.intro-splash__caption--2.is-cut,
+.intro-splash__caption--3.is-cut,
+.intro-splash__caption--4.is-cut,
 .intro-splash__caption--final.is-cut {
   opacity: 1;
 }
@@ -433,12 +426,6 @@ ul { list-style: none; margin: 0; padding: 0; }
   -webkit-mask-image: url("../assets/images/Asterisk 4.png");
   mask-image: url("../assets/images/Asterisk 4.png");
   background-color: var(--color-dark);
-}
-@keyframes intro-splash-asterisk-cut {
-  to { opacity: 1; }
-}
-@keyframes intro-splash-asterisk-hide {
-  to { opacity: 0; }
 }
 @keyframes intro-splash-slide {
   to { transform: translateY(-100%); }

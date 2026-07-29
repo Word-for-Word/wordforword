@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLuxuryScroll();
   initIntroReveal();
   initIntroSplashHold();
-  initFinalSplashScreenCut();
+  initSplashScreens();
   initIntroScrollLock();
   initHeroAsteriskPosition();
   // Everything below is deferred one frame past the block above, per a
@@ -675,141 +675,77 @@ function whenImageSettled(img) {
   });
 }
 
-// Cut-in delays for screens 01/02/03/04/final — MUST match the
-// .intro-splash__asterisk--N/.intro-splash__caption--N animation-delay
-// values in style.css exactly (0/720/1140/1560/1980ms). Duplicated here
-// (rather than read from computed style) because replaySkippedSplashScreens()
-// below needs these as plain numbers to schedule its own JS-driven
-// replacement sequence — see that function for why.
+// Cut-in delays for screens 01/02/03/04/final, index-matched to the
+// names array in initSplashScreens() below. Screen N's hide time is
+// screen N+1's own cut time (a deliberate no-gap flash-straight-into-
+// each-other look, per earlier explicit request); "final" has no hide
+// at all — it's what the splash lingers on.
 const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 
-// Fixes a real "skips steps" bug, confirmed via CDP network throttling:
-// screens 01-04 are driven by the plain, ungated CSS animation-delay
-// values above (see their own comment in style.css for why this is
-// deliberate — screen 01 must appear as early as physically possible,
-// before even fonts/CSS are guaranteed loaded, so nothing here can wait
-// on JS/DOMContentLoaded to KICK OFF the sequence). The catch: those
-// delays are measured against the page's shared document timeline
-// (same clock as navigation start), not "whenever THIS element's style
-// happens to first resolve." On a normal connection those are the same
-// moment for all practical purposes, so this is invisible. On a slow
-// enough connection, though, render-blocking resources (this stylesheet
-// included) can take longer to arrive than the ENTIRE fixed sequence
-// (1980ms) — and once they finally do, the browser doesn't replay the
-// animation from 01; it resolves straight to wherever the CURRENT
-// document-time places it (typically the final "00" screen), because
-// that's genuinely already "in the past" relative to the timeline this
-// animation was always scheduled against. Screens 01-04 can end up
-// having never been painted even once. Confirmed empirically: under a
-// throttled connection, the very first real paint already showed "00",
-// with zero intermediate frames — and separately, that a FRESH
-// `animation` value assigned via JS starts its OWN delay clock from
-// the moment it's assigned (not the document timeline), which is
-// exactly the lever this function pulls.
+// Drives ALL 5 intro-splash screens (1/2/3/4/final) through ONE unified
+// mechanism — a plain .is-cut opacity toggle, scheduled via setTimeout,
+// instead of each screen running its own independent animation-delay/
+// steps(1) CSS animation against the shared document timeline.
 //
-// Detects that specific situation (elapsed time already past the whole
-// sequence by the time this runs) and, ONLY then, replays it for real:
-// resets every screen to invisible, then reassigns each one's SAME named
-// keyframes (intro-splash-asterisk-cut/-hide, see style.css) via inline
-// style instead of leaving them to the static CSS rule — since a freshly
-// assigned `animation` value's delay counts from right now, this
-// guarantees every screen gets its full, genuine dwell time regardless
-// of how late this code itself started running. Returns the extra time
-// (ms, from now) initIntroSplashHold() needs to keep waiting before the
-// splash is allowed to slide away, so the replay can't get cut off
-// mid-sequence by that function's own (now-irrelevant, already-elapsed)
-// minimum-visual-time math; returns 0 when nothing was skipped, i.e. the
-// normal/fast path is left completely untouched.
-function replaySkippedSplashScreens(splash, elapsed) {
-  const sequenceEndMs = SPLASH_SCREEN_CUT_DELAYS_MS[SPLASH_SCREEN_CUT_DELAYS_MS.length - 1];
-  if (elapsed < sequenceEndMs) return 0;
-
-  // "final" is NOT included here — it no longer uses this animation-
-  // delay/steps(1) system at all (see initFinalSplashScreenCut() and its
-  // own CSS comment). That function is independently elapsed-corrected,
-  // so it needs no coordination with this replay mechanism.
-  const screens = [1, 2, 3, 4].map((n) => ({
+// That per-screen CSS approach held up fine for the general "slow
+// connection" case (see the git history for the throttled-network
+// investigation that originally shaped this system), but NOT under
+// sustained CPU throttling: confirmed live (6x CPU throttle via CDP)
+// that document.timeline.currentTime can already report "we're well
+// past everything" while the renderer itself hasn't yet caught up
+// repainting an EARLIER screen's own CSS animation to match — i.e. two
+// independent screens, each independently animating against the same
+// document timeline, CAN visibly disagree about where "now" is when the
+// browser is struggling to keep up. That showed up exactly as reported:
+// the final screen's text rendering on top of screen 4, overlapping.
+//
+// Reading document.timeline.currentTime ONCE here and scheduling every
+// screen's cut AND hide off that SAME snapshot removes the possibility
+// entirely — there is only one JS-owned notion of "now" for the whole
+// sequence, and each screen's own state change is one classList.add/
+// remove call, not a competing animation the renderer has to catch up
+// on independently. On a very slow load, every delay clamps to 0 via
+// Math.max and the whole sequence fires in one rapid, deterministic
+// burst ending on "final" — visually abrupt in that specific case, but
+// never overlapping, which is what actually got reported as broken.
+//
+// Trade-off, deliberately accepted: screen 1 no longer appears before
+// DOMContentLoaded (it used to, as pure CSS, independent of JS) — on a
+// connection so slow that DOMContentLoaded itself is delayed, the cream
+// background now just shows a bit longer first. Chosen over the
+// alternative (visibly overlapping screens under load) per explicit
+// feedback that the latter is the higher-priority failure mode.
+function initSplashScreens() {
+  // Same guard as initIntroSplashHold() — the whole splash is already
+  // force-hidden via the html.skip-intro-splash CSS rule, so there's
+  // nothing for this to usefully schedule.
+  if (SKIP_INTRO_SPLASH) return;
+  const screens = [1, 2, 3, 4, "final"].map((n, i) => ({
     asterisk: document.querySelector(`.intro-splash__asterisk--${n}`),
     caption: document.querySelector(`.intro-splash__caption--${n}`),
+    cutAt: SPLASH_SCREEN_CUT_DELAYS_MS[i],
+    hideAt: SPLASH_SCREEN_CUT_DELAYS_MS[i + 1], // undefined for "final" — never hides
   }));
-  if (!screens.every((s) => s.asterisk && s.caption)) return 0;
+  if (!screens.every((s) => s.asterisk && s.caption)) return;
 
-  for (const { asterisk, caption } of screens) {
-    asterisk.style.animation = "none";
-    caption.style.animation = "none";
-    asterisk.style.opacity = "0";
-    caption.style.opacity = "0";
+  const elapsed = (document.timeline.currentTime || 0) + SKIP_INTRO_SPLASH_OFFSET_MS;
+  for (const { asterisk, caption, cutAt, hideAt } of screens) {
+    setTimeout(
+      () => {
+        asterisk.classList.add("is-cut");
+        caption.classList.add("is-cut");
+      },
+      Math.max(0, cutAt - elapsed)
+    );
+    if (hideAt == null) continue;
+    setTimeout(
+      () => {
+        asterisk.classList.remove("is-cut");
+        caption.classList.remove("is-cut");
+      },
+      Math.max(0, hideAt - elapsed)
+    );
   }
-  // Double rAF (same idiom as initIntroReveal(), same reason) — guarantees
-  // that opacity:0 reset above has genuinely painted at least once before
-  // the fresh animations below start, so a same-frame reset+reassign can't
-  // coalesce and skip straight back to the end again.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      splash.style.animation = "none";
-      splash.style.backgroundColor = "var(--color-cream)";
-      screens.forEach(({ asterisk, caption }, i) => {
-        const cutDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i];
-        const hideDelay = SPLASH_SCREEN_CUT_DELAYS_MS[i + 1]; // always defined now — screen 4 (last in this array) hides at index 4's value (1980), same as the CSS original
-        const anim = `intro-splash-asterisk-cut 0.01s steps(1) ${cutDelay}ms forwards, intro-splash-asterisk-hide 0.01s steps(1) ${hideDelay}ms forwards`;
-        asterisk.style.animation = anim;
-        caption.style.animation = anim;
-      });
-      // Mirrors .intro-splash's own bg-red crossfade, at the same relative
-      // moment (the final screen's own cut time) and the same duration.
-      setTimeout(() => {
-        splash.style.transition = "background-color 0.15s ease";
-        splash.style.backgroundColor = "var(--color-red)";
-        // Clears the `animation: none` this function set on the
-        // CONTAINER itself (not its children) further up, now that the
-        // replay is done. An inline style always wins over ANY
-        // stylesheet rule, regardless of specificity or which class
-        // gets added later — leaving "none" here would permanently
-        // block .intro-splash.is-ready-to-slide's own `animation` (the
-        // actual slide-away, added later by initIntroSplashHold() once
-        // the page is ready) from EVER applying, freezing the splash on
-        // this screen forever instead of just this one. Harmless to
-        // clear now: the base .intro-splash rule's own bg-cream/bg-red
-        // keyframes reapplying at this exact moment resolve to the same
-        // red this line already just set directly, so there's nothing
-        // to visibly flash.
-        splash.style.animation = "";
-      }, sequenceEndMs);
-    });
-  });
-
-  return sequenceEndMs;
-}
-
-// The final "00" screen's asterisk + caption used to share
-// screens 1-4's animation-delay/steps(1) system (see style.css's own
-// removed rule) — mathematically synced (identical selector, identical
-// delay/duration), but still just two independent CSS animations each
-// hoping the browser paints them together at the 1980ms mark on the
-// shared document timeline. Reported live as a slight desync on a slow
-// machine. This is the MOST-seen screen (initIntroSplashHold() holds
-// the splash here, sometimes for several extra seconds, until the page
-// is genuinely ready), so it gets a stronger guarantee than "should be
-// fine": setting BOTH elements' is-cut class in the same synchronous
-// statement block makes a desync impossible BY CONSTRUCTION, not just
-// unlikely — there's no point between two adjacent classList.add()
-// calls in the same script execution for the browser to paint one
-// without the other. The delay itself is elapsed-corrected the same way
-// --intro-delay is in initIntroReveal(), so a slow load doesn't need a
-// separate replay path the way screens 1-4 do (see
-// replaySkippedSplashScreens) — Math.max(0, ...) just fires immediately
-// if 1980ms has already passed by the time this runs.
-function initFinalSplashScreenCut() {
-  const asterisk = document.querySelector(".intro-splash__asterisk--final");
-  const caption = document.querySelector(".intro-splash__caption--final");
-  if (!asterisk || !caption) return;
-
-  const FINAL_CUT_MS = SPLASH_SCREEN_CUT_DELAYS_MS[SPLASH_SCREEN_CUT_DELAYS_MS.length - 1];
-  const elapsed = Date.now() - (window.__pageLoadStart || Date.now()) + SKIP_INTRO_SPLASH_OFFSET_MS;
-  setTimeout(() => {
-    asterisk.classList.add("is-cut");
-    caption.classList.add("is-cut");
-  }, Math.max(0, FINAL_CUT_MS - elapsed));
 }
 
 // Keeps the intro splash lingering on its final "00" logo screen until
@@ -823,9 +759,10 @@ function initFinalSplashScreenCut() {
 //   1. The original minimum visual time (2480ms, elapsed-corrected the
 //      same way every other intro timing on this page is) — so on a
 //      normal connection this behaves EXACTLY as before, no added
-//      delay. If replaySkippedSplashScreens() above had to kick in, this
-//      also folds in however much MORE time that replay itself needs to
-//      finish, so the slide-away can't cut it off mid-sequence.
+//      delay. On a slow load where initSplashScreens() had to fire its
+//      whole sequence in a rapid burst, this naturally clamps to 0 extra
+//      wait — nothing left to protect once every screen's own state is
+//      already settled.
 //   2. Real readiness: fonts AND every <img> the hero itself reveals
 //      (wordmark "for", hero asterisk, nav logo) finished loading —
 //      avoids revealing the title in a fallback font/missing image and
@@ -848,10 +785,14 @@ function initIntroSplashHold() {
   const MIN_VISUAL_MS = 2480; // matches the slide-away delay this replaces
   const READY_TIMEOUT_MS = 8000;
 
-  const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
-  const replayHoldMs = replaySkippedSplashScreens(splash, elapsed);
+  // document.timeline.currentTime, NOT Date.now() - window.__pageLoadStart
+  // — see initSplashScreens()'s own comment for the full story: a
+  // Date.now()-based proxy can drift from the real document timeline
+  // under exactly the conditions (something delaying THIS SCRIPT's own
+  // execution specifically) this elapsed-time correction exists for.
+  const elapsed = document.timeline.currentTime || 0;
   const minVisualTime = new Promise((resolve) => {
-    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed, replayHoldMs));
+    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed));
   });
   const heroImages = document.querySelectorAll(".hero img, .nav__logo img");
   const readiness = Promise.race([
