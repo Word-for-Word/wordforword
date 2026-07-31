@@ -98,15 +98,38 @@ document.addEventListener("DOMContentLoaded", () => {
   window.scrollTo(0, 0);
   initNavHighlight();
   initLuxuryScroll();
-  initIntroReveal();
-  // initSplashScreens() runs BEFORE initIntroSplashHold() so the latter
-  // can read splashFinalLandedDelayMs (set by the former) instead of
-  // independently guessing when the "00" screen lands — see the comment
-  // on that variable for why the two must never disagree.
-  initSplashScreens();
-  initIntroSplashHold();
-  initIntroScrollLock();
   initHeroAsteriskPosition();
+  // Gated on whenIntroAssetsReady() — see that function's own comment.
+  // Previously this whole block ran unconditionally on DOMContentLoaded,
+  // which fires once parsing is done regardless of whether the splash's
+  // own images have actually finished downloading — on a slow/cold
+  // connection (reported live on the freshly-deployed site) that read as
+  // a screen cutting in with its own asterisk/caption still missing,
+  // popping in moments later mid-sequence. Until this resolves, the user
+  // sees nothing but the intro splash's own plain cream background (see
+  // .intro-splash in style.css: opacity:0 is the default for every
+  // numbered asterisk/caption, only flipped by initSplashScreens() below)
+  // — html.intro-scroll-locked (set synchronously before first paint, see
+  // index.html's own inline <head> script) keeps the real page from being
+  // scrolled into view underneath regardless of how long this wait takes.
+  // A no-op (resolves immediately) on every page other than a fresh
+  // homepage load, so this doesn't change timing anywhere else.
+  whenIntroAssetsReady().then(() => {
+    initIntroReveal();
+    // initSplashScreens() runs BEFORE initIntroSplashHold() so the latter
+    // can read splashFinalLandedDelayMs (set by the former) instead of
+    // independently guessing when the "00" screen lands — see the comment
+    // on that variable for why the two must never disagree.
+    initSplashScreens();
+    initIntroSplashHold();
+    initIntroScrollLock();
+    // Reads the header's own --intro-delay, which initIntroReveal() just
+    // set above (elapsed-time-corrected) — moved here (out of the
+    // unconditional block below) specifically to preserve that same-task
+    // ordering now that initIntroReveal() itself runs behind this promise
+    // instead of unconditionally at DOMContentLoaded.
+    initHeaderReady();
+  });
   // Everything below is deferred one frame past the block above, per a
   // reported live symptom on a slow machine: the homepage's intro splash
   // showed its final "00" screen's text missing, then abruptly appearing
@@ -128,7 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // even reach yet, since html.intro-scroll-locked blocks scrolling and
   // the splash visually covers the whole page for several seconds
   // regardless. Deferring them by one frame costs nothing perceptible
-  // and gives the browser a chance to paint in between.
+  // and gives the browser a chance to paint in between. initRevealOnScroll()
+  // reads --intro-delay too (on pages with no elaborate splash), but stays
+  // correct here regardless of the above: whenIntroAssetsReady() resolves
+  // as an immediate microtask on those pages, so initIntroReveal() has
+  // already set it by the time THIS callback's own rAF fires.
   requestAnimationFrame(() => {
     // Must run before initRevealOnScroll() — that function's own
     // staggeredTargets query for .quote-block__mask needs these tiles to
@@ -148,7 +175,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initCarouselReveal();
     initLogoSecretEntry();
     initNavPageFlash();
-    initHeaderReady();
     initPublicationsDropdown();
   });
 });
@@ -753,6 +779,32 @@ function whenImageSettled(img) {
     img.addEventListener("load", resolve, { once: true });
     img.addEventListener("error", resolve, { once: true });
   });
+}
+
+// Assets the intro splash's OWN JS-driven sequence needs before it's safe
+// to start — the webfont the captions render in, plus all 5 numbered
+// asterisks (1/2/3/4/final). 2/3/4 are CSS mask-image sources rather than
+// <img> tags (see index.html's own prefetch script for why), so there's
+// nothing in the DOM to pass to whenImageSettled() directly — a fresh
+// Image() per URL is used to probe them instead; if the prefetch already
+// populated the browser's cache for that URL, this resolves practically
+// immediately. Same "resolve, never reject" shape as whenImageSettled,
+// plus a hard timeout on the whole group — one slow/broken asset must
+// never hold the ENTIRE intro (splash AND hero, both gated on this same
+// promise in the DOMContentLoaded handler below) hostage forever. A no-op
+// (resolves immediately) on any page other than a fresh homepage load —
+// SKIP_INTRO_SPLASH means the splash is already force-hidden, and
+// !HAS_ELABORATE_SPLASH means there's no splash here to begin with.
+const INTRO_ASSETS_READY_TIMEOUT_MS = 8000;
+function whenIntroAssetsReady() {
+  if (SKIP_INTRO_SPLASH || !HAS_ELABORATE_SPLASH) return Promise.resolve();
+  const asteriskUrls = [1, 2, 3, 4].map((n) => `${ASSET_BASE}assets/images/Asterisk ${n}.png`);
+  asteriskUrls.push(`${ASSET_BASE}assets/images/Asterisk - Default, Cream.png`);
+  const imagesReady = asteriskUrls.map((src) => whenImageSettled(Object.assign(new Image(), { src })));
+  return Promise.race([
+    Promise.all([document.fonts ? document.fonts.ready : Promise.resolve(), ...imagesReady]),
+    new Promise((resolve) => setTimeout(resolve, INTRO_ASSETS_READY_TIMEOUT_MS)),
+  ]);
 }
 
 // Transition moments for screens 01/02/03/04/final — moment[i] is BOTH
