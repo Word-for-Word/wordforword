@@ -5,8 +5,7 @@ date: 2026-03-01
 author: Jane Doe
 editor: John Smith
 designer: Alex Lee
-summary: A reflection on what it means to truly listen to a patient's story, and
-  what gets lost when we don't.
+summary: A reflection on what it means to truly listen to a patient's story, and what gets lost when we don't.
 illustration: assets/images/articles/example-the-weight-of-listening.jpg
 illustration_alt: A watercolor illustration of a stethoscope resting on an open book
 illustration_caption: Illustration by Alex Lee
