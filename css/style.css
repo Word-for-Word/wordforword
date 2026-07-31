@@ -191,6 +191,13 @@ ul { list-style: none; margin: 0; padding: 0; }
   inset: 0;
   z-index: 9999;
   background: var(--color-cream);
+  /* Lets the cream->red flip below (splash.style.backgroundColor, set by
+     initSplashScreens() in main.js) crossfade instead of snapping — a
+     `transition` reacts to that exact synchronous style change rather
+     than running on its own separately-scheduled clock, so unlike the
+     old @keyframes-based crossfade this removed (see comment below), it
+     can't drift out of sync with the final screen's own cut-in. */
+  transition: background-color 0.45s ease-in-out;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -226,8 +233,8 @@ ul { list-style: none; margin: 0; padding: 0; }
      main.js confirms the page is genuinely ready, so a slow connection
      lingers on the "00" logo screen instead of clearing to reveal a
      still-blank page underneath (see that function's own comment).
-     The cream->red background crossfade used to be a separate CSS
-     animation timed against the document timeline (intro-splash-bg-
+     The cream->red background change used to be driven by a separate
+     CSS animation timed against the document timeline (intro-splash-bg-
      cream/-red, now removed) — a SECOND independent thing racing the
      same clock initSplashScreens() reads, which could drift from it
      under load the exact same way screens 1-4 could once drift from
@@ -237,7 +244,11 @@ ul { list-style: none; margin: 0; padding: 0; }
      cut in yet, or vice versa. initSplashScreens() now sets
      splash.style.backgroundColor directly, in the SAME synchronous
      callback as the final screen's own cut-in — one JS-owned state
-     change instead of two independently-timed ones. */
+     change instead of two independently-timed ones. Per follow-up
+     feedback that the resulting flip still read as too abrupt, the
+     `transition` above now crossfades it — safe against the same drift
+     bug because a transition fires off that one synchronous assignment
+     itself rather than running on its own separately-scheduled clock. */
 }
 /* Added by initIntroSplashHold() once BOTH the minimum visual time
    (2480ms — matching the original fixed slide delay this replaces) AND
@@ -382,6 +393,59 @@ ul { list-style: none; margin: 0; padding: 0; }
 .intro-splash__caption--4.is-cut,
 .intro-splash__caption--final.is-cut {
   opacity: 1;
+}
+/* Screens 01 and 00/final only (02/03/04 keep the plain hard cut above:
+   0 -> 1 opacity, no transition) — per explicit request, these two
+   instead stay blank a split-second longer, then blink in with a quick
+   vertical bounce. animation (not transition) is what makes the "blank
+   pause" possible in the first place — 120ms delay with fill mode
+   `both` holds the keyframes' 0% state (opacity:0) for that whole
+   window before the animation itself starts, where a transition has no
+   equivalent concept of a pre-start hold. This wins over the shared
+   opacity:1 rule just above for these same selectors regardless of
+   source order/specificity — a running (or delayed-but-pending, via
+   `backwards` fill) CSS animation always overrides a plain property
+   declaration for the properties it animates. Composes fine with
+   .intro-splash__asterisk-wrap's own continuous jitter-settle animation
+   (a DIFFERENT element — the wrapper around all 5 numbered asterisks,
+   see that class below) since nested elements' own `transform`s stack
+   independently rather than fighting over the same property.
+
+   The bounce itself animates the standalone `translate` property, NOT
+   `transform` — .intro-splash__caption itself already carries its own
+   static `transform: translateX(-50%)` for horizontal centering (the
+   classic "center an unsized absolutely-positioned box" trick), and a
+   CSS animation touching `transform` REPLACES that property's value
+   outright rather than merging with it, silently discarding the
+   centering the instant this animation applied (confirmed live: the
+   caption text drifted off-center while the asterisk — which has no
+   transform-based centering of its own to lose — stayed put). `translate`
+   is its own independent property (composes with `transform` rather than
+   overwriting it, applied before it per spec), so animating THAT instead
+   leaves the caption's centering transform completely untouched. */
+.intro-splash__asterisk--1.is-cut,
+.intro-splash__caption--1.is-cut,
+/* Screen 00/final gets the same treatment, per explicit follow-up
+   request — reuses the identical animation/timing verbatim rather than
+   a second near-duplicate keyframes block. Nothing else on this screen
+   depends on its own cut-in being instantaneous: the cream->red
+   background crossfade is a separate, JS-driven inline style set in the
+   SAME callback that adds is-cut (see initSplashScreens() in main.js),
+   so it still flips right on schedule regardless of how long this
+   element's own blank-pause-then-bounce takes to visually finish. */
+.intro-splash__asterisk--final.is-cut,
+.intro-splash__caption--final.is-cut {
+  animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
+}
+@keyframes intro-splash-flicker-in {
+  0%   { opacity: 0; translate: 0 0; }
+  /* Snap to visible almost instantly once the animation itself starts —
+     an abrupt opacity jump (not a fade) is what reads as "blink in"
+     rather than a soft fade-in. */
+  1%   { opacity: 1; translate: 0 -4px; }
+  40%  { translate: 0 1.5px; }
+  70%  { translate: 0 -0.6px; }
+  100% { opacity: 1; translate: 0 0; }
 }
 /* Trial variant: screens 01-04 all sit on cream now (see .intro-splash
    above), varying by asterisk/caption color instead — red / blue
@@ -629,13 +693,21 @@ html.show-page-flash .page-flash__color {
 .page-flash__asterisk {
   height: calc(var(--hero-asterisk-size) * 0.65);
   width: auto;
+  opacity: 0;
 }
 /* Continuous jitter, not the intro splash's one-shot settle-to-still
    (there's no "next screen" here to settle in time for) — reuses that
    same jitter's early values (see intro-splash-asterisk-jitter-settle
-   above), just looped back to (0,0) for a seamless repeat. */
+   above), just looped back to (0,0) for a seamless repeat. Comma'd
+   alongside intro-splash-flicker-in (see .intro-splash__asterisk--1.is-cut
+   above) so every page-flash screen pops in with the same blank-pause
+   +bounce the intro splash's own screens 01/00 use, not just a plain
+   fade — the two animations don't fight because they touch different
+   properties (this one's `transform`, that one's `opacity`/`translate`). */
 html.show-page-flash .page-flash__asterisk {
-  animation: page-flash-asterisk-jitter 0.7s linear infinite;
+  animation:
+    page-flash-asterisk-jitter 0.7s linear infinite,
+    intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 @keyframes page-flash-asterisk-jitter {
   0%     { transform: translate(0, 0); }
@@ -654,6 +726,13 @@ html.show-page-flash .page-flash__asterisk {
   align-items: center;
   gap: 15px;
   text-align: center;
+  opacity: 0;
+}
+/* Same intro-splash-flicker-in bounce as the asterisk above, on the
+   caption too — matches the intro splash, where screen 01/00's asterisk
+   AND caption both bounce in together. */
+html.show-page-flash .page-flash__caption {
+  animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 .page-flash--01 { background: var(--color-red); }
 .page-flash--02 { background: var(--color-grey); }
@@ -909,7 +988,10 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
      the "2-3 sizes" rule on --text-body/--text-small in :root. */
   font-size: var(--text-small);
   /* Book (400), not the site-wide Light (300) default — kept at the
-     original weight rather than following body's drop to Light. */
+     original weight rather than following body's drop to Light. (A
+     thicker-weight test briefly lived here — that request was actually
+     about the .section-eyebrow section titles on the publications
+     pages, not this nav, so it's reverted.) */
   font-weight: 400;
   /* Matches .hero__eyebrow's letter-spacing — 0.12em (previous value)
      was much wider than any other tracked text on the page. */
@@ -2844,6 +2926,70 @@ a.diamond-cta {
   width: 100%;
   text-align: center;
 }
+/* An ACTUALLY-scrolling variant of .marquee-banner (currently
+   #get-involved and #publications — see their own HTML comments) — the
+   base preset above is a deliberate static illusion (see its own
+   comment), this instead moves continuously. .marquee-banner__scroll
+   holds 2 identical .marquee-banner__track copies (see the HTML) laid
+   out side by side via flex and animated between translateX(calc(-1 *
+   var(--marquee-track-width))) and translateX(0) — since the 2 copies
+   are byte-identical, the instant the 1st has scrolled fully into view
+   the 2nd (identical) one is sitting exactly where the 1st started, so
+   the loop point is invisible either direction.
+
+   --marquee-track-width is set (as an exact px value, per instance) by
+   setMarqueeScrollMetrics() in main.js, measuring THIS track's own real
+   rendered width — NOT a bare -50%. -50% looks equivalent at a glance
+   (2 equal-width tracks, so 50% of the pair should equal exactly 1
+   track), but flexbox/whitespace/sub-pixel layout rounding can leave the
+   container's true total width a fraction of a pixel off from exactly
+   2x one track's width — invisible on a single glance, but a real,
+   reported "the marquee resets/jumps" glitch once that fraction is
+   compounded by a long-running infinite loop's own restart boundary.
+   Shifting by this track's own measured width instead guarantees the
+   2nd copy lands EXACTLY where the 1st started, every single loop, with
+   no accumulated drift possible. The 50% fallback below only matters
+   before that JS runs (or if it's ever missing).
+
+   animation-duration is ALSO set inline by that same function — sized
+   to this track's own width divided by MARQUEE_SCROLL_SPEED_PX_PER_S,
+   so every .marquee-banner--scrolling instance moves at the exact same
+   FELT speed regardless of how long its own content is (a longer track
+   gets a proportionally longer duration, not the same fixed number a
+   shorter track would look faster with). The 96s below is just a
+   pre-JS fallback.
+
+   width:auto/text-align:left/flex-shrink:0 override the base track rule
+   above (equal selector specificity, but this comes later) —
+   width:100%/text-align:center only made sense for a single centered
+   static track, not 2 tracks meant to sit flush against each other in a
+   flowing row. */
+.marquee-banner--scrolling .marquee-banner__scroll {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 96s linear infinite;
+}
+.marquee-banner--scrolling .marquee-banner__track {
+  width: auto;
+  text-align: left;
+  flex-shrink: 0;
+}
+@keyframes marquee-scroll {
+  from { transform: translateX(calc(-1 * var(--marquee-track-width, 50%))); }
+  to { transform: translateX(0); }
+}
+/* prefers-reduced-motion already forces every other ambient/looping
+   animation on the site to a standstill (see that media query further
+   down) — this one lives with its own rule instead of being folded into
+   that shared list since .marquee-banner--scrolling didn't exist yet
+   when that list was last touched; functionally identical (transition:
+   none would be a no-op here since this uses `animation`, not
+   `transition` — animation-play-state: paused is the actual equivalent). */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-banner--scrolling .marquee-banner__scroll {
+    animation-play-state: paused;
+  }
+}
 /* Each "*" separator is the brown asterisk PNG (assets/images/Brown
    asterisk.png — see initMarqueeAsterisks() in main.js), not a plain
    text character — a raster image has no font-metric/line-height
@@ -3385,11 +3531,20 @@ span.split-cta__text-line {
    Quote block — now the "Slogan" banner image (was the plain text
    quote "Empowering voices previously unheard.", per explicit request
    to replace it with a graphic that has that same line baked into its
-   own artwork). Kept the .quote-block class name/selector rather than
-   introducing a new one — it was ALREADY in initRevealOnScroll()'s
-   staggeredTargets list (see main.js) and the shared opacity-reveal
-   selector list below, so the fade-in-on-scroll treatment carries over
-   for free with zero JS/selector changes.
+   own artwork). Composed of an evenly-sized tile grid layered over one
+   uncut <img> — same "mask panels fade out to unveil the photo
+   underneath" trick as .image-mosaic__mask (see that section's own
+   comment), per explicit request that this assemble in tile-by-tile on
+   scroll rather than fade in as one flat rectangle. The tiles
+   themselves are generated at runtime by initQuoteBlockTiles() in
+   main.js (one shared tile count instead of hand-duplicating the same
+   mask <div>s across the 6 separate HTML files that all reuse this
+   .quote-block markup) — see that function's own comment for the grid
+   math. .quote-block__mask (NOT .quote-block itself) is what's in
+   initRevealOnScroll()'s staggeredTargets list and the shared
+   opacity-reveal selector list below, mirroring .image-mosaic__mask
+   exactly: the section wrapper just always renders, its mask tiles do
+   the actual revealing.
 =================================================================== */
 .quote-block {
   position: relative;
@@ -3404,44 +3559,80 @@ span.split-cta__text-line {
      noticeably wider than the actual card row above it). */
   margin: 60px 40px 0;
 }
-.quote-block img {
-  display: block;
-  width: 100%;
-  height: auto;
+/* Wraps the photo + its mask grid — needs an explicit size (via
+   aspect-ratio, since its children are position:absolute and can no
+   longer size it from their own intrinsic dimensions the way a plain
+   <img> could) locked to Slogan.jpg's own real 3600x1837 proportions,
+   so object-fit:cover on the photo below never has to crop it. */
+.quote-block__image {
+  position: relative;
+  overflow: hidden;
   border-radius: 15px;
+  aspect-ratio: 3600 / 1837;
+  min-width: 0;
+}
+.quote-block__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Grid math lives with initQuoteBlockTiles() in main.js (it sets
+   grid-template-columns/rows inline, sized to match that function's own
+   tile count) — no fixed column/row count here so the two can't drift
+   out of sync with each other. */
+.quote-block__masks {
+  position: absolute;
+  inset: 0;
+  display: grid;
+}
+.quote-block__mask {
+  background: var(--color-cream);
+}
+/* Same faint hover glow as .image-mosaic__hover-tile/
+   .featured-carousel__hover-tile — per-cell white wash on the photo
+   itself, since a tiled image reads as clickable/interactive squares the
+   same way .square already does elsewhere on the site. Sits above the
+   mask grid (z-index) so it's hoverable immediately once a tile's own
+   mask has faded — .quote-block__overlay's own z-index:3 (below) keeps
+   the caption card itself above THIS layer, same reasoning as
+   .image-mosaic__caption's own comment. */
+.quote-block__hover-tiles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+}
+.quote-block__hover-tile {
+  background: rgba(255, 255, 255, 0);
+  transition: background-color 0.3s ease-out;
+}
+.quote-block__hover-tile:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transition: background-color 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 /* Centers the text card over the Slogan artwork without stretching it —
    this wrapper spans the full image so it can center its child on both
    axes, but carries no size/background of its own (see
    .quote-block__overlay-text for the actual visible rectangle, sized to
-   its own content). Its opacity transition is separate from — and
-   delayed past — .quote-block's own image reveal above: both start from
-   the SAME .is-visible trigger, but this one's transition-delay is
-   pinned to .quote-block img's own 0.7s reveal duration (see .is-visible
-   below) so the text card only starts fading in once the photo has
-   genuinely finished, reading as a deliberate second step rather than
-   both popping in together. */
+   its own content). Carries the generic .mosaic-reveal class (in the
+   HTML) instead of its own bespoke opacity/is-visible rule — the tile
+   grid now assembles at its own pace (however long the mask cascade
+   actually takes to scroll into view, not a fixed guess), so
+   initQuoteBlockReveal() in main.js uses the same revealWithTile()
+   helper initMosaicReveal() does, firing this once the LAST mask tile
+   genuinely finishes its own transition instead of a hardcoded delay
+   layered on top of .quote-block's own (now nonexistent — see above)
+   whole-image fade. */
 .quote-block__overlay {
   position: absolute;
   inset: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease-out;
-  transition-delay: 0s;
-}
-.quote-block.is-visible .quote-block__overlay {
-  opacity: 1;
-  /* .quote-block itself (the image) doesn't start ITS OWN 0.7s reveal
-     until --reveal-delay elapses (a per-instance stagger value set by
-     initRevealOnScroll() in main.js, based on this section's position
-     among main's children — not always 0). This has to add that same
-     --reveal-delay on top of the image's 0.7s duration, or the overlay
-     starts counting down from the same instant as the image and can
-     finish fading in before the image itself is even done. */
-  transition-delay: calc(var(--reveal-delay, 0ms) + 0.7s);
 }
 .quote-block__overlay-text {
   margin: 0;
@@ -3789,13 +3980,21 @@ span.split-cta__text-line {
    section-level children, an unrelated number that could easily outpace
    or lag the internal choreography) for no visual benefit, since the
    section has nothing to show on its own besides its children.
-=================================================================== */
+
+   .marquee-banner--scrolling, per explicit request: the whole marquee
+   fades in as one flat unit when it scrolls into view (a per-phrase
+   left-to-right stagger was tried first and reverted — overcomplicated
+   for what this is), same as every other plain single-element target in
+   this list, while its own continuous scroll animation (a DIFFERENT
+   property — see that class further down) keeps running underneath
+   completely independently of this opacity fade. */
 .square,
 .split-cta__illustration-tile,
 .image-mosaic__mask,
 .featured-carousel__mask,
-.quote-block,
-.publication-card {
+.quote-block__mask,
+.publication-card,
+.marquee-banner--scrolling {
   opacity: 0;
   /* filter here too — only .square ever actually changes that property
      (its own hover-leave brightness reset, see .square's base rule),
@@ -3825,8 +4024,9 @@ span.split-cta__text-line {
 .split-cta__illustration-tile.is-visible,
 .image-mosaic__mask.is-visible,
 .featured-carousel__mask.is-visible,
-.quote-block.is-visible,
-.publication-card.is-visible {
+.quote-block__mask.is-visible,
+.publication-card.is-visible,
+.marquee-banner--scrolling.is-visible {
   /* Second value pins filter's delay to 0s even once .is-visible is
      present — transition-delay lists repeat cyclically to match
      transition-property's count when there are fewer values than
@@ -3843,11 +4043,13 @@ span.split-cta__text-line {
    behind them), fade OUT on reveal instead of in. Higher specificity
    than the bare .is-visible above, so it wins regardless of order. */
 .image-mosaic__mask,
-.featured-carousel__mask {
+.featured-carousel__mask,
+.quote-block__mask {
   opacity: 1;
 }
 .image-mosaic__mask.is-visible,
-.featured-carousel__mask.is-visible {
+.featured-carousel__mask.is-visible,
+.quote-block__mask.is-visible {
   opacity: 0;
 }
 /* Covers additionally slide up as they fade — the shared rule above
@@ -4421,7 +4623,19 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   font-size: 18px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-red);
+  /* Was --color-red — per explicit request, section titles (Volumes,
+     Spotlight, More to read, and every per-category label on
+     interviews/essays/narratives/outreach/publications.html) now read
+     in the same brown as the rest of the page's deep text. */
+  color: var(--color-dark);
+  /* No explicit weight before this — these titles were quietly
+     inheriting body's own Light (300) default. Bumped to 500 (Medium)
+     as a "slightly thicker" test, per explicit request to see these
+     specific section titles rendered heavier — Newsreader is a real
+     variable font (wght 200-800), so 500 is its own genuinely
+     interpolated weight. Revert to removing this line (falls back to
+     inherited 300) if it doesn't read right. */
+  font-weight: 500;
   white-space: nowrap;
 }
 .section-eyebrow__rule {
@@ -4524,7 +4738,11 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   margin: 0 0 16px;
 }
 .spotlight__teaser {
-  font-size: var(--text-body);
+  /* Was --text-body — per explicit request, sized down to the design
+     system's own next-smallest step (the only 2 body/UI sizes this site
+     uses are --text-body and --text-small; see the :root comment on
+     that scale). */
+  font-size: var(--text-small);
   line-height: 1.5;
   margin: 0 0 16px;
 }
@@ -4622,7 +4840,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .square,
   .image-mosaic__mask,
   .featured-carousel__mask,
-  .quote-block,
+  .quote-block__mask,
   .publication-card,
   /* .split-cta itself is no longer part of the opacity-reveal system
      (see the comment on that shared selector list further up) — its
@@ -4639,7 +4857,8 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .mosaic-reveal,
   .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
   .image-mosaic__mask,
-  .featured-carousel__mask { opacity: 0; }
+  .featured-carousel__mask,
+  .quote-block__mask { opacity: 0; }
   /* Roles grid hover swap still needs to toggle (opacity/transform still
      differ between rest and :hover), just instantly rather than sliding. */
   .square__role,

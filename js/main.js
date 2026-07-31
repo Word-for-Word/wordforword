@@ -99,8 +99,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initNavHighlight();
   initLuxuryScroll();
   initIntroReveal();
-  initIntroSplashHold();
+  // initSplashScreens() runs BEFORE initIntroSplashHold() so the latter
+  // can read splashFinalLandedDelayMs (set by the former) instead of
+  // independently guessing when the "00" screen lands — see the comment
+  // on that variable for why the two must never disagree.
   initSplashScreens();
+  initIntroSplashHold();
   initIntroScrollLock();
   initHeroAsteriskPosition();
   // Everything below is deferred one frame past the block above, per a
@@ -126,9 +130,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // regardless. Deferring them by one frame costs nothing perceptible
   // and gives the browser a chance to paint in between.
   requestAnimationFrame(() => {
+    // Must run before initRevealOnScroll() — that function's own
+    // staggeredTargets query for .quote-block__mask needs these tiles to
+    // already exist in the DOM.
+    initQuoteBlockTiles();
     initRevealOnScroll();
     initSection4CarouselGate();
     initMosaicReveal();
+    initQuoteBlockReveal();
     initSplitCtaReveal();
     initHeroEyebrowExit();
     initMarqueeAsterisks();
@@ -390,6 +399,36 @@ function initNavPageFlash() {
       sessionStorage.setItem("wfw-page-flash", "02");
     });
   });
+
+  // Same flag, for same-site links OUTSIDE the nav entirely — CTA buttons
+  // like section 1's "Learn more" (-> about.html) or the publications
+  // "View more"/"Read our latest issue!" tiles. Without this, clicking
+  // one of those arrives at its destination with no page-flash at all
+  // (the nav is the only thing that ever set the flag), which reads as
+  // that page's own splash being skipped. `.closest(".nav")` excludes the
+  // header links above so this doesn't just redundantly re-set the same
+  // flag a second time for them. index.html is deliberately left out of
+  // this map — Overview's own flash (see NAV_PAGE_FLASH_SCREENS[0] above)
+  // is paired with skip-intro-splash and stays scoped to the ONE
+  // top-level "Overview" nav link, per explicit request (see
+  // html.skip-intro-splash's own comment).
+  const PAGE_FLASH_SCREEN_BY_HREF = {
+    "publications.html": "02",
+    "interviews.html": "02",
+    "essays.html": "02",
+    "narratives.html": "02",
+    "outreach.html": "02",
+    "about.html": "03",
+    "get-involved.html": "04",
+  };
+  document.querySelectorAll("a[href]").forEach((link) => {
+    if (link.closest(".nav")) return;
+    const screen = PAGE_FLASH_SCREEN_BY_HREF[link.getAttribute("href")];
+    if (!screen) return;
+    link.addEventListener("click", () => {
+      sessionStorage.setItem("wfw-page-flash", screen);
+    });
+  });
 }
 
 // vertical-align: middle centers an inline-block box against the
@@ -498,17 +537,58 @@ function centerMarqueeTrack(track) {
 
 function centerMarqueeTracks() {
   for (const track of document.querySelectorAll(".marquee-banner__track")) {
+    // .marquee-banner--scrolling tracks (currently just #get-involved's
+    // test variant) drive their own position via a continuous CSS
+    // animation (see that class in style.css) — this function's
+    // corrective translateX is for the static illusion's fixed centering
+    // and would fight (and get immediately overwritten by) that
+    // animation, so skip it entirely here.
+    if (track.closest(".marquee-banner--scrolling")) continue;
     centerMarqueeTrack(track);
+  }
+}
+
+// Shared felt speed for every .marquee-banner--scrolling instance, in
+// px/s — a single number here (rather than a fixed animation-duration in
+// CSS) is what makes #get-involved and #publications move at the exact
+// same visual pace despite having different (and differently long)
+// content: each instance's own duration below is derived from ITS OWN
+// track's real measured width divided by this constant, so a longer
+// track takes proportionally longer per loop instead of covering the
+// same distance in the same time and LOOKING faster.
+// 20 (was effectively ~90 before this constant existed) — per explicit
+// follow-up feedback that even the first slowdown was still too fast.
+const MARQUEE_SCROLL_SPEED_PX_PER_S = 20;
+function setMarqueeScrollMetrics() {
+  const scrolls = document.querySelectorAll(".marquee-banner--scrolling .marquee-banner__scroll");
+  for (const scroll of scrolls) {
+    const track = scroll.querySelector(".marquee-banner__track");
+    if (!track) continue;
+    // This track's own real rendered width, NOT "50% of the container" —
+    // see the CSS comment on .marquee-banner--scrolling .marquee-banner__scroll
+    // for why the distinction matters (a reported visible reset at the
+    // loop boundary, from sub-pixel drift between the two).
+    const width = track.getBoundingClientRect().width;
+    if (!width) continue;
+    scroll.style.setProperty("--marquee-track-width", `${width}px`);
+    scroll.style.animationDuration = `${width / MARQUEE_SCROLL_SPEED_PX_PER_S}s`;
   }
 }
 
 function initMarqueeCentering() {
   centerMarqueeTracks();
+  setMarqueeScrollMetrics();
   // Re-measure once the real webfonts (Newsreader/Instrument/Kapakana) are
   // actually in — same fallback-vs-real-font reflow reasoning as
   // positionHeroAsterisk.
-  document.fonts.ready.then(centerMarqueeTracks);
-  window.addEventListener("resize", centerMarqueeTracks);
+  document.fonts.ready.then(() => {
+    centerMarqueeTracks();
+    setMarqueeScrollMetrics();
+  });
+  window.addEventListener("resize", () => {
+    centerMarqueeTracks();
+    setMarqueeScrollMetrics();
+  });
 }
 
 // Plays the one-time load-in sequence (title -> eyebrows -> nav), driven
@@ -680,6 +760,24 @@ function whenImageSettled(img) {
 // straight-into-each-other look, per earlier explicit request — there
 // is no separate "hide time," each screen's hide IS the next one's cut).
 const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
+// Floor on real time between two consecutive screen swaps — see the
+// comment inside initSplashScreens() below for why this exists. 400 (was
+// 220) — screen 01 now plays its own 120ms-delay + 240ms bounce-in (see
+// .intro-splash__asterisk--1.is-cut in style.css), and this floor is
+// what guarantees screen 01 stays on-screen long enough for that full
+// 360ms sequence to actually finish even in the worst-case (every moment
+// clamped) slow-load scenario — 220ms would have let screen 2 cut in
+// mid-bounce.
+const SPLASH_SCREEN_MIN_HOLD_MS = 400;
+// Set by initSplashScreens() to the ACTUAL real delay (ms from
+// DOMContentLoaded) at which the final/00 screen lands, once computed
+// below. initIntroSplashHold() reads this — instead of independently
+// re-deriving its own guess at when the splash sequence finishes — so
+// the two can never disagree about when it's safe to start sliding the
+// splash away. Requires initSplashScreens() to run BEFORE
+// initIntroSplashHold() (see the DOMContentLoaded handler's call
+// order).
+let splashFinalLandedDelayMs = 0;
 
 // Drives ALL 5 intro-splash screens (1/2/3/4/final) through ONE unified
 // mechanism — a plain .is-cut opacity toggle, scheduled via setTimeout,
@@ -714,10 +812,26 @@ const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 // own callback already did — there's no point inside one synchronous
 // callback for the browser to paint a frame in the middle of it.
 //
-// On a very slow load, every moment's delay clamps to 0 via Math.max
-// and the whole sequence fires in one rapid, deterministic burst ending
-// on "final" — visually abrupt in that specific case, but never
-// overlapping or gapping, which is what actually got reported as broken.
+// Every moment also carries a MINIMUM real hold (SPLASH_SCREEN_MIN_HOLD_MS)
+// on top of its elapsed-corrected ideal delay: on a very slow/cold load
+// (this script not even starting until well after navigation — e.g. a
+// dev server that had to cold-compile on the first hit of the day),
+// `elapsed` can already exceed every momentMs above, which used to
+// clamp EVERY Math.max(0, momentMs - elapsed) to 0 — all 5 screens
+// toggling within one synchronous burst of back-to-back zero-delay
+// timers, with no paint happening in between. The browser then only
+// ever actually renders whichever screen was toggled LAST ("00"/final)
+// — screens 01-04 get their classes added and removed again before a
+// frame ever shows them. Reported live as "a split-second glimpse of
+// 00, none of the preceding splashes visible." Per explicit follow-up
+// feedback, the splash must always visibly start on 01 no matter what —
+// higher priority than keeping the sequence's total length constant, so
+// each step is now scheduled at least SPLASH_SCREEN_MIN_HOLD_MS after
+// the previous one ACTUALLY fired (not just after its own ideal
+// moment), guaranteeing a real paintable gap between every swap even in
+// the all-clamped-to-0 case. On a normal-speed load this is a no-op —
+// the natural 420ms gaps between real momentMs values already exceed
+// this floor, so Math.max just keeps the original ideal delay.
 //
 // Trade-off, deliberately accepted: screen 1 no longer appears before
 // DOMContentLoaded (it used to, as pure CSS, independent of JS) — on a
@@ -739,9 +853,16 @@ function initSplashScreens() {
 
   const lastMomentIndex = SPLASH_SCREEN_CUT_DELAYS_MS.length - 1;
   const elapsed = (document.timeline.currentTime || 0) + SKIP_INTRO_SPLASH_OFFSET_MS;
+  let scheduledDelay = 0;
   for (const [i, momentMs] of SPLASH_SCREEN_CUT_DELAYS_MS.entries()) {
     const prev = screens[i - 1];
     const next = screens[i];
+    const idealDelay = Math.max(0, momentMs - elapsed);
+    // Never schedule sooner than SPLASH_SCREEN_MIN_HOLD_MS after the
+    // PREVIOUS moment's own scheduled (not ideal) delay — guarantees a
+    // real gap even when every idealDelay above has collapsed to 0.
+    scheduledDelay = i === 0 ? idealDelay : Math.max(idealDelay, scheduledDelay + SPLASH_SCREEN_MIN_HOLD_MS);
+    if (i === lastMomentIndex) splashFinalLandedDelayMs = scheduledDelay;
     setTimeout(
       () => {
         if (prev) {
@@ -757,7 +878,7 @@ function initSplashScreens() {
         // independently-timed CSS animation.
         if (i === lastMomentIndex) splash.style.backgroundColor = "var(--color-red)";
       },
-      Math.max(0, momentMs - elapsed)
+      scheduledDelay
     );
   }
 }
@@ -805,8 +926,17 @@ function initIntroSplashHold() {
   // under exactly the conditions (something delaying THIS SCRIPT's own
   // execution specifically) this elapsed-time correction exists for.
   const elapsed = document.timeline.currentTime || 0;
+  // Math.max against splashFinalLandedDelayMs (set by initSplashScreens(),
+  // which runs before this — see the DOMContentLoaded handler's call
+  // order): on a slow/cold load where the screen-cut sequence needed its
+  // own SPLASH_SCREEN_MIN_HOLD_MS floor to guarantee 01-04 are each
+  // actually visible (see that function's comment), the "00" screen can
+  // land LATER than this MIN_VISUAL_MS constant assumes. Without this,
+  // the splash could start sliding away before "00" has even cut in —
+  // sliding away mid-sequence, on top of whichever screen happened to be
+  // showing.
   const minVisualTime = new Promise((resolve) => {
-    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed));
+    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed, splashFinalLandedDelayMs));
   });
   const heroImages = document.querySelectorAll(".hero img, .nav__logo img");
   const readiness = Promise.race([
@@ -1135,13 +1265,69 @@ function initLuxuryScroll() {
 // re-triggering while everything else now doesn't.
 const REVEAL_RETRIGGER_ENABLED = false;
 
+// Splits the "Slogan" banner (assets/images/Slogan.jpg, 3600x1837) into
+// an evenly-sized tile grid at runtime, generating the mask <div>s
+// initRevealOnScroll() below stagger-reveals — same "mask panels fade
+// out to unveil the photo underneath" trick as .image-mosaic__mask (see
+// that section's own CSS comment), per explicit request that this image
+// assemble in tile-by-tile on scroll instead of fading in as one flat
+// rectangle. Generated here rather than hand-written in HTML because
+// .quote-block is reused verbatim across 6 separate pages (index/about/
+// get-involved/templates/{publications,article,category}.html) — one
+// shared tile count instead of near-identical divs duplicated 6 times,
+// which could quietly drift out of sync across pages if ever changed by
+// hand in only some of them.
+//
+// 4 columns x 2 rows (was 6x3 — per explicit follow-up feedback that 18
+// tiles read as too small/fussy; 8 bigger tiles reads more like a
+// deliberate mosaic): Slogan.jpg's own aspect ratio (3600/1837 ~= 1.96)
+// is closest to a whole-number grid at 4:2 (=2.0, ~2% off — invisible in
+// practice) without visibly distorting into non-square tiles — the exact
+// same column:row = width:height convention .featured-carousel's own
+// 4x2 grid already uses for its own 4:2(=2.0)-ratio container.
+const QUOTE_BLOCK_TILE_COLS = 4;
+const QUOTE_BLOCK_TILE_ROWS = 2;
+// Builds one COLS x ROWS grid layer (either the reveal masks or the
+// hover-glow tiles — same dimensions, different child class) and appends
+// it to `image`. Shared so the two grids can never drift out of sync
+// with each other or with QUOTE_BLOCK_TILE_COLS/ROWS.
+function buildQuoteBlockTileGrid(image, wrapperClass, tileClass) {
+  const wrapper = document.createElement("div");
+  wrapper.className = wrapperClass;
+  wrapper.style.gridTemplateColumns = `repeat(${QUOTE_BLOCK_TILE_COLS}, 1fr)`;
+  wrapper.style.gridTemplateRows = `repeat(${QUOTE_BLOCK_TILE_ROWS}, 1fr)`;
+  for (let i = 0; i < QUOTE_BLOCK_TILE_COLS * QUOTE_BLOCK_TILE_ROWS; i++) {
+    const tile = document.createElement("div");
+    tile.className = tileClass;
+    tile.setAttribute("aria-hidden", "true");
+    wrapper.appendChild(tile);
+  }
+  image.appendChild(wrapper);
+}
+function initQuoteBlockTiles() {
+  const images = document.querySelectorAll(".quote-block__image");
+  for (const image of images) {
+    // Idempotent — harmless if this ever runs twice for the same image.
+    if (image.querySelector(".quote-block__masks")) continue;
+    buildQuoteBlockTileGrid(image, "quote-block__masks", "quote-block__mask");
+    // Per-cell hover glow (per explicit request, once the photo was
+    // split into tiles) — same .image-mosaic__hover-tile pattern, a
+    // separate grid layer above the masks rather than a hover rule ON
+    // the masks themselves, since a mask's opacity is already spoken
+    // for by the scroll-reveal (fades to 0 permanently once revealed —
+    // see .quote-block__mask.is-visible) and can't also carry a hover
+    // background without the two fighting over the same property.
+    buildQuoteBlockTileGrid(image, "quote-block__hover-tiles", "quote-block__hover-tile");
+  }
+}
+
 function initRevealOnScroll() {
   // .split-cta__illustration-tile (not .split-cta itself — see the CSS
   // comment above this same selector list) is what gives section 3's
   // illustration box its tile-by-tile cascade: 4 tiles sharing one
   // parent, same stagger math as any other square-grid.
   const staggeredTargets = document.querySelectorAll(
-    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block, .publication-card"
+    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block__mask, .publication-card, .marquee-banner--scrolling"
   );
   // .partners reveals as ONE unit (slide up + fade, like the hero
   // elements — see .mosaic-reveal/.mosaic-reveal--slide on it in
@@ -1630,6 +1816,25 @@ function initMosaicReveal() {
     const [bottomLeft, bottomRight] = [masks[4], masks[5]];
     revealWithTile(bottomLeft, [scrim, captionLeft].filter(Boolean));
     revealWithTile(bottomRight, [captionRight].filter(Boolean));
+  }
+}
+
+// Chains .quote-block__overlay's own reveal off the LAST tile (bottom-
+// right — the one whose cascade delay/viewport entry finishes last) —
+// same revealWithTile() helper initMosaicReveal() above uses, so the
+// text card only starts fading in once the photo has genuinely finished
+// assembling, not a fixed guessed delay layered on top of a whole-image
+// fade (that's no longer a thing here — see the CSS comment on
+// .quote-block). No-op on the 5 pages that reuse .quote-block without
+// an overlay (about/get-involved/publications/article/category) — the
+// querySelector for it just returns null there.
+function initQuoteBlockReveal() {
+  const blocks = document.querySelectorAll(".quote-block");
+  for (const block of blocks) {
+    const masks = block.querySelectorAll(".quote-block__mask");
+    const overlay = block.querySelector(".quote-block__overlay");
+    if (!masks.length || !overlay) continue;
+    revealWithTile(masks[masks.length - 1], [overlay]);
   }
 }
 
