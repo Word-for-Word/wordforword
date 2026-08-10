@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=185" />
+  <link rel="stylesheet" href="css/style.css?v=207" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -137,49 +137,217 @@
     <div class="nav-dim-overlay" aria-hidden="true"></div>
 
   <!-- ============ HERO ============ -->
-  <!-- Copied verbatim from publications.html's own hero (same classes,
-       same --intro-delay values, same asset references) so the
-       animations/timing are guaranteed identical — placeholder content
-       ("Our"/"Publications", "Volumes"/"Articles") to be swapped for
-       this page's own copy later. See templates/publications.html's own
-       HTML comment and style.css's --compact comment for the full
-       reasoning behind this system. -->
+  <!-- Was copied verbatim from publications.html's own hero — now this
+       page's own copy: "About" (was "Publications"), "Our mission"/
+       "Our team" eyebrows (was "Volumes"/"Articles"), About Us Title.png
+       (was Publications Title.png). Dropped hero__wordmark-word
+       --publications (that stroke treatment was explicitly publications-
+       only, see style.css's own comment on it) and moved
+       .hero__wordmark-d-anchor onto the "t" (was the "s" in
+       "Publications") — positionHeroAsterisk() in main.js anchors the
+       asterisk to whatever glyph this span wraps, so it now lands on
+       "About"'s own top-right corner automatically, no JS changes
+       needed. hero__wordmark-placeholder--about/hero__wordmark-for-wrap
+       --about (further down + in style.css) swap this page's own
+       text/image stacking (text on top, image below, image's z-index
+       above the text) relative to the shared --compact composition —
+       page-specific modifiers, not edits to the shared rules, since
+       get-involved.html/publications.html reuse those same classes for
+       the opposite (image-on-top) composition. See style.css for the
+       full reasoning behind this system. -->
   <section class="hero hero--compact">
     <p class="hero__eyebrow">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Volumes</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Our mission</span>
     </p>
-    <div class="hero__wordmark-wrap hero__wordmark-wrap--compact">
-      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--publications" style="--intro-delay: 3420ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3420ms;">Publication<span class="hero__wordmark-d-anchor">s</span></span></span>
+    <div class="hero__wordmark-wrap hero__wordmark-wrap--compact hero__wordmark-wrap--about">
+      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact hero__wordmark-placeholder--about" aria-hidden="true">
+        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact" style="--intro-delay: 3220ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;">Abou<span class="hero__wordmark-d-anchor">t</span></span></span>
       </div>
-      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact" style="--intro-delay: 3220ms;" aria-hidden="true">
-        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;" src="assets/images/Publications Title.png" alt="" />
+      <!-- --intro-delay swapped with the text above (was 3220ms) per
+           explicit request: "About" should animate in FIRST, then the
+           image — the shared --compact composition (publications.html
+           etc.) has the image lead since it's the smaller flourish
+           bridging into the headline word, but this page's own
+           composition (image below/behind the text) reads better with
+           the headline leading instead. -->
+      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact hero__wordmark-for-wrap--about" style="--intro-delay: 3420ms;" aria-hidden="true">
+        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3420ms;" src="assets/images/About Us Title.png" alt="" />
       </div>
       <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 3720ms;" aria-hidden="true">
         <img class="hero__wordmark-asterisk" src="assets/images/Asterisk - Default.png" alt="" />
       </div>
     </div>
     <p class="hero__eyebrow hero__eyebrow--right">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Articles</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Our team</span>
     </p>
   </section>
 
-  <!-- Deliberately empty for now — see .static-page in style.css. Just
-       the header + matching page background, standing in so "Learn
-       more" (index.html section 1) has a real page to lead to. -->
-  <main class="static-page"></main>
+  <!-- Was deliberately empty (see .static-page in style.css) — now
+       holds the quote-block/partners sections below, matching
+       index.html's own nesting exactly (both sit INSIDE <main>, only
+       <footer> sits outside it) so this page picks up the SAME
+       main { gap: 60px } spacing between them that index.html gets;
+       previously these two sections sat as siblings AFTER </main>
+       instead, which visibly read as different spacing from
+       index.html's own bottom. -->
+  <main class="static-page">
+
+  <!-- ============ INTRO ============ -->
+  <!-- Same square-grid skeleton as index.html's own #overview (section
+       1) — reused for consistency, just a different aspect ratio (3
+       rows here, not 4) and different tile content. The ladybug/diamond
+       inset photos + their asterisks are pulled verbatim from #overview
+       (same assets, same square__inset-image/square__inset-asterisk-
+       wrap markup, same --top-left/--bottom-right positioning), just on
+       different-colored tiles per explicit request. The "reserved for
+       text" tiles (row 1 cols 3-4, row 2 cols 3-4) are one merged 2x2
+       square (square--cream, i.e. no fill — page background shows
+       through) holding the actual intro copy, centered in that
+       2-column-by-2-row area the same way .site-footer__center is
+       centered in ITS own merged 2x2 (see that section's own markup). -->
+  <section id="about-intro" class="square-grid square-grid--4col square-grid--rows-3">
+    <div class="square square--grey" style="grid-column: 1; grid-row: 1;" aria-hidden="true"></div>
+    <div class="square square--red square--inset" style="grid-column: 2; grid-row: 1;">
+      <img class="square__inset-image" src="assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
+      <div class="square__inset-asterisk-wrap square__inset-asterisk-wrap--top-left" aria-hidden="true">
+        <div class="square__inset-asterisk"></div>
+      </div>
+    </div>
+    <div class="square square--cream square--align-left square--pad-lg square--text-gap-30" style="grid-column: 3 / span 2; grid-row: 1 / span 2;">
+      <h2 class="square__intro-title">What is Word for Word?</h2>
+      <p class="square__intro-body">In today&rsquo;s society, the power of spoken word is often underutilized and undervalued. <em>Word for Word</em> strives to change that by catalyzing <strong>meaningful conversations about medical and healthcare accessibility</strong>. From the lack of sanitation supplies to the spread of viral diseases, the people in Philadelphia and beyond have stories that deserve to be heard.</p>
+      <p class="square__intro-body">As an organization, we hope to <strong>give underrepresented voices a listening ear</strong>; we hope to illuminate the stories of patients and practitioners; and we hope to garner support for the issues that matter most today.</p>
+      <p class="square__intro-body">Outside of this scope, <em>Word for Word</em> celebrates the medical humanities through poetry, short stories, abstracts, vignettes, and other creative works that explore the <strong>inextricable relationship between medicine and the humanities</strong>.</p>
+    </div>
+
+    <div class="square square--checker" style="grid-column: 1; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--tan" style="grid-column: 2; grid-row: 2;" aria-hidden="true"></div>
+
+    <div class="square square--dark" style="grid-column: 1; grid-row: 3;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 2; grid-row: 3; --checker-a: var(--color-tan); --checker-b: var(--color-red);" aria-hidden="true"></div>
+    <div class="square square--red square--inset" style="grid-column: 3; grid-row: 3;">
+      <img class="square__inset-image" src="assets/images/Section 1 Square 16.png" alt="Diamond-cropped detail of a flower bud" />
+      <div class="square__inset-asterisk-wrap square__inset-asterisk-wrap--bottom-right" aria-hidden="true">
+        <div class="square__inset-asterisk"></div>
+      </div>
+    </div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 3; --checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+  </section>
+
+  <!-- ============ BEYOND THE PAGE ============ -->
+  <!-- Section 2 — reuses index.html's own section 3 (.split-cta) grid/
+       padding/column-width exactly, so this lands with identical
+       margins/layout without duplicating any of its CSS. Skeleton for
+       now: no CTA (this copy has no link to send anyone to) and no
+       image chosen yet, so the right column is just a dashed
+       placeholder box (see .split-cta__illustration-wrap--placeholder)
+       instead of real artwork — swap it for a real <img> later without
+       touching the surrounding layout. -->
+  <section class="split-cta">
+    <div class="split-cta__text">
+      <h3 class="split-cta__title">Beyond the Page</h3>
+      <p class="beyond-page__body"><strong>We knit word into action.</strong> <em>Word for Word</em> hosts food drives with Philabundance and partners with youth organizations in Philadelphia&mdash;and beyond. Through outreach, we bring reading, medicine, and the medical humanities into the community.</p>
+      <p class="beyond-page__body">We strive to respond to the stories shared with us, and to <strong>empower others to do the same.</strong></p>
+    </div>
+    <div class="split-cta__deco" aria-hidden="true">
+      <div class="split-cta__illustration-wrap split-cta__illustration-wrap--placeholder"></div>
+    </div>
+  </section>
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Same banner as every other page's own — see index.html's own
-       comment above .quote-block for why the class is reused verbatim
-       (fade-in-on-scroll comes free from the existing selector list). -->
+  <!-- Exact copy of index.html's own .quote-block (was missing its
+       .quote-block__overlay text entirely) — see that file's own comment
+       above .quote-block for why the class/mosaic-reveal is reused
+       verbatim (fade-in-on-scroll, tile-by-tile mask assembly, comes
+       free from the existing selector list/initQuoteBlockTiles() in
+       main.js). -->
   <section class="quote-block">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
     </div>
+    <div class="quote-block__overlay mosaic-reveal">
+      <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
+    </div>
   </section>
 
+  <!-- ============ PARTNER LOGOS ============ -->
+  <!-- Exact copy of index.html's own .partners marquee — see that
+       file's own comment above it for the full reasoning. -->
+  <section class="partners marquee-banner--scrolling">
+    <div class="partners__scroll">
+      <p class="partners__track">
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+      </p>
+      <p class="partners__track" aria-hidden="true">
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+      </p>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <!-- Exact copy of index.html's own <footer> — .square/.square-grid are
+       generic, page-agnostic (initRevealOnScroll() in main.js queries
+       `.square` sitewide and toggles .is-visible on scroll), so reusing
+       this verbatim works correctly on any page without extra wiring.
+       This page was previously missing a footer entirely. -->
+  <footer id="about" class="site-footer square-grid square-grid--4col">
+    <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 2; grid-row: 1;" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 3; grid-row: 1;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 1; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 2; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 3; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square site-footer__center" style="grid-column: 2 / span 2; grid-row: 1 / span 2;">
+      <img class="site-footer__title" src="assets/images/Footer Title.png" alt="Word for Word*" />
+      <ul class="site-footer__links">
+        <li><a href="https://www.instagram.com/pennword4word/?hl=en" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://pennclubs.com/club/word-for-word/" target="_blank" rel="noopener">Penn Clubs</a></li>
+        <li><a href="mailto:wordforwordpenn@gmail.com">Email</a></li>
+      </ul>
+      <p class="site-footer__inspo">Site Inspiration: <a href="https://www.bruegel2018.at/?ref=httpster.net" target="_blank" rel="noopener">Kunsthistorisches Museum</a></p>
+      <p class="site-footer__copyright">© 2026 Word for Word | <a href="https://melodysz.github.io/fishtank/" target="_blank" rel="noopener">From an ocean blue...</a></p>
+    </div>
+  </footer>
+
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="js/main.js?v=111" defer></script>
+    <script src="js/main.js?v=126" defer></script>
 </body>
 </html>

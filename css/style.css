@@ -1441,10 +1441,13 @@ main {
      dimmed brand color reads as an off-palette color, not a real one. */
   /* Its own size — not tied to --text-small/--text-body, since it needs
      to sit bigger than nav/caption text but isn't part of the 2-size
-     body/UI scale either. */
-  font-size: 18px;
-  /* Book (400), not the site-wide Light (300) default. */
-  font-weight: 400;
+     body/UI scale either. Sized up from 18px per explicit request. */
+  font-size: 20px;
+  /* Back to the site-wide Light (400 -> 300) per explicit request — was
+     previously bumped to Book (400) specifically to read heavier than
+     this default; reverting that override now reads as lighter, as
+     asked. */
+  font-weight: 300;
   /* Tighter than body's inherited 1.5 — these are 2 short fragments of
      one thought, not real paragraph copy, so they read better sitting
      close together. 1.2 (tried first) read as too cramped — the two
@@ -1505,8 +1508,16 @@ main {
      a long single word (e.g. "Publications") needs more room than
      either "Word" did, so the word's own font-size below is scaled
      down and the wrap widened to match, rather than letting it overflow
-     a wrap sized for a 4-letter word. */
-  width: clamp(280px, 40vw, 560px);
+     a wrap sized for a 4-letter word. Scaled up 25% (clamp(280,40vw,560)
+     -> clamp(350,50vw,700)) per explicit request that this whole title
+     read too small — scaled by the SAME factor as the word's own
+     font-size below, not just bumped independently: .hero__wordmark-for
+     --compact's width and every position nudge in this system
+     (translateY(13%)/--about's own -46%) are already percentages OF
+     this wrap/its own box, so scaling wrap and text together keeps the
+     image sized and positioned exactly as relative to the text as it
+     was before, just bigger throughout — no separate re-tuning needed. */
+  width: clamp(350px, 50vw, 700px);
   aspect-ratio: 560 / 340;
 }
 .hero__wordmark-placeholder--compact {
@@ -1527,8 +1538,11 @@ main {
 }
 .hero__wordmark-word--compact {
   /* Scaled down from the homepage's own clamp(104px, 14.85vw, 192px) —
-     this variant's whole point is smaller hero text. */
-  font-size: clamp(56px, 8vw, 104px);
+     this variant's whole point is smaller hero text. Bumped 25%
+     (56/8vw/104 -> 70/10vw/130) per explicit request that it read too
+     small — see .hero__wordmark-wrap--compact's own comment for why the
+     wrap above is scaled by this exact same factor alongside it. */
+  font-size: clamp(70px, 10vw, 130px);
 }
 .hero__wordmark-for-wrap--compact {
   /* The homepage's own centers "for" through the middle of both words —
@@ -1554,8 +1568,14 @@ main {
 .hero__wordmark-asterisk-wrap--compact {
   /* Homepage's own asterisk (var(--hero-asterisk-size)) is sized to
      balance against ITS much bigger hero text — proportionally too
-     large next to this variant's smaller word, per explicit request. */
-  width: calc(var(--hero-asterisk-size) * 0.55);
+     large next to this variant's smaller word, per explicit request.
+     0.55 -> 0.7: scaled up alongside the word's own 25% size bump above
+     (.hero__wordmark-word--compact) so the asterisk stays in the same
+     visual proportion to the now-bigger text instead of reading
+     comparatively small next to it. Position is unaffected — it's
+     computed live off the actual glyph by positionHeroAsterisk() in
+     main.js, not tied to this size. */
+  width: calc(var(--hero-asterisk-size) * 0.7);
 }
 .hero__wordmark-word--publications {
   /* Per explicit request: a stroke OUTSIDE each letter, not eating into
@@ -1570,6 +1590,60 @@ main {
      automatically wherever --compact's sizing gets reused. */
   -webkit-text-stroke: 8px var(--color-cream);
   paint-order: stroke;
+}
+/* about.html's own composition — page-specific modifiers (not edits to
+   the shared --compact rules above) since get-involved.html/
+   publications.html reuse those same classes for the opposite
+   (image-on-top, text-below-behind-it) stacking. Per explicit request:
+   text on top, image below, with the image's z-index ABOVE the text so
+   where they overlap, the image slightly obscures the text — the exact
+   reverse of the shared rules' own z-index (text above image) and
+   vertical order (image flush-top nudged down, text centered). Text now
+   flush-top (no nudge needed — the overlap comes entirely from the
+   image below moving UP into it); image flush-bottom, nudged UP.
+   -45% (not a straight mirror of the shared rule's own -13%-down nudge)
+   — "About Us Title.png"'s own image is a different shape/size relative
+   to "About" than "Our" was to "Publications", so the shared rule's
+   exact magnitude read as barely-overlapping here; tuned up by eye until
+   "Us" genuinely overlapped into "About"'s own bottom edge. */
+/* Text flush-top + image flush-bottom-nudged-up leaves the combined
+   text+image visual group sitting above the wrap's own (and the hero
+   section's own) true vertical center — the shared --compact rules
+   never needed correcting for this because their own centered-text/
+   flush-top-image composition happens to balance out roughly even.
+   A flat px value here was tried first (33px, tuned against ~1400px+
+   viewports where .hero__wordmark-word--compact's font-size and
+   .hero__wordmark-wrap--compact's own width — two independent clamp()s
+   with different vw coefficients, same class of mismatch documented on
+   the hero asterisk's own positioning — both happen to hit their max
+   ceiling) — reported still off, since plenty of real browser windows
+   sit below that width, where the two clamps are NOT proportional and
+   a static value can't track both at once. Corrected the same way the
+   asterisk is instead: measured live and set as an inline transform by
+   positionAboutHeroTitle() in main.js, re-run on fonts.ready/resize/
+   introfinished. translateY(0) here is just the pre-JS fallback. */
+.hero__wordmark-wrap--about {
+  transform: translateY(0);
+}
+.hero__wordmark-placeholder--about {
+  justify-content: flex-start;
+  z-index: 1;
+}
+.hero__wordmark-for-wrap--about {
+  align-items: flex-end;
+  /* -45% (up from the shared rule's own -13%-down) tuned by eye so "Us"
+     genuinely overlaps "About"'s own bottom edge — see this rule's own
+     earlier comment. -48% per explicit follow-up feedback: -53% (an
+     earlier bump) moved it up too far. -44% per a later follow-up
+     ("move it down a tiny bit" from -48%), then -46% per one more
+     follow-up, then -49% per "move it up a little", then -47% per "move
+     it down a little" once more. positionAboutHeroTitle()
+     in main.js re-centers the whole group against this value automatically
+     on every change, so tuning this alone is always safe — no need to
+     re-tune the wrap-level centering correction to match. */
+  transform: translateY(-47%);
+  --squash-base: translateY(-47%);
+  z-index: 2;
 }
 
 /* ===================================================================
@@ -1594,6 +1668,7 @@ main {
 }
 .square-grid--rows-1 { aspect-ratio: 4 / 1; }
 .square-grid--rows-2 { aspect-ratio: 4 / 2; }
+.square-grid--rows-3 { aspect-ratio: 4 / 3; }
 .square-grid--rows-4 { aspect-ratio: 4 / 4; }
 /* Section 4's grid sits flush against .featured-carousel directly below it
    (see index.html) — squares off just the bottom 2 corners (normally
@@ -1671,6 +1746,15 @@ main {
 .square--red   { background: var(--color-red);   color: var(--color-tan); }
 .square--tan   { background: var(--color-tan);    color: var(--color-dark); }
 .square--cream { background: var(--color-cream);  color: var(--color-dark); }
+/* --color-cream IS the page background (see the variable's own
+   comment) — this tile is body copy, not a decorative accent, so
+   .square:hover's brightness glow reads as a stray flash rather than
+   real feedback. Same reasoning/pattern as .site-footer__center's own
+   pointer-events:none: this is the one square tile people are meant to
+   just read, not hover. */
+.square--cream {
+  pointer-events: none;
+}
 .square--grey  { background: var(--color-grey);   color: var(--color-tan); }
 .square--dark  { background: var(--color-dark);   color: var(--color-tan); }
 
@@ -1777,6 +1861,88 @@ main {
    tall the tile happened to be). */
 .square--text-gap-30 { gap: 30px; }
 
+/* About page section 1's merged 2x2 "What is Word for Word?" tile —
+   title + 3 paragraphs, left-aligned/justified (.square--align-left +
+   this rule's own text-align:justify override on the paragraphs) and
+   vertically centered as a block via .square's own base
+   justify-content:center, matching the reference screenshot. */
+.square__intro-title {
+  /* Same face/size as every other real section title on the site
+     (.split-cta__title, "What else?" — section 3's own heading), per
+     explicit request to match rather than invent a new scale. */
+  font-family: var(--font-display);
+  font-size: clamp(26px, 8vw, 40px);
+  font-weight: 400;
+  margin: 0;
+}
+.square__intro-body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  text-align: justify;
+  margin: 0;
+}
+/* Same lighter 500 (not the browser's bold 700 default) as every other
+   Newsreader body-copy context on the site — see the shared comment
+   above .square__body strong. */
+.square__intro-body strong {
+  font-weight: 500;
+}
+/* Scoped to THIS tile only — not the shared .square--pad-lg/
+   .square--text-gap-30 classes it also carries, which other pages
+   still use at their original 70px/30px values. At those shared
+   values the title + 3 paragraphs need more height than 2 true-square
+   rows provide (690px) — which is what forces rows 1-2 to grow past
+   what the OTHER (true-square) tiles sharing those rows need, leaving
+   those tiles stranded with blank background below them once
+   grid-auto-rows:auto stretches the rows to fit this text.
+   Side padding is deliberately the larger axis (matches the shared
+   70px value exactly) with top/bottom compressed instead of shrinking
+   both evenly — per explicit request, side padding should always be
+   the greater one, never top/bottom. Squeezing top/bottom (not sides)
+   is also the more effective lever anyway: less side padding widens
+   the line box and reflows into fewer, longer lines, which COSTS
+   height rather than saving it — top/bottom padding is pure height
+   with no such reflow tax. These values are intentionally the
+   largest vertical padding/gap that still keeps the current copy
+   (see about.html) at or under the 690px budget — re-measure and
+   raise them again any time the copy gets shorter, per the ongoing
+   copy-trim effort, but keep side > top/bottom when you do. */
+#about-intro .square--cream {
+  /* Top/bottom sum still 40px (unchanged from the even 20px/20px this
+     replaced) — this is a pure REPOSITION, not a size change: .square's
+     own justify-content:center centers content within the space left
+     after padding, so shifting weight from top to bottom moves that
+     centered block up by exactly the difference (here, 12px) without
+     touching the tile's total height requirement or reopening the
+     row-gap risk. Per explicit request to nudge the copy up within its
+     box, copy left as-is. */
+  padding: 8px 70px 32px;
+  gap: 18px;
+}
+/* .square-grid--rows-3's shared aspect-ratio (all 3 rows locked to an
+   equal 1/3 share of a fixed total height, same as #overview's own
+   rows) works for photo/checker tiles, which have no real content
+   demand of their own — but the title + 3 real paragraphs above
+   genuinely need more height than 2 of those fixed rows have room for
+   at normal viewport widths (confirmed live: content measured ~824px
+   tall against a ~690px available box, silently clipping the title off
+   the top and the last paragraph's final lines off the bottom, since
+   the tile's own overflow:hidden + centered content hides an overrun
+   symmetrically on both ends rather than visibly overflowing). Same
+   fix as the 660px-breakpoint pattern below (aspect-ratio:auto +
+   grid-auto-rows:auto lets each row size to its own tallest content)
+   applied here at every width, not just narrow ones — with the
+   decorative tiles individually pinned back to a real 1:1 square (via
+   their own aspect-ratio, not a shared row height) so THEY don't
+   inherit the text row's much taller height. */
+#about-intro {
+  aspect-ratio: auto;
+  grid-auto-rows: auto;
+}
+#about-intro > .square:not(.square--cream) {
+  aspect-ratio: 1 / 1;
+}
+
 /* Diamond-argyle checker filler tile. Colors are passed in per-instance
    via the --checker-a / --checker-b custom properties.
 
@@ -1865,6 +2031,21 @@ main {
 }
 .square__script--sub { font-size: var(--text-body); }
 .square__body { font-size: var(--text-body); flex: 1; }
+/* A plain <strong> falls back to the browser default bold (700) —
+   reported live as too heavy, twice over (800 first, then even the
+   plain 700 default). Settled on 500 — enough weight to read as real
+   emphasis against the surrounding Light (300) body copy without the
+   much starker jump a true bold reads as on this particular serif at
+   these sizes. Applied consistently across every Newsreader body-copy
+   context (.square__footnote — section 1 tile 7's "word for word";
+   .square__role-description — section 2's hover-revealed role
+   descriptions; .square__script — section 2 tile 7's "spring"). */
+.square__body strong,
+.square__footnote strong,
+.square__role-description strong,
+.square__script strong {
+  font-weight: 500;
+}
 /* flex:1 is meant for single-child tiles, where it just fills the tile
    with no visible effect. Whenever a sibling follows (section 1 tile 7's
    2-line sentence, section 4 tile 2's body + handle, section 4 tile 7's
@@ -2299,10 +2480,11 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
   width: 200px;
   height: 50px;
 }
-/* Same face/size as ordinary body text — --font-body at its lightest
-   (300, matching body's own default weight), --text-body size, not
-   italic. Previously used Instrument Serif italic at a one-off size,
-   which was specific to "Learn more" inside the diamond, not this. */
+/* Same face/size as ordinary body text — --font-body, --text-body size,
+   not italic. Previously used Instrument Serif italic at a one-off
+   size, which was specific to "Learn more" inside the diamond, not
+   this. Weight bolded to 500 (then reverted back to 300, body's own
+   default) per explicit request to un-bold "Still curious?". */
 .square__arc text, .square__arc textPath {
   font-family: var(--font-body);
   font-weight: 300;
@@ -2867,6 +3049,52 @@ a.diamond-cta {
   right: 24px;
 }
 
+/* Bottom-center slide-count indicators — same job a typical row of
+   carousel dots does, but filled diamonds (rotate(45deg) on a small
+   solid square, same technique as .featured-carousel__nav/.diamond-cta
+   above) per explicit request instead of circles. Built dynamically by
+   initFeaturedCarousel() in main.js (one per REAL slide, never per
+   clone) so the count can't drift out of sync with the actual number
+   of slides; no base rule needed in index.html beyond the empty
+   container. */
+.featured-carousel__indicators {
+  position: absolute;
+  /* Same 24px inset every other persistent carousel element (title,
+     edition, nav buttons, the "(0N)" number) already uses, so this
+     lines up with the slide-count caption along the same bottom
+     line instead of sitting at its own arbitrary offset. */
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* Solid fill, not an outline — "filled diamonds" per the request.
+   Inactive ones sit at reduced opacity (dimmed, not literally
+   transparent-to-invisible) so the active slide's diamond reads as
+   "more solid" purely by contrast, without needing a second color. */
+.featured-carousel__indicator {
+  appearance: none;
+  background: var(--color-tan);
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.featured-carousel__indicator:hover {
+  opacity: 0.65;
+}
+.featured-carousel__indicator.is-active {
+  opacity: 1;
+}
+
 /* ===================================================================
    Marquee banners ("Get Involved *", "Publications *") — no background
    (just page bg showing through), no rounded corners (nothing to round
@@ -3237,6 +3465,32 @@ span.split-cta__text-line {
      replaced (a long history of translateY values — -40 through a
      diagnostic -400px — all lived on this rule before that was caught). */
 }
+/* About page "Beyond the Page" (section 2) skeleton — same .split-cta__
+   illustration-wrap sizing/position as section 3's real artwork box
+   above, but no image chosen yet, so this just outlines where one will
+   go instead of rendering the tile-mosaic + artwork machinery that box
+   normally holds. */
+.split-cta__illustration-wrap--placeholder {
+  border: 2px dashed var(--color-dark);
+  border-radius: 15px;
+  opacity: 0.35;
+}
+/* .split-cta__title/.split-cta__text-line's own reveal-on-scroll chain
+   (initSplitCtaReveal() in main.js) only fires once a real illustration
+   image is present — this skeleton section deliberately has neither, so
+   its title/body render plain and immediately visible rather than
+   inheriting classes whose opacity:0 starting state would never get
+   cleared. */
+.beyond-page__body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+}
+.beyond-page__body + .beyond-page__body {
+  margin-top: 16px;
+}
+.beyond-page__body strong {
+  font-weight: 500;
+}
 /* The actual visible rectangle: 2 tiles across, 1.5 tiles down (a
    full-height row of 2 + a half-height row of 2 — tiles are square, so a
    half-height bottom row is what makes 2 rows add up to "1.5 tiles"
@@ -3549,15 +3803,15 @@ span.split-cta__text-line {
 .quote-block {
   position: relative;
   text-align: center;
-  /* No max-width (was 700px, sized for a short line of text) — per
-     explicit request, this now spans the same width as the homepage's
-     own .publications section — specifically .publications__grid's own
-     effective width (body's ordinary --page-margin PLUS that grid's own
-     extra 40px horizontal margin, see its own comment — measured
-     directly: 50px inset each side, not just the outer .publications
-     section's plain --page-margin alone, which is 10px and reads as
-     noticeably wider than the actual card row above it). */
-  margin: 60px 40px 0;
+  /* No max-width (was 700px, sized for a short line of text). Previously
+     matched .publications__grid's own narrower 50px-inset width (an
+     extra 40px on top of body's own --page-margin); per explicit
+     follow-up request, widened again to align with most other
+     sections instead — e.g. the footer (.site-footer, via
+     .square-grid), which carries no horizontal margin of its own and
+     so just sits at body's plain 10px --page-margin. Only the
+     vertical 60px top margin is this section's own. */
+  margin: 60px 0 0;
 }
 /* Wraps the photo + its mask grid — needs an explicit size (via
    aspect-ratio, since its children are position:absolute and can no
@@ -3658,42 +3912,67 @@ span.split-cta__text-line {
    Partner logos
 =================================================================== */
 .partners {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 96px;
-  flex-wrap: wrap;
-  /* Padding is internal breathing room around the logos. margin-top is
-     an explicit ADDITION to main's own 60px gap (was 0, relying on that
-     gap alone) — per explicit request, the whole stretch from the
-     publications section down through here read as too cramped
-     vertically. */
+  /* EXPERIMENTAL marquee conversion — was a centered flex row of the 3
+     raw logo <img>s; now a full-bleed (100vw, matching .marquee-banner's
+     own edge-to-edge treatment) overflow:hidden strip wrapping
+     .partners__scroll instead. Now ALSO carries .marquee-banner--
+     scrolling (see index.html) for its scroll-triggered reveal, per
+     explicit follow-up request to match the other marquees exactly —
+     this class used to have its own bespoke fade+slide (matching the
+     hero title's values) specifically to stay OUT of that shared
+     system; now that it's deliberately IN it, .partners itself carries
+     only layout, no opacity/transform/transition of its own — see
+     .marquee-banner--scrolling/.marquee-banner--scrolling.is-visible
+     further down for the reveal it now shares with #get-involved/
+     #publications. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  overflow: hidden;
+  /* Padding is internal breathing room around the logos. Used to also
+     carry margin-top: 40px (an explicit ADDITION on top of main's own
+     60px gap, from when .partners was a plain static row and the
+     publications-to-here stretch read as too cramped) — dropped per
+     explicit follow-up feedback: that extra 40px, added only above and
+     not below, made the space above the marquee (132px: main's 60px gap
+     + this 40px + this rule's own 32px padding-top) visibly bigger than
+     the space below it (92px: this rule's own 32px padding-bottom +
+     main's 60px margin-bottom) — confirmed live. Removing it restores
+     the same 92px both sides. */
   padding: 32px 0;
-  margin-top: 40px;
-  /* Reveals as ONE unit (not per-logo) — matches the hero title's exact
-     values (translateY(36px), 1.6s, same easing split as
-     .hero__title-exit: ease-in for the fade, easeOutCubic for the
-     slide) rather than reusing the generic .mosaic-reveal/
-     .mosaic-reveal--slide utility, which was tried first and visibly
-     started already-opaque, only sliding — fade and slide weren't
-     actually happening together. A dedicated rule here sidesteps
-     whatever in that shared utility's cascade caused that. */
-  opacity: 0;
-  transform: translateY(36px);
-  transition: opacity 1.6s ease-in, transform 1.6s cubic-bezier(0.33, 1, 0.68, 1);
-  /* Best-effort mitigation for a reported real-Chrome-only bug (not
-     reproducible in automated/headless testing across 5+ scroll
-     patterns): elements this far down a long page can get a delayed
-     "cold start" repaint the first time they're scrolled into view,
-     which can make the transition's very first rendered frame already
-     partway faded/slid in instead of starting clean. This hints the
-     browser to keep the element composite-ready ahead of time rather
-     than repainting it from scratch at the moment it's revealed. */
-  will-change: opacity, transform;
 }
-.partners.is-visible {
-  opacity: 1;
-  transform: none;
+/* .partners__scroll/.partners__track mirror .marquee-banner--scrolling's
+   own 2-identical-copies-side-by-side technique (see that class's own
+   long comment further up) — parallel, not shared, classes: same
+   mechanics (a flex row of 2 byte-identical tracks, animated by exactly
+   ONE track's own measured width so the loop point is invisible),
+   measured/driven by initPartnersMarquee() in main.js rather than
+   setMarqueeScrollMetrics(), which only ever queries .marquee-banner__*.
+   --marquee-track-width/duration are set inline per-instance by that
+   function, same as the text marquees; the values below are only the
+   pre-JS fallback. Flex (not the text marquees' inline/nowrap layout)
+   since these are images of very different heights (76-100px) needing
+   real vertical centering, not baseline text alignment — no canvas
+   cap-height measuring hack needed here. */
+.partners__scroll {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 96s linear infinite;
+}
+.partners__track {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  flex-shrink: 0;
+  /* Matches .marquee-banner's own padding so the strip reads as the
+     same "thing" as the other marquees, just carrying logos instead of
+     text. */
+  padding: 0 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .partners__scroll {
+    animation-play-state: paused;
+  }
 }
 .partners__logo {
   height: 76px;
@@ -3705,6 +3984,17 @@ span.split-cta__text-line {
    larger height. */
 .partners__logo--kelly {
   height: 100px;
+}
+/* Same brown asterisk artwork AND size as every other marquee's "*"
+   separator (assets/images/Brown asterisk.png, MARQUEE_ASTERISK_SIZE =
+   14px in main.js) — per explicit request, matching those rather than
+   sized up for the taller logos. Vertical centering comes for free from
+   .partners__track's own align-items:center (a flex row, unlike the
+   text marquees' inline layout), so none of the canvas-measured
+   cap-height alignment those need applies here. */
+.partners__asterisk {
+  height: 14px;
+  width: auto;
 }
 
 /* ===================================================================
@@ -3738,8 +4028,13 @@ span.split-cta__text-line {
    section's own container aspect-ratio. */
 .site-footer .square--checker {
   aspect-ratio: 1 / 1;
-  /* Same will-change:opacity mitigation as .partners above — the
-     footer is the very bottom of a long page, same reported symptom. */
+  /* Mitigation for a reported real-Chrome-only bug: elements this far
+     down a long page can get a delayed "cold start" repaint the first
+     time they're scrolled into view, making the opacity transition's
+     very first rendered frame already partway faded in instead of
+     starting clean. This hints the browser to keep the element
+     composite-ready ahead of time rather than repainting from scratch
+     at reveal. */
   will-change: opacity;
 }
 .site-footer__center {
@@ -3843,7 +4138,7 @@ span.split-cta__text-line {
      space below its own much-shorter square content. auto sizes each
      row independently, purely from what's actually in IT. */
   .square-grid--4col { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; aspect-ratio: auto; }
-  .square-grid--rows-1, .square-grid--rows-2, .square-grid--rows-4 { aspect-ratio: auto; }
+  .square-grid--rows-1, .square-grid--rows-2, .square-grid--rows-3, .square-grid--rows-4 { aspect-ratio: auto; }
   .square { aspect-ratio: 1 / 1; }
   /* A strict square is too short to hold real paragraph copy once its
      own column narrows this far — confirmed live: "Through interviews…"
@@ -3900,6 +4195,22 @@ span.split-cta__text-line {
   #overview > *:nth-child(9) { grid-column: 2 !important; grid-row: 7 !important; }
   #overview > *:nth-child(10) { grid-column: 1 !important; grid-row: 8 !important; }
   #overview > *:nth-child(11) { grid-column: 2 !important; grid-row: 8 !important; }
+  /* Same "inline column-3/4 placements don't reflow" problem, same
+     !important-override fix, for about.html's own section 1 — see
+     #overview's own comment above for the full reasoning. Only 1
+     content-driven square here (child 3, the merged intro text tile),
+     so it just gets its own full-width row instead of being paired
+     with another content square; the remaining 8 decorative squares
+     pair up 2-per-row in source order. */
+  #about-intro > *:nth-child(1) { grid-column: 1 !important; grid-row: 1 !important; }
+  #about-intro > *:nth-child(2) { grid-column: 2 !important; grid-row: 1 !important; }
+  #about-intro > *:nth-child(3) { grid-column: 1 / span 2 !important; grid-row: 2 !important; }
+  #about-intro > *:nth-child(4) { grid-column: 1 !important; grid-row: 3 !important; }
+  #about-intro > *:nth-child(5) { grid-column: 2 !important; grid-row: 3 !important; }
+  #about-intro > *:nth-child(6) { grid-column: 1 !important; grid-row: 4 !important; }
+  #about-intro > *:nth-child(7) { grid-column: 2 !important; grid-row: 4 !important; }
+  #about-intro > *:nth-child(8) { grid-column: 1 !important; grid-row: 5 !important; }
+  #about-intro > *:nth-child(9) { grid-column: 2 !important; grid-row: 5 !important; }
   /* .image-mosaic (child 5 above) has no aspect-ratio of its own — on
      desktop its height comes entirely from spanning 3 rows of the
      aspect-ratio-locked 4-col grid. That grid is aspect-ratio:auto here,
@@ -4149,19 +4460,27 @@ span.split-cta__text-line {
 .intro-reveal--slide-slow.is-visible {
   transform: none;
 }
-/* Hero title only (word 1, word 2, "for") — the shared easeOutCubic
-   above front-loads its motion (fast start, slow settle), which read as
-   an abrupt "pop" for a pure fade specifically, even though it feels
-   right for the slide. Only overriding transition-timing-function (not
-   the whole `transition` shorthand) so this doesn't reset the
-   transition-delay overrides set elsewhere for the scroll-linked exit/
-   re-entry — comma position matches .intro-reveal--slide-slow's own
-   property order (opacity, transform): ease-in only touches the fade,
-   the slide keeps its existing curve untouched. ease-in is slow-then-
-   fast — the opposite shape from ease-out — so the fade now eases
-   gently into motion instead of jumping straight to visible. */
-.hero__title-exit {
+/* Hero title (word 1, word 2, "for") AND the eyebrow lines — the shared
+   easeOutCubic above front-loads its motion (fast start, slow settle),
+   which read as an abrupt "pop" for a pure fade specifically, even
+   though it feels right for the slide. Only overriding
+   transition-timing-function (not the whole `transition` shorthand) so
+   this doesn't reset the transition-delay overrides set elsewhere for
+   the scroll-linked exit/re-entry — comma position matches
+   .intro-reveal--slide-slow's own property order (opacity, transform):
+   ease-in only touches the fade, the slide keeps its existing curve
+   untouched. ease-in is slow-then-fast — the opposite shape from
+   ease-out — so the fade now eases gently into motion instead of
+   jumping straight to visible. Originally scoped to .hero__title-exit
+   only; the eyebrow lines were reported showing the exact same "already
+   fully opaque" pop on scroll re-entry once the title's own fade was
+   fixed and made the eyebrows' un-fixed one obvious by contrast next to
+   it — same underlying cause, same fix, just never applied there too. */
+.hero__title-exit,
+.hero__eyebrow-line {
   transition-timing-function: ease-in, cubic-bezier(0.33, 1, 0.68, 1);
+}
+.hero__title-exit {
   /* Title pieces travel further to reach their resting spot than the
      shared .intro-reveal--slide-slow default (36px) — per explicit
      request for more visible motion on the title specifically, without
@@ -4304,6 +4623,19 @@ body.intro-finished .hero__title-exit {
    intro sequence comment in index.html), not an arbitrary re-entry-only
    value, per explicit request that scrolling back should just replay
    what the intro itself does. */
+/* Word 1 previously had NO extra delay (0s, straight off the base reset
+   above) — it started moving the INSTANT the scroll threshold was
+   crossed, so by the time "for"/word 2 even started, word 1 was already
+   mid-flight or done, reading as barely-there next to them. Per explicit
+   request this isn't about the trigger (still the same scroll threshold,
+   still the first piece to move) — just a small head-start delay so the
+   eye actually catches it beginning to move instead of arriving
+   "already in progress." Small enough to still leave a clear gap before
+   "for" starts at 0.13s (comparable to the eyebrow lines' own working
+   90ms line-1-to-line-2 stagger), so the sequential read isn't lost. */
+body.intro-finished .hero__wordmark-word--1 .hero__title-exit.is-visible {
+  transition-delay: 0.05s;
+}
 body.intro-finished .hero__wordmark-for.is-visible {
   transition-delay: 0.13s;
 }
@@ -4317,7 +4649,16 @@ body.intro-finished .hero__title-exit:not(.is-visible) {
      stale partial value. */
   transition-duration: 0s;
   opacity: 0;
-  transform: translateY(-100px);
+  /* -100px (matching the eyebrow lines' own exit distance) read as
+     barely-there on re-entry — word 1 in particular, since it has no
+     extra transition-delay (see the stagger rules above) and so is
+     already done sliding before "for"/word 2 even start, making its
+     travel easy to miss entirely. Per explicit request this is a
+     distance problem, not a timing one: bumped to -180px so the title's
+     re-entry reads as clearly as its page-load intro (.hero__title-exit's
+     own 140px) does. Left the eyebrow lines/asterisk at -100px — only
+     the title itself was reported as reading weak. */
+  transform: translateY(-180px);
 }
 body.intro-finished .hero__title-exit.is-visible {
   opacity: 1;
@@ -4657,7 +4998,10 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
    rules here.
 =================================================================== */
 .spotlight {
-  padding: 0 100px;
+  /* Was 100px — per explicit request, now spans the same width as this
+     page's own section 1 (.publications__grid's 40px-extra-on-top-of-
+     --page-margin inset, i.e. 40px here). */
+  padding: 0 40px;
   margin: 60px 0;
 }
 .spotlight__lead {
@@ -4849,7 +5193,6 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .split-cta__illustration-tile,
   .split-cta__illustration,
   .split-cta__text-line,
-  .partners,
   .intro-reveal,
   .intro-reveal--slide,
   .intro-reveal--slide-slow,
