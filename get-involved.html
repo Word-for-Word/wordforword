@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=185" />
+  <link rel="stylesheet" href="css/style.css?v=206" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -136,6 +136,18 @@
     </header>
     <div class="nav-dim-overlay" aria-hidden="true"></div>
 
+    <!-- Fixed viewport frame — same markup as index.html's own (see that
+         file's HTML comment for the full reasoning); was missing on this
+         page, which is why it lacked the rounded-corner frame every other
+         page has. -->
+    <div class="viewport-frame" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
+    <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
+    <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
+
   <!-- ============ HERO ============ -->
   <!-- Copied verbatim from publications.html's own hero (same classes,
        same --intro-delay values, same asset references) so the
@@ -164,22 +176,110 @@
     </p>
   </section>
 
-  <!-- Deliberately empty for now — see .static-page in style.css. Just
-       the header + matching page background, standing in so section 2's
-       small diamond CTA (index.html) has a real page to lead to. -->
-  <main class="static-page"></main>
+  <!-- Was deliberately empty (see .static-page in style.css) — now
+       holds the quote-block/partners sections below, matching
+       index.html's own nesting exactly (both sit INSIDE <main>, only
+       <footer> sits outside it) so this page picks up the SAME
+       main { gap: 60px } spacing between them that index.html gets;
+       previously these two sections sat as siblings AFTER </main>
+       instead, which visibly read as different spacing from
+       index.html's own bottom. -->
+  <main class="static-page">
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Same banner as every other page's own — see index.html's own
-       comment above .quote-block for why the class is reused verbatim
-       (fade-in-on-scroll comes free from the existing selector list). -->
+  <!-- Exact copy of index.html's own .quote-block (was missing its
+       .quote-block__overlay text entirely) — see that file's own comment
+       above .quote-block for why the class/mosaic-reveal is reused
+       verbatim (fade-in-on-scroll, tile-by-tile mask assembly, comes
+       free from the existing selector list/initQuoteBlockTiles() in
+       main.js). -->
   <section class="quote-block">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
     </div>
+    <div class="quote-block__overlay mosaic-reveal">
+      <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
+    </div>
   </section>
 
+  <!-- ============ PARTNER LOGOS ============ -->
+  <!-- Exact copy of index.html's own .partners marquee — see that
+       file's own comment above it for the full reasoning. -->
+  <section class="partners marquee-banner--scrolling">
+    <div class="partners__scroll">
+      <p class="partners__track">
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+      </p>
+      <p class="partners__track" aria-hidden="true">
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+      </p>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <!-- Exact copy of index.html's own <footer> — .square/.square-grid are
+       generic, page-agnostic (initRevealOnScroll() in main.js queries
+       `.square` sitewide and toggles .is-visible on scroll), so reusing
+       this verbatim works correctly on any page without extra wiring.
+       This page was previously missing a footer entirely. -->
+  <footer id="about" class="site-footer square-grid square-grid--4col">
+    <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 2; grid-row: 1;" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 3; grid-row: 1;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 1; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 2; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--dark" style="grid-column: 3; grid-row: 2;" aria-hidden="true"></div>
+    <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
+    <div class="square site-footer__center" style="grid-column: 2 / span 2; grid-row: 1 / span 2;">
+      <img class="site-footer__title" src="assets/images/Footer Title.png" alt="Word for Word*" />
+      <ul class="site-footer__links">
+        <li><a href="https://www.instagram.com/pennword4word/?hl=en" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://pennclubs.com/club/word-for-word/" target="_blank" rel="noopener">Penn Clubs</a></li>
+        <li><a href="mailto:wordforwordpenn@gmail.com">Email</a></li>
+      </ul>
+      <p class="site-footer__inspo">Site Inspiration: <a href="https://www.bruegel2018.at/?ref=httpster.net" target="_blank" rel="noopener">Kunsthistorisches Museum</a></p>
+      <p class="site-footer__copyright">© 2026 Word for Word | <a href="https://melodysz.github.io/fishtank/" target="_blank" rel="noopener">From an ocean blue...</a></p>
+    </div>
+  </footer>
+
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="js/main.js?v=111" defer></script>
+    <script src="js/main.js?v=126" defer></script>
 </body>
 </html>

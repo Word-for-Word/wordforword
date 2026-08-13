@@ -16,7 +16,7 @@ const ASSET_BASE = location.pathname.includes("/articles/") ? "../" : "";
 // ongoing scroll-linked reset) — both need to agree on the same
 // definition of "visible," or the seeded value on handoff could
 // contradict what the ongoing check computes moments later.
-const HERO_EXIT_THRESHOLD = 0.95;
+const HERO_EXIT_THRESHOLD = 0.6;
 
 // Only ever true when index.html's own inline <head> script (right after
 // __pageLoadStart) found the one-shot sessionStorage flag set — meaning
@@ -96,9 +96,11 @@ window.scrollTo(0, 0);
 
 document.addEventListener("DOMContentLoaded", () => {
   window.scrollTo(0, 0);
+  initPageFlashReady();
   initNavHighlight();
   initLuxuryScroll();
   initHeroAsteriskPosition();
+  initAboutHeroTitlePosition();
   // Gated on whenIntroAssetsReady() — see that function's own comment.
   // Previously this whole block ran unconditionally on DOMContentLoaded,
   // which fires once parsing is done regardless of whether the splash's
@@ -115,12 +117,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // A no-op (resolves immediately) on every page other than a fresh
   // homepage load, so this doesn't change timing anywhere else.
   whenIntroAssetsReady().then(() => {
-    initIntroReveal();
-    // initSplashScreens() runs BEFORE initIntroSplashHold() so the latter
-    // can read splashFinalLandedDelayMs (set by the former) instead of
-    // independently guessing when the "00" screen lands — see the comment
-    // on that variable for why the two must never disagree.
+    // initSplashScreens() now runs FIRST (was after initIntroReveal()) so
+    // splashFinalLandedDelayMs is already set by the time initIntroReveal()
+    // reads it — see that variable's own comment for why, and
+    // initIntroReveal()'s own comment on the "floor" that reads it for the
+    // actual bug this reorder fixes. It still also runs before
+    // initIntroSplashHold(), for the original reason: that function reads
+    // splashFinalLandedDelayMs too, instead of independently guessing when
+    // the "00" screen lands.
     initSplashScreens();
+    initIntroReveal();
     initIntroSplashHold();
     initIntroScrollLock();
     // Reads the header's own --intro-delay, which initIntroReveal() just
@@ -166,6 +172,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initMosaicReveal();
     initQuoteBlockReveal();
     initSplitCtaReveal();
+    initBeyondPageTextReveal();
+    // initBeyondPageMagneticImages(); // temporarily disabled per explicit request
     initHeroEyebrowExit();
     initMarqueeAsterisks();
     initMarqueeCentering();
@@ -217,6 +225,38 @@ document.addEventListener("DOMContentLoaded", () => {
 // .intro-reveal--drop, so transitionend would otherwise never fire) and
 // as a general safety net against any other case where neither event
 // fires.
+
+// Compensates for a gap between when html.show-page-flash gets set
+// (synchronously, at the very top of <body>, before either external
+// stylesheet — Google Fonts, this page's own css/style.css — has
+// necessarily finished loading) and when the browser can actually FIRST
+// PAINT that state. Google Fonts' stylesheet is render-blocking but
+// loads independently of this page's own css/style.css, which is what
+// actually defines every .page-flash keyframe below — once THAT
+// stylesheet parses, the animations tied to html.show-page-flash are
+// considered "applied" and start ticking immediately, even while the
+// browser is still holding the actual paint back waiting on the (often
+// slower, external) Google Fonts request. Reported live: navigating
+// between pages, the flash's own short pop-in (a 360ms bounce) and even
+// the header's drop-in had already finished ticking through that
+// invisible gap by the time anything was actually visible. Gating every
+// one of THOSE animations behind a 2nd class (page-flash-ready), added
+// only after a real paint has happened (double rAF — same idiom
+// initSplitCtaReveal() elsewhere in this file uses for the same reason),
+// re-anchors their start to a point the user can actually see, however
+// long that earlier, invisible gap turned out to be. html.show-page-
+// flash ALONE still covers the real page instantly (see .page-flash's
+// own opacity/visibility in the CSS, deliberately NOT gated on this) —
+// only the animated portions wait.
+function initPageFlashReady() {
+  if (!document.documentElement.classList.contains("show-page-flash")) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.documentElement.classList.add("page-flash-ready");
+    });
+  });
+}
+
 function initHeaderReady() {
   const header = document.querySelector(".site-header");
   if (!header) return;
@@ -601,19 +641,50 @@ function setMarqueeScrollMetrics() {
   }
 }
 
+// Same measured-width-driven duration technique as setMarqueeScrollMetrics()
+// above (see its own comment for why a JS-measured width beats a bare
+// -50%/fixed duration), kept as a separate function/selector rather than
+// widening that one's query to .partners__scroll — .partners now shares
+// .marquee-banner--scrolling's own scroll-triggered REVEAL (the one-time
+// fade-in), but its continuous-scroll elements are still their own
+// .partners__scroll/.partners__track (not .marquee-banner__scroll/
+// .marquee-banner__track), which setMarqueeScrollMetrics()'s query never
+// matches — logo images need real vertical centering (a flex row), not
+// the text marquees' inline/baseline layout, so they were never merged.
+function setPartnersMarqueeMetrics() {
+  const scroll = document.querySelector(".partners__scroll");
+  if (!scroll) return;
+  const track = scroll.querySelector(".partners__track");
+  if (!track) return;
+  const width = track.getBoundingClientRect().width;
+  if (!width) return;
+  scroll.style.setProperty("--marquee-track-width", `${width}px`);
+  scroll.style.animationDuration = `${width / MARQUEE_SCROLL_SPEED_PX_PER_S}s`;
+}
+
 function initMarqueeCentering() {
   centerMarqueeTracks();
   setMarqueeScrollMetrics();
+  setPartnersMarqueeMetrics();
   // Re-measure once the real webfonts (Newsreader/Instrument/Kapakana) are
   // actually in — same fallback-vs-real-font reflow reasoning as
-  // positionHeroAsterisk.
+  // positionHeroAsterisk. The logos themselves also affect
+  // .partners__track's width once loaded (images have no intrinsic size
+  // until decoded), so that gets its own settle-then-remeasure below too.
   document.fonts.ready.then(() => {
     centerMarqueeTracks();
     setMarqueeScrollMetrics();
   });
+  const partnersTrack = document.querySelector(".partners__track");
+  if (partnersTrack) {
+    Promise.all(Array.from(partnersTrack.querySelectorAll("img"), whenImageSettled)).then(
+      setPartnersMarqueeMetrics
+    );
+  }
   window.addEventListener("resize", () => {
     centerMarqueeTracks();
     setMarqueeScrollMetrics();
+    setPartnersMarqueeMetrics();
   });
 }
 
@@ -687,39 +758,25 @@ function initIntroReveal() {
     return;
   }
 
-  // The hero asterisk (.hero__wordmark-asterisk-wrap) also carries an
-  // --intro-delay, read by its own CSS `animation-delay` instead of the
-  // shared .intro-reveal/is-visible transition mechanism — but its clock
-  // starts ticking from page parse time, uncorrected, while every
-  // .intro-reveal element's delay below gets the SAME elapsed time
-  // subtracted off before its transition even starts. Left uncorrected,
-  // the asterisk would still pop in on schedule (page-parse-time +
-  // 4630ms) even on a slow load where the correction below pushes the
-  // title's own reveal later than that — i.e. exactly "asterisk visible
-  // while the title is still animating in." It gets the SAME elapsed-time
-  // subtraction as every .intro-reveal element below, via its own
-  // (separate) list — deliberately NOT merged into introEls: is-visible
-  // gets added to introEls a few lines down, and the generic .is-visible
-  // { opacity: 1 } rule would immediately win the cascade over this
-  // element's opacity:0 base rule (same specificity, later in the
-  // stylesheet) for the entire animation-delay window before its own
-  // `animation` is even running to override it back — i.e. visible from
-  // frame 1, never actually playing its pop-in. Correcting only its
-  // --intro-delay, without ever touching its classList, avoids that.
-  const asteriskWrap = document.querySelector(".hero__wordmark-asterisk-wrap");
-  // Same reasoning as the asterisk wrap above, for the same reason: the
-  // hero title's squash-and-stretch (.hero__wordmark-word/--for-wrap,
-  // see style.css) carries its own COPY of its inner .hero__title-exit's
-  // --intro-delay (a CSS custom property set on a child isn't visible to
-  // a rule targeting its ancestor, so it has to be duplicated in the
-  // HTML rather than read through it) — left uncorrected, it would start
-  // counting down from page-parse time while its inner element's copy
-  // gets the elapsed-time correction below, drifting the two out of sync
-  // by however long THIS page load actually took.
-  const squashStretchWraps = document.querySelectorAll(".hero__wordmark-word, .hero__wordmark-for-wrap");
-  const timedEls = asteriskWrap
-    ? [...introEls, asteriskWrap, ...squashStretchWraps]
-    : [...introEls, ...squashStretchWraps];
+  // The hero title's squash-and-stretch entrance (.hero__wordmark-word/
+  // --for-wrap, see style.css) targets the OUTER wrapper, not the inner
+  // .hero__title-exit span/img that actually carries --intro-delay — a
+  // CSS custom property set on a child isn't visible to a rule
+  // targeting its ancestor, so the wrapper needs its OWN copy of that
+  // same value. That copy used to be a second, hand-written
+  // --intro-delay in the HTML, kept in sync with the inner one by hand;
+  // now it's copied here at runtime instead (see the loop further down,
+  // after introEls has already been corrected below) — one less place
+  // to remember to update if these delays ever change again.
+  //
+  // The hero asterisk is timed the same way: instead of its own
+  // independent, hand-recomputed --intro-delay (previously "word 2's
+  // delay + ~930ms," manually redone by hand every time word 2's own
+  // delay changed — reported live as exactly the fragile, easy-to-forget
+  // upkeep this generated), its delay is now DERIVED directly from word
+  // 2's own corrected delay further down, so retiming word 2 alone is
+  // enough to keep the asterisk correctly synced to it.
+  const timedEls = introEls;
 
   // + SKIP_INTRO_SPLASH_OFFSET_MS: 0 normally (no-op); when the splash
   // itself was skipped, this folds the "start earlier" shift into the
@@ -727,9 +784,68 @@ function initIntroReveal() {
   // below (and into the final anchor timeout further down, which reuses
   // this same `elapsed`), rather than needing a second code path.
   const elapsed = Date.now() - (window.__pageLoadStart || Date.now()) + SKIP_INTRO_SPLASH_OFFSET_MS;
+  // Floor for the correction below — reported live on a slow/cold load
+  // (a hard reload hitting Google Fonts/the Lenis CDN fresh): once
+  // `elapsed` alone exceeds an element's own --intro-delay, the plain
+  // Math.max(0, ...) below clamps it to 0, so that element starts
+  // fading in THE INSTANT is-visible is added, finishing a mere
+  // ~0.8-1.6s later — while the splash's OWN hold (initIntroSplashHold(),
+  // which starts at this same moment) can't possibly finish faster than
+  // splashFinalLandedDelayMs (set by initSplashScreens(), run immediately
+  // before this so the value is ready here), itself bounded BELOW by a
+  // hard constant regardless of how large elapsed gets — see that
+  // function's own SPLASH_SCREEN_MIN_HOLD_MS floor: 4 screen transitions
+  // at a guaranteed minimum 400ms real gap each can never finish faster
+  // than 1600ms, no matter how long asset loading took. --intro-delay
+  // above has no equivalent lower bound (clamps all the way to 0), which
+  // is the actual asymmetry: flooring it at splashFinalLandedDelayMs
+  // closes that gap using the EXACT same number the splash itself is
+  // bound by, rather than a separately-guessed constant that can drift
+  // out of sync with it.
+  //
+  // Deliberately NOT adding any extra buffer on top (a first attempt
+  // added +SPLASH_SCREEN_MIN_HOLD_MS here) — reported live as making
+  // things WORSE, not better: splashFinalLandedDelayMs already converges
+  // on the same 1600ms floor the splash itself is bound by as elapsed
+  // grows, so stacking another 400ms on top overshot it, pushing the
+  // hero's reveal to START noticeably AFTER the splash had already
+  // finished clearing — a new, MORE visible dead gap (page revealed,
+  // hero sitting blank) in exactly the moderate-slow-load range this was
+  // supposed to fix invisibly. Matching the bound exactly, with no
+  // padding, is what keeps the hero's finish landing shortly AFTER
+  // (never before) the splash's own earliest possible clear time.
+  const splashReadyFloorMs = splashFinalLandedDelayMs;
   for (const el of timedEls) {
     const original = parseFloat(el.style.getPropertyValue("--intro-delay")) || 0;
-    el.style.setProperty("--intro-delay", `${Math.max(0, original - elapsed)}ms`);
+    el.style.setProperty("--intro-delay", `${Math.max(0, original - elapsed, splashReadyFloorMs)}ms`);
+  }
+
+  // Squash-stretch wrappers copy their now-corrected delay straight from
+  // their own inner .hero__title-exit child — see this function's own
+  // earlier comment for why the wrapper needs a copy of this value at
+  // all, and why it's derived here rather than hand-duplicated in HTML.
+  const squashStretchWraps = document.querySelectorAll(".hero__wordmark-word, .hero__wordmark-for-wrap");
+  for (const wrap of squashStretchWraps) {
+    const inner = wrap.querySelector(".hero__title-exit");
+    if (inner) wrap.style.setProperty("--intro-delay", inner.style.getPropertyValue("--intro-delay"));
+  }
+
+  // The asterisk pops in once word 2 has visibly settled: word 2's own
+  // (already corrected, just-copied-onto-its-wrapper) delay, plus the
+  // shared reveal transition's own duration, plus a small buffer so it
+  // pops in just after word 2 finishes settling rather than the instant
+  // it does. 800 matches .intro-reveal--slide-slow's own transition
+  // duration — update both together if that duration ever changes.
+  const HERO_TITLE_TRANSITION_MS = 800;
+  const HERO_ASTERISK_SETTLE_BUFFER_MS = 130;
+  const asteriskWrap = document.querySelector(".hero__wordmark-asterisk-wrap");
+  const word2Wrap = document.querySelector(".hero__wordmark-word--2");
+  if (asteriskWrap && word2Wrap) {
+    const word2Delay = parseFloat(word2Wrap.style.getPropertyValue("--intro-delay")) || 0;
+    asteriskWrap.style.setProperty(
+      "--intro-delay",
+      `${word2Delay + HERO_TITLE_TRANSITION_MS + HERO_ASTERISK_SETTLE_BUFFER_MS}ms`
+    );
   }
 
   requestAnimationFrame(() => {
@@ -763,7 +879,18 @@ function initIntroReveal() {
     // initHeroEyebrowExit() listens for this to do its FIRST sync of the
     // hero asterisk specifically — see that function for why.
     document.dispatchEvent(new CustomEvent("introfinished", { detail: { asteriskVisible } }));
-  }, Math.max(0, 6650 - elapsed));
+  }, Math.max(0, 6650 - elapsed, splashReadyFloorMs + 1600 + 180));
+  // ^ Same slow-load floor as the --intro-delay correction above, and for
+  // the same reason: 6650 (= the eyebrow lines' own 4870ms delay + their
+  // 1.6s slide-slow duration + a 180ms buffer) assumes elapsed is small
+  // enough that nothing above got floored. On a slow load where it
+  // clamped every element's delay to splashReadyFloorMs instead, the
+  // LATEST-finishing element also lands at that same floor, not 4870ms —
+  // so this timeout needs the matching floor (splashReadyFloorMs + the
+  // eyebrows' own 1.6s duration + the same 180ms buffer) or it fires
+  // (and hands off to the scroll-linked system, which uses much shorter
+  // delays — see initHeroEyebrowExit()) before the reveal it's supposed
+  // to wait out has actually finished.
 }
 
 // Resolves once a real <img> has either loaded or failed — .complete is
@@ -821,6 +948,18 @@ const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 // clamped) slow-load scenario — 220ms would have let screen 2 cut in
 // mid-bounce.
 const SPLASH_SCREEN_MIN_HOLD_MS = 400;
+// How long the FINAL "00" screen specifically must stay up once it lands
+// before initIntroSplashHold() is allowed to consider the splash ready to
+// slide away — separate from SPLASH_SCREEN_MIN_HOLD_MS above, which only
+// guarantees a real gap BETWEEN screens 01-04, not any dwell time on 00
+// itself once it's the one showing. Without this, a slow-enough load lets
+// initIntroSplashHold()'s own MIN_VISUAL_MS-elapsed correction clamp to
+// (or below) splashFinalLandedDelayMs, so "ready to slide" can fire in the
+// same instant "00" lands — reported live as "skips past 00 way too
+// quickly." 700ms — longer than the 400ms inter-screen floor since this
+// is the one screen a viewer is actually meant to read/register, not just
+// glimpse in passing like 01-04.
+const SPLASH_SCREEN_FINAL_HOLD_MS = 700;
 // Set by initSplashScreens() to the ACTUAL real delay (ms from
 // DOMContentLoaded) at which the final/00 screen lands, once computed
 // below. initIntroSplashHold() reads this — instead of independently
@@ -987,8 +1126,27 @@ function initIntroSplashHold() {
   // the splash could start sliding away before "00" has even cut in —
   // sliding away mid-sequence, on top of whichever screen happened to be
   // showing.
+  //
+  // splashFinalLandedDelayMs alone only guarantees "00" has LANDED by
+  // the time this resolves — not that it's been VISIBLE for any real
+  // stretch afterward. On a slow enough load, MIN_VISUAL_MS - elapsed
+  // clamps to 0 (or below splashFinalLandedDelayMs) at the exact same
+  // time "00" lands, so minVisualTime and the screen-cut can resolve in
+  // the same instant: "00" never actually gets looked at before
+  // is-ready-to-slide fires (readiness is frequently already true by
+  // this point too, having had the whole rest of the sequence to
+  // settle) — reported live as "skips past 00 way too quickly," still
+  // reproducing even after flooring initIntroReveal()'s own delays
+  // against splashFinalLandedDelayMs (a related but DIFFERENT bug — that
+  // one was about the HERO finishing before the splash could clear, not
+  // about "00" itself getting a real dwell). SPLASH_SCREEN_FINAL_HOLD_MS
+  // adds that missing floor: "00" must stay up at least this long after
+  // landing, regardless of how clamped everything upstream got.
   const minVisualTime = new Promise((resolve) => {
-    setTimeout(resolve, Math.max(0, MIN_VISUAL_MS - elapsed, splashFinalLandedDelayMs));
+    setTimeout(
+      resolve,
+      Math.max(0, MIN_VISUAL_MS - elapsed, splashFinalLandedDelayMs + SPLASH_SCREEN_FINAL_HOLD_MS)
+    );
   });
   const heroImages = document.querySelectorAll(".hero img, .nav__logo img");
   const readiness = Promise.race([
@@ -1167,6 +1325,130 @@ function initHeroAsteriskPosition() {
     if (anchor) ro.observe(anchor);
   }
   window.addEventListener("resize", positionHeroAsterisk);
+}
+
+// Centers about.html's own text+image hero title group (see .hero__
+// wordmark-wrap--about's own long comment in style.css) within the hero
+// section. Same root problem as positionHeroAsterisk() above — two
+// independent clamp()s (the word's font-size, the wrap's width) only
+// stay proportional to each other in a narrow viewport band — so a
+// static px correction only stays correct in whatever band it was tuned
+// against; a real live measurement is required everywhere else. No-op
+// on every other page (none of them carry .hero__wordmark-wrap--about).
+//
+// Targets the EYEBROWS' own vertical center, not .hero's raw geometric
+// center — confirmed live these are NOT the same point: .hero--compact
+// reserves padding-top for the fixed nav (calc(var(--nav-height) + 40px))
+// before align-content:center centers the grid row in what's left, so
+// the row (wrap + eyebrows) actually sits BELOW .hero's own midpoint,
+// not on it. An earlier version of this function targeted .hero's own
+// center directly and landed the title 55px above where the eyebrows
+// (and every other compact hero's title) actually sit — matched hero's
+// abstract center, but read as visibly uncentered next to its own
+// eyebrows. The eyebrows carry no transform of their own, so they're a
+// clean, always-correct stand-in for "where this grid row really is."
+//
+// text/img's own positions are measured via offsetTop (like
+// positionHeroAsterisk() above), NOT getBoundingClientRect() — text's
+// inner .hero__title-exit span and img itself both carry the page-load
+// reveal's OWN transient slide-in transform (--intro-delay-gated,
+// translateY(140px) -> none). getBoundingClientRect() would capture
+// WHATEVER that transform happens to be at the exact moment this runs;
+// called early (this function's own first call fires well before
+// --intro-delay elapses, same reasoning as positionHeroAsterisk()'s own
+// early call) that's the PRE-reveal position, not the resting one —
+// reported live as exactly that: the title landing correctly centered,
+// then visibly teleporting once a LATER call (fonts.ready/
+// introfinished, after the reveal has actually finished) recomputed the
+// real position. offsetTop is pre-transform layout — immune to that
+// transient slide either way — with each element's own PERMANENT design
+// nudge (word--2's -3px, the for-wrap's own -48%) added back via
+// getTranslateY(), safe to read even mid squash-stretch entrance
+// animation since that only ever animates scale, never touches the
+// translate component held in --squash-base (see that keyframe's own
+// comment). Net effect: correct on every single call, regardless of
+// timing, instead of only once the reveal has settled. */
+function positionAboutHeroTitle() {
+  const wrap = document.querySelector(".hero__wordmark-wrap--about");
+  if (!wrap) return;
+  const hero = wrap.closest(".hero");
+  const eyebrows = hero ? hero.querySelectorAll(".hero__eyebrow") : null;
+  const text = wrap.querySelector(".hero__wordmark-word--2");
+  const forWrap = wrap.querySelector(".hero__wordmark-for-wrap");
+  const img = wrap.querySelector(".hero__wordmark-for");
+  if (!hero || !eyebrows || !eyebrows.length || !text || !forWrap || !img) return;
+
+  // Clear any previous correction before measuring — otherwise a second
+  // call (resize, fonts.ready) would measure an already-corrected
+  // position and compound the offset instead of recomputing it fresh.
+  wrap.style.transform = "none";
+  const wrapRect = wrap.getBoundingClientRect(); // wrap itself carries no transient transform
+  const textTop = offsetRelativeTo(text, wrap).top + getTranslateY(text);
+  const textBottom = textTop + text.offsetHeight;
+  const imgTop = offsetRelativeTo(img, wrap).top + getTranslateY(forWrap);
+  const imgBottom = imgTop + img.offsetHeight;
+  const combinedTop = wrapRect.top + Math.min(textTop, imgTop);
+  const combinedBottom = wrapRect.top + Math.max(textBottom, imgBottom);
+  const combinedCenter = (combinedTop + combinedBottom) / 2;
+
+  const eyebrowCenters = Array.from(eyebrows, (el) => {
+    const r = el.getBoundingClientRect();
+    return r.top + r.height / 2;
+  });
+  const targetCenter = eyebrowCenters.reduce((a, b) => a + b, 0) / eyebrowCenters.length;
+  wrap.style.transform = `translateY(${targetCenter - combinedCenter}px)`;
+}
+
+// Called very early (see initHeroAsteriskPosition()'s own call site) —
+// deliberately BEFORE text/img's own --intro-delay (~3220-3420ms) has
+// elapsed, while both are still sitting at their plain declared (not
+// yet animating) transforms, so this first read can safely use
+// getBoundingClientRect() directly with no risk of measuring a
+// transient mid-transition value. fonts.ready normally resolves well
+// before that delay too. The "introfinished" listener is a final
+// safety-net re-measure for the rare case fonts.ready itself was slow
+// enough to land inside the reveal's own animating window — by the time
+// introfinished fires (~6.65s), every reveal transition/animation on
+// the page has already finished and is holding its resting state, so
+// this last correction is always measuring something stable.
+//
+// Deferred one animation frame past the event itself — NOT called
+// directly as the listener. initHeroEyebrowExit() has its OWN
+// "introfinished" listener (registered later, since it's set up behind
+// whenIntroAssetsReady() while this one runs unconditionally near the
+// top of DOMContentLoaded) that's what actually adds .is-visible to the
+// hero asterisk; DOM listeners for the same event fire in registration
+// order, so this one would otherwise run FIRST, forcing a reflow (via
+// getBoundingClientRect() inside positionAboutHeroTitle()) at the exact
+// moment body.intro-finished is set but the asterisk's own is-visible
+// isn't yet — the browser then commits that transitional
+// "not-visible-yet" state (body.intro-finished
+// .hero__wordmark-asterisk-wrap:not(.is-visible), an instant opacity:0/
+// translateY(-100px) blip) as a REAL painted frame, instead of it being
+// invisibly batched away with the very next mutation like it would be
+// otherwise. Reported live as the asterisk visibly vanishing for over a
+// second right as the intro sequence finished, then fading back in —
+// the exact reflow-hazard class of bug .hero__wordmark-asterisk-wrap's
+// own "introfinished" handling was already written carefully to avoid,
+// reintroduced here by this listener's own forced reflow racing ahead
+// of it. Deferring past a rAF lets every same-tick "introfinished"
+// listener (including that one) finish its own class mutations first,
+// so this reads the fully-settled result instead of a half-applied one.
+function initAboutHeroTitlePosition() {
+  const wrap = document.querySelector(".hero__wordmark-wrap--about");
+  if (!wrap) return;
+  positionAboutHeroTitle();
+  document.fonts.ready.then(positionAboutHeroTitle);
+  document.addEventListener(
+    "introfinished",
+    () => requestAnimationFrame(positionAboutHeroTitle),
+    { once: true }
+  );
+  window.addEventListener("resize", positionAboutHeroTitle);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(positionAboutHeroTitle);
+    ro.observe(wrap);
+  }
 }
 
 // Highlights the nav link for the page currently loaded (each link is a
@@ -1379,15 +1661,14 @@ function initRevealOnScroll() {
   // illustration box its tile-by-tile cascade: 4 tiles sharing one
   // parent, same stagger math as any other square-grid.
   const staggeredTargets = document.querySelectorAll(
-    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block__mask, .publication-card, .marquee-banner--scrolling"
+    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block__mask, .publication-card, .marquee-banner--scrolling, .beyond-page__img, .slogan-preview .split-cta__text-line, .team-bio, #about-intro .square--cream .split-cta__text-line"
   );
-  // .partners reveals as ONE unit (slide up + fade, like the hero
-  // elements — see .mosaic-reveal/.mosaic-reveal--slide on it in
-  // index.html) instead of tile-by-tile per logo, so it's tracked
-  // separately: it still needs checkAll() below to toggle its
-  // visibility, but must NEVER get a --reveal-delay from the stagger
-  // loop (that's what caused the old per-logo cascade).
-  const singleUnitTargets = document.querySelectorAll(".partners");
+  // .partners used to be tracked separately here (a single-unit reveal
+  // that must never get a --reveal-delay) — now that it shares
+  // .marquee-banner--scrolling's own reveal with #get-involved/
+  // #publications (per explicit request), it's picked up by the query
+  // above like any other instance of that class; no separate tracking
+  // needed.
   // .featured-carousel__mask is EXCLUDED from checkAll()'s own viewport
   // check below (though it stays in staggeredTargets so the stagger loop
   // right below still gives it a normal --reveal-delay among its own 8
@@ -1407,7 +1688,7 @@ function initRevealOnScroll() {
   const viewportTargets = Array.from(staggeredTargets).filter(
     (el) => !el.classList.contains("featured-carousel__mask")
   );
-  const targets = [...viewportTargets, ...singleUnitTargets];
+  const targets = viewportTargets;
   if (!targets.length) return;
 
   // Stagger is normalized to a shared TOTAL cascade span per group
@@ -1446,6 +1727,27 @@ function initRevealOnScroll() {
     footerCenter.style.setProperty("--reveal-delay", `${thirdSquareDelay}ms`);
   }
 
+  // Override: .marquee-banner--scrolling (the sponsor/partner marquee on
+  // every page, plus #get-involved/#publications on index.html) is
+  // always a single, standalone full-width section — not one of several
+  // visually-simultaneous siblings the generic per-parent stagger above
+  // is meant for. That loop still indexes it by its position among
+  // <main>'s own top-level section children (an accident of how many
+  // sections happen to precede it, unrelated to any real stagger group).
+  // On about.html this handed .partners a 600ms delay (3rd of <main>'s
+  // 3 children) — long enough that the footer's OWN tiles just below it
+  // (mostly <525ms, entering the viewport at nearly the same scroll
+  // position) finished fading in before the marquee's delay had even
+  // elapsed, reading as "the footer animates in before the sponsor
+  // marquee" despite the marquee sitting earlier in the DOM. Forcing 0ms
+  // removes that accidental lag; the marquee still fades in as its own
+  // flat unit (see the CSS comment above .marquee-banner--scrolling), it
+  // just does so the instant ITS OWN rect crosses the reveal threshold
+  // instead of waiting on an unrelated number.
+  for (const marquee of document.querySelectorAll(".marquee-banner--scrolling")) {
+    marquee.style.setProperty("--reveal-delay", "0ms");
+  }
+
   // Section 3's illustration tiles are 2 rows (row 1: the full-height
   // pair, DOM index 0-1; row 2: the half-height pair below, index 2-3 —
   // see the HTML comment above .split-cta__illustration-tiles), not 4
@@ -1463,6 +1765,33 @@ function initRevealOnScroll() {
     splitCtaTiles[1].style.setProperty("--reveal-delay", "0ms");
     splitCtaTiles[2].style.setProperty("--reveal-delay", "300ms");
     splitCtaTiles[3].style.setProperty("--reveal-delay", "300ms");
+  }
+
+  // About page "Beyond the Page" photo stack — same override pattern as
+  // splitCtaTiles above (explicit values beat the generic per-parent
+  // index math), needed here because that generic math also counts the
+  // beige circle as a sibling and would space these two photos out more
+  // than wanted. A short, explicit gap instead, per explicit request
+  // that img--2 should follow img--1 "sooner." opacity/translate/rotate
+  // all share this SAME --reveal-delay (see the CSS) — per a later
+  // explicit request that rotate not wait for translate to finish first,
+  // there's no separate flat delay for rotate anymore, so this 120ms gap
+  // now staggers the rotate too, not just the slide/fade.
+  //
+  // BEYOND_PAGE_ENTRANCE_DELAY_MS (base offset added to both, defined
+  // near initBeyondPageTextReveal() below) is separate from the 120ms
+  // stagger between the two — checkAll() above still flips is-visible
+  // on these at the SAME early scroll position as every other tracked
+  // element (that threshold is shared sitewide, not worth forking just
+  // for this section); this offset instead delays when the CSS
+  // transition actually STARTS reacting to that class, per explicit
+  // request that the motion itself started before the section was
+  // scrolled far enough into view to actually watch it happen.
+  const beyondPageImg1 = document.querySelector(".beyond-page__img--1");
+  const beyondPageImg2 = document.querySelector(".beyond-page__img--2");
+  if (beyondPageImg1 && beyondPageImg2) {
+    beyondPageImg1.style.setProperty("--reveal-delay", `${BEYOND_PAGE_ENTRANCE_DELAY_MS}ms`);
+    beyondPageImg2.style.setProperty("--reveal-delay", `${BEYOND_PAGE_ENTRANCE_DELAY_MS + 120}ms`);
   }
 
   // Per explicit request, row 2 should just naturally follow row 1 once
@@ -1643,14 +1972,17 @@ function initHeroEyebrowExit() {
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let ticking = false;
-  let asteriskReady = false;
+  // Was asterisk-only; now also gates alwaysEls (eyebrow-line/title-exit)
+  // below — see that guard's own comment for why. Renamed to make clear
+  // it's a whole-system handoff flag, not an asterisk-specific one.
+  let scrollLinkedReady = false;
   // Tracks the asterisk's PREVIOUS visibility so the respin below only
   // fires on an actual hidden->visible transition (scrolling back up
   // into the hero after having scrolled away) — not on every scroll
   // tick while it's already sitting visible. Seeded properly once
-  // asteriskReady flips true (see the "introfinished" listener below),
-  // not here — before that point the asterisk isn't being toggled at
-  // all yet, so there's no real "previous" state to track.
+  // scrollLinkedReady flips true (see the "introfinished" listener
+  // below), not here — before that point the asterisk isn't being
+  // toggled at all yet, so there's no real "previous" state to track.
   let asteriskWasVisible = false;
 
   // Tracks whether the hero was ever scrolled out of view BEFORE the
@@ -1670,7 +2002,7 @@ function initHeroEyebrowExit() {
   // handler tell those two cases apart.
   let scrolledAwayBeforeReady = false;
   const preReadyScrollCheck = () => {
-    if (asteriskReady) {
+    if (scrollLinkedReady) {
       window.removeEventListener("scroll", preReadyScrollCheck);
       return;
     }
@@ -1681,8 +2013,28 @@ function initHeroEyebrowExit() {
     const rect = hero.getBoundingClientRect();
     const outFraction = Math.max(0, -rect.top) / rect.height;
     const visible = outFraction < HERO_EXIT_THRESHOLD;
-    for (const el of alwaysEls) el.classList.toggle("is-visible", visible);
-    if (asterisk && asteriskReady) {
+    // Gated on scrollLinkedReady for the same reason the asterisk already
+    // was: body.intro-finished is what scopes the CSS that makes exit
+    // always instant (transition-duration:0s — see style.css), so a fast
+    // scroll down-then-up BEFORE intro-finished has no such protection —
+    // is-visible gets removed then re-added within the SAME real 0.8s
+    // transition window, with no paint in between to commit the
+    // "removed" state. The browser then has nothing to transition FROM,
+    // so it doesn't restart the animation at all: the element just
+    // freezes at whatever opacity/transform it happened to be mid-flight
+    // through the ORIGINAL page-load reveal. Reported live: the very
+    // FIRST scroll-down-then-up (which, on a fresh reload, reliably
+    // lands inside this pre-intro-finished window) silently slides but
+    // never fades; every later cycle — always well after intro-finished
+    // — works fine. Leaving alwaysEls untouched until scrollLinkedReady
+    // mirrors what the asterisk already does correctly: the page-load
+    // reveal (driven purely by each element's own --intro-delay) plays
+    // out undisturbed, and the scroll-linked system only starts touching
+    // these classes once the CSS protection for it actually exists.
+    if (scrollLinkedReady) {
+      for (const el of alwaysEls) el.classList.toggle("is-visible", visible);
+    }
+    if (asterisk && scrollLinkedReady) {
       asterisk.classList.toggle("is-visible", visible);
       if (visible && !asteriskWasVisible && !reduceMotion) {
         asterisk.classList.remove("is-respinning");
@@ -1717,8 +2069,18 @@ function initHeroEyebrowExit() {
   document.addEventListener(
     "introfinished",
     (e) => {
-      asteriskReady = true;
       const visible = e.detail.asteriskVisible;
+      // Seed alwaysEls to the ACTUAL current visibility the instant the
+      // system comes online — same precomputed value (read before any
+      // class changes, back in initIntroReveal()) the asterisk already
+      // relies on, for the same reflow-hazard reason: computing it fresh
+      // here, after intro-finished but before this toggle, would let the
+      // browser commit a real in-between state as a transition's start
+      // point. Unlike the asterisk, alwaysEls needs no respin-style
+      // flourish — a plain toggle is enough, it's a transition, not an
+      // animation that can go stale.
+      for (const el of alwaysEls) el.classList.toggle("is-visible", visible);
+      scrollLinkedReady = true;
       if (asterisk) {
         if (scrolledAwayBeforeReady && visible && !reduceMotion) {
           // Genuinely a hidden->visible transition (scrolled away and
@@ -2016,6 +2378,140 @@ function initSplitCtaReveal() {
   sync();
   const observer = new MutationObserver(sync);
   observer.observe(triggerTile, { attributes: true, attributeFilter: ["class"] });
+}
+
+// About page "Beyond the Page" — same reveal-CHAIN idea as
+// initSplitCtaReveal() above (text fades/slides in once the section's
+// own illustration is already underway, not immediately on page load),
+// but that function early-returns for this page (its own `if (!tiles.
+// length || !illustration) return;` — there's no .split-cta__
+// illustration-tile/.split-cta__illustration here, this section's
+// "illustration" is the 2-photo stack instead). Mirrors that function's
+// own bidirectional-MutationObserver-on-a-trigger-element pattern,
+// watching .beyond-page__img--1 (the earlier of the 2 photos to settle)
+// instead of a tile.
+// Base offset added to .beyond-page__img--1/--2's own --reveal-delay (see
+// initRevealOnScroll() above) — checkAll() flips is-visible on them at the
+// SAME early scroll-position threshold as every other tracked element on
+// the site, which per explicit request fired before the section was
+// scrolled far enough into view to actually watch the entrance play out.
+// This doesn't change WHEN is-visible gets added, only how long the CSS
+// transition waits afterward before reacting to it. BEYOND_PAGE_TEXT_
+// DELAY_MS below is kept in step with this by hand (= this + 600) — see
+// its own comment.
+const BEYOND_PAGE_ENTRANCE_DELAY_MS = 400;
+const BEYOND_PAGE_TEXT_DELAY_MS = BEYOND_PAGE_ENTRANCE_DELAY_MS + 600; // matches .beyond-page__img's own opacity transition duration, shifted by the same entrance delay
+function initBeyondPageTextReveal() {
+  const textLines = document.querySelectorAll(".split-cta--beyond-page .split-cta__text-line");
+  const asteriskWrap = document.querySelector(".beyond-page__asterisk-wrap");
+  const triggerImg = document.querySelector(".beyond-page__img--1");
+  if (!textLines.length || !triggerImg) return;
+
+  const revealTextLines = () => {
+    for (const line of textLines) line.classList.add("is-visible");
+  };
+  const hideTextLines = () => {
+    for (const line of textLines) line.classList.remove("is-visible");
+  };
+  // Pops in at the SAME moment the photos' own entrance transition
+  // actually starts (BEYOND_PAGE_ENTRANCE_DELAY_MS, not the earlier raw
+  // trigger) — mirrors index.html's own revealAsterisks() firing
+  // alongside revealIllustration() rather than with the (later) text.
+  const revealAsterisk = () => {
+    if (asteriskWrap) asteriskWrap.classList.add("is-visible");
+  };
+  const hideAsterisk = () => {
+    if (asteriskWrap) asteriskWrap.classList.remove("is-visible");
+  };
+
+  let showTimer = null;
+  let asteriskTimer = null;
+  let lastKnownVisible = null;
+  const sync = () => {
+    const nowVisible = triggerImg.classList.contains("is-visible");
+    if (nowVisible === lastKnownVisible) return;
+    lastKnownVisible = nowVisible;
+
+    clearTimeout(showTimer);
+    clearTimeout(asteriskTimer);
+    if (nowVisible) {
+      asteriskTimer = setTimeout(revealAsterisk, BEYOND_PAGE_ENTRANCE_DELAY_MS);
+      showTimer = setTimeout(revealTextLines, BEYOND_PAGE_TEXT_DELAY_MS);
+    } else {
+      hideTextLines();
+      hideAsterisk();
+    }
+  };
+
+  sync();
+  const observer = new MutationObserver(sync);
+  observer.observe(triggerImg, { attributes: true, attributeFilter: ["class"] });
+}
+
+// About page "Beyond the Page" outreach photos — a subtle magnetic-
+// REPULSION effect per explicit request: approaching/hovering a photo
+// nudges it slightly AWAY from the cursor (opposite of the usual
+// "magnetic" attraction pattern). Driven by a continuous per-frame lerp
+// toward a target offset — same technique initCustomCursor() below uses
+// for its own floaty drag (curX/curY easing toward mouseX/mouseY every
+// frame) — rather than setting the target directly and letting a CSS
+// `transition` retarget on every raw mousemove event; the latter is what
+// made an earlier version of this feel jerky (each new mousemove cuts
+// off the previous transition mid-flight and restarts easing from
+// wherever it happened to be). A low LERP factor is what gives it a
+// floaty, lagging quality instead of tracking the cursor immediately.
+// Applied via the plain `transform` property (translate(px,px)),
+// deliberately NOT the standalone `translate`/`rotate` properties these
+// same elements already use for their scroll-entrance slide/tilt (see
+// .beyond-page__img's own CSS comment) — individual transform
+// properties compose with `transform` automatically (CSS Transforms
+// Level 2), so this coexists without either system needing to know
+// about the other.
+const BEYOND_PAGE_MAGNETIC_RADIUS = 320; // px from a photo's center before it reacts at all — expanded per explicit request
+const BEYOND_PAGE_MAGNETIC_MAX_OFFSET = 30; // px — expanded per explicit request, but still deliberately capped, not a real relocation
+const BEYOND_PAGE_MAGNETIC_LERP = 0.06; // low = floaty/lagging; see this function's own comment
+function initBeyondPageMagneticImages() {
+  const images = document.querySelectorAll(".beyond-page__img");
+  if (!images.length) return;
+
+  const state = Array.from(images, () => ({ curX: 0, curY: 0 }));
+  let mouseX = null;
+  let mouseY = null;
+
+  document.addEventListener(
+    "mousemove",
+    (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    },
+    { passive: true }
+  );
+
+  function raf() {
+    images.forEach((img, i) => {
+      const s = state[i];
+      let targetX = 0;
+      let targetY = 0;
+      if (mouseX !== null) {
+        const rect = img.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = cx - mouseX;
+        const dy = cy - mouseY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0 && dist < BEYOND_PAGE_MAGNETIC_RADIUS) {
+          const strength = 1 - dist / BEYOND_PAGE_MAGNETIC_RADIUS;
+          targetX = (dx / dist) * strength * BEYOND_PAGE_MAGNETIC_MAX_OFFSET;
+          targetY = (dy / dist) * strength * BEYOND_PAGE_MAGNETIC_MAX_OFFSET;
+        }
+      }
+      s.curX += (targetX - s.curX) * BEYOND_PAGE_MAGNETIC_LERP;
+      s.curY += (targetY - s.curY) * BEYOND_PAGE_MAGNETIC_LERP;
+      img.style.transform = `translate(${s.curX.toFixed(2)}px, ${s.curY.toFixed(2)}px)`;
+    });
+    requestAnimationFrame(raf);
+  }
+  requestAnimationFrame(raf);
 }
 
 // Custom cursor decoration: a small Instrument Serif asterisk that
@@ -2367,6 +2863,51 @@ function initFeaturedCarousel() {
   // guarding around a bad index.
   let isAnimating = false;
 
+  // Bottom-center diamond indicators (see .featured-carousel__indicator
+  // in style.css) — one per REAL slide, never per clone, built here
+  // instead of hand-written in the HTML so the count can't drift out of
+  // sync with the actual slide total. Clicking one jumps straight to
+  // that slide: indicator i corresponds to track.children[i + 1], since
+  // slot 0 is the prepended clone (see the `index` comment above).
+  const indicatorsContainer = document.querySelector(".featured-carousel__indicators");
+  const indicatorButtons = indicatorsContainer
+    ? realSlides.map((_, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "featured-carousel__indicator";
+        btn.setAttribute("role", "tab");
+        btn.setAttribute("aria-label", `Go to slide ${i + 1}`);
+        btn.addEventListener("click", () => goToSlide(i));
+        indicatorsContainer.appendChild(btn);
+        return btn;
+      })
+    : [];
+  // `index` ranges over the clone-padded track (0..totalSlides-1); this
+  // maps it back to which REAL slide (0-based) is actually showing,
+  // wrapping the same way the transitionend snap below does — so the
+  // active dot stays correct even mid-wraparound, when `index` is
+  // briefly sitting in a clone slot (0 or totalSlides-1).
+  const updateIndicators = () => {
+    if (!indicatorButtons.length) return;
+    const activeRealIndex = ((index - 1) % realCount + realCount) % realCount;
+    indicatorButtons.forEach((btn, i) => {
+      const isActive = i === activeRealIndex;
+      btn.classList.toggle("is-active", isActive);
+      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+  };
+  updateIndicators();
+
+  const goToSlide = (i) => {
+    const targetIndex = i + 1;
+    if (isAnimating || targetIndex === index) return;
+    isAnimating = true;
+    index = targetIndex;
+    render(true);
+    crossfadeCaptionTo(track.children[index]);
+    updateIndicators();
+  };
+
   track.addEventListener("transitionend", (e) => {
     if (e.propertyName !== "transform") return;
     if (index === totalSlides - 1) {
@@ -2385,6 +2926,7 @@ function initFeaturedCarousel() {
     index -= 1;
     render(true);
     crossfadeCaptionTo(track.children[index]);
+    updateIndicators();
   });
   nextBtn.addEventListener("click", () => {
     if (isAnimating) return;
@@ -2392,6 +2934,7 @@ function initFeaturedCarousel() {
     index += 1;
     render(true);
     crossfadeCaptionTo(track.children[index]);
+    updateIndicators();
   });
 }
 
@@ -2422,8 +2965,12 @@ function initCarouselReveal() {
   const edition = document.querySelector(".featured-carousel__edition");
   const number = document.querySelector(".featured-carousel__number");
   const navButtons = document.querySelectorAll(".featured-carousel__nav");
+  // Also a persistent, photo-position-agnostic control — same reasoning
+  // as navButtons above, so it's grouped with them rather than either
+  // tile.
+  const indicators = document.querySelector(".featured-carousel__indicators");
   if (masks.length < 8 || !scrim) return;
 
-  revealWithTile(masks[0], [scrim, title, edition, ...navButtons].filter(Boolean));
+  revealWithTile(masks[0], [scrim, title, edition, ...navButtons, indicators].filter(Boolean));
   revealWithTile(masks[7], [number].filter(Boolean));
 }

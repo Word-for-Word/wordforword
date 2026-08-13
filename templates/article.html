@@ -111,17 +111,77 @@
         </div>
       </div>
     </article>
-  </main>
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Same banner as every other page's own — see index.html's own
-       comment above .quote-block for why the class is reused verbatim
-       (fade-in-on-scroll comes free from the existing selector list). -->
+  <!-- Exact copy of index.html's own .quote-block (was missing its
+       .quote-block__overlay text entirely) — see that file's own comment
+       above .quote-block for why the class/mosaic-reveal is reused
+       verbatim (fade-in-on-scroll, tile-by-tile mask assembly, comes
+       free from the existing selector list/initQuoteBlockTiles() in
+       main.js). Now sits INSIDE <main> (was after </main>) — matches
+       index.html's own nesting exactly (both quote-block and partners
+       sit inside <main>, only the footer partial is outside), so this
+       page picks up the SAME main { gap: 60px } spacing between them
+       that index.html gets. -->
   <section class="quote-block">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="{{BASE}}assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
     </div>
+    <div class="quote-block__overlay mosaic-reveal">
+      <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
+    </div>
   </section>
+
+  <!-- ============ PARTNER LOGOS ============ -->
+  <!-- Exact copy of index.html's own .partners marquee (was missing
+       entirely) — see that file's own comment above it for the full
+       reasoning. -->
+  <section class="partners marquee-banner--scrolling">
+    <div class="partners__scroll">
+      <p class="partners__track">
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+      </p>
+      <p class="partners__track" aria-hidden="true">
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo partners__logo--kelly" src="{{BASE}}assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+        <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+        <img class="partners__asterisk" src="{{BASE}}assets/images/Brown asterisk.png" alt="" />
+      </p>
+    </div>
+  </section>
+
+  </main>
 
 {{FOOTER}}
 </body>

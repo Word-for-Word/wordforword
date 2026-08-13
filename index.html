@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=185" />
+  <link rel="stylesheet" href="css/style.css?v=206" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -377,11 +377,40 @@
          still text placeholders pending their own image treatment. -->
     <div class="hero__wordmark-wrap">
       <div class="hero__wordmark-placeholder" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--1" style="--intro-delay: 3220ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;">Word</span></span>
-        <span class="hero__wordmark-word hero__wordmark-word--2" style="--intro-delay: 3700ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3700ms;">Wor<span class="hero__wordmark-d-anchor">d</span></span></span>
+        <span class="hero__wordmark-word hero__wordmark-word--1"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3620ms;">Word</span></span>
+        <span class="hero__wordmark-word hero__wordmark-word--2"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4100ms;">Wor<span class="hero__wordmark-d-anchor">d</span></span></span>
       </div>
-      <div class="hero__wordmark-for-wrap" style="--intro-delay: 3350ms;" aria-hidden="true">
-        <img class="hero__wordmark-for hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3350ms;" src="assets/images/Homepage hero title.png" alt="" />
+      <!-- Title group (word 1/for/word 2) shifted +400ms later
+           (3220/3350/3700 -> 3620/3750/4100) per explicit follow-up
+           feedback: the title read as triggering "half a second too
+           early." Kept the SAME internal stagger gaps (word 1 -> for
+           +130ms -> word 2 +350ms) — just the whole group's own start
+           pushed later. Eyebrows/nav intentionally left at their
+           existing delays (4630/4870ms) — only the title itself was
+           reported as mistimed.
+
+           --intro-delay now lives ONLY on each .hero__title-exit inner
+           span/img above/below — no longer duplicated onto the outer
+           .hero__wordmark-word/-for-wrap wrapper too. initIntroReveal()
+           in main.js now COPIES the (already elapsed-corrected) inner
+           value onto the wrapper itself at runtime instead of requiring
+           both to be hand-kept in sync here — see that function's own
+           comment for why the copy still has to land on the wrapper
+           specifically (the squash-stretch entrance animation targets
+           IT, not the inner span, and a CSS rule on an ancestor can't
+           read a custom property set on its child).
+
+           The asterisk (below) is timed the same automatic way now: it
+           used to carry its own hardcoded --intro-delay here, hand-
+           recomputed to whatever "word 2's delay + ~930ms" worked out to
+           any time word 2's own delay changed — reported live as
+           exactly the kind of manual, error-prone upkeep this whole
+           system should not need. initIntroReveal() now derives it
+           directly from word 2's own (corrected) delay + its 800ms
+           transition duration + a 130ms settle buffer, so retiming word
+           2 alone is enough — see that function's own comment. -->
+      <div class="hero__wordmark-for-wrap" aria-hidden="true">
+        <img class="hero__wordmark-for hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3750ms;" src="assets/images/Homepage hero title.png" alt="" />
       </div>
       <!-- Two elements so two rotations can compose: the WRAP does a
            one-shot decelerating "extra" spin (large -> 0deg) plus the
@@ -399,7 +428,27 @@
            blocks a `transition` from ever visibly running on the same
            element/properties). The inner img's own continuous spin is
            untouched either way — it's a separate element. -->
-      <div class="hero__wordmark-asterisk-wrap" style="--intro-delay: 4300ms;" aria-hidden="true">
+      <!-- --intro-delay here is a FALLBACK only (~word 2's own original
+           4100ms + the derivation main.js applies, before any elapsed-
+           time correction) — initIntroReveal() overwrites it with the
+           real, derived value almost immediately on any normal load.
+           It still has to be a real number, not left unset: unlike the
+           squash-stretch wrappers (whose animation only activates once
+           its INNER child already has .is-visible, added well after
+           initIntroReveal() has already set every delay it touches),
+           this element's own hero-asterisk-intro animation is
+           unconditional — running from the moment CSS first applies,
+           with animation-delay: var(--intro-delay, 0ms). An empty
+           custom property falls back to that literal 0ms default,
+           so without a real number here the animation starts playing
+           immediately at page load and is fully finished by the time
+           JS ever gets a chance to correct it — confirmed live: exactly
+           that, the asterisk popping in within the first second instead
+           of once word 2 has settled. Changing animation-delay on an
+           animation that's already running doesn't retroactively
+           restart it, so JS setting the correct value moments later
+           was already too late. -->
+      <div class="hero__wordmark-asterisk-wrap" style="--intro-delay: 5030ms;" aria-hidden="true">
         <img class="hero__wordmark-asterisk" src="assets/images/Asterisk - Default.png" alt="" />
       </div>
     </div>
@@ -423,10 +472,10 @@
     <section id="overview" class="square-grid square-grid--4col square-grid--rows-4">
       <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       <div class="square square--red square--pad-lg" style="grid-column: 2; grid-row: 1;">
-        <p class="square__body">At Word for Word, we explore the intersection of medicine and the humanities.</p>
+        <p class="square__body">At Word for Word, we explore the intersection of <strong>medicine and the humanities</strong>.</p>
       </div>
       <div class="square square--tan square--pad-lg" style="grid-column: 3; grid-row: 1;">
-        <p class="square__body">Through interviews, scholarship, and creative work, we illuminate stories from across the healthcare experience.</p>
+        <p class="square__body">Through <strong>interviews, scholarship, and creative work</strong>, we illuminate stories from across the healthcare experience.</p>
       </div>
       <div class="square square--grey square--inset" style="grid-column: 4; grid-row: 1;">
         <img class="square__inset-image" src="assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
@@ -495,7 +544,7 @@
 
       <div class="square square--red square--text-gap-30 square--pad-lg" style="grid-column: 3; grid-row: 2;">
         <p class="square__body">We strive to share their stories as told&mdash;</p>
-        <p class="square__footnote">&mdash;word for word.</p>
+        <p class="square__footnote">&mdash;<strong>word for word</strong>.</p>
       </div>
       <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-tan); --checker-b: var(--color-red);" aria-hidden="true"></div>
 
@@ -617,30 +666,30 @@
       <div class="square square--red square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--display-italic">Interviewer*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Interviewer"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description">*Interview individuals with experiences in medicine and the humanities, and shape those conversations into written narratives.</p>
+        <p class="square__role-description"><span>*Interview individuals with experiences in medicine and the humanities, and <strong>shape those conversations into written narratives</strong>.</span></p>
       </div>
       <div class="square square--tan square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--caps">Columnist*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Columnist"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description">*Create narratives on the human side of healthcare, with freedom to write book reviews, opinions, poetry, prose, or analysis.</p>
+        <p class="square__role-description"><span>*<strong>Create narratives on the human side of healthcare</strong>, with freedom to write book reviews, opinions, poetry, prose, or analysis.</span></p>
       </div>
       <div class="square square--grey square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--display">Editor*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Editor"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description">*Work closely with columnists and interviewers to refine clarity, structure, and flow, while respecting the writer&rsquo;s intent.</p>
+        <p class="square__role-description"><span>*Work closely with columnists and interviewers to <strong>refine clarity, structure, and flow</strong>, while respecting the writer&rsquo;s intent.</span></p>
       </div>
       <div class="square square--dark square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--script">Designer*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Designer"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description">*Translate narrative into visual form, illustrating written pieces in the journal&rsquo;s signature fine-arts aesthetic.</p>
+        <p class="square__role-description"><span>*<strong>Translate narrative into visual form</strong>, illustrating written pieces in the journal&rsquo;s signature fine-arts aesthetic.</span></p>
       </div>
 
       <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       <div class="square square--dark square--content-left">
-        <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br />Join the team.</p>
+        <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br /><strong>Join the team.</strong></p>
       </div>
       <div class="square square--red square--content-left">
-        <p class="square__script square__script--sub">Applications open<br />in the spring.</p>
+        <p class="square__script square__script--sub">Applications open<br />in the <strong>spring</strong>.</p>
         <!-- Was a bare non-interactive div; now a real <a> so it (a)
              actually leads somewhere and (b) matches a[href] in
              initCustomCursor()'s isClickablePoint(), so hovering it
@@ -675,7 +724,7 @@
              title case. Shares .split-cta__text-line so it reveals as
              the FIRST step of the same stagger chain (see that class's
              own comment below) rather than popping in separately. -->
-        <h3 class="split-cta__title split-cta__text-line">What else?</h3>
+        <h3 class="split-cta__title section-title split-cta__text-line">What else?</h3>
         <!-- Hardcoded as 3 separate lines (not one wrapped <p>) so each
              can stagger in independently — same tradeoff as the hero
              wordmark/eyebrow lines: matches the CURRENT wrap at this
@@ -971,6 +1020,16 @@
             <img class="arrow-glyph__hover" src="assets/images/Arrow, blue.png" alt="" />
           </span>
         </button>
+        <!-- Populated by initFeaturedCarousel() in main.js — one diamond
+             per REAL slide (4 today), generated rather than hand-written
+             here so it can never silently drift out of sync with the
+             actual slide count. Clicking one jumps straight to that
+             slide; the active one gets .is-active (solid fill), every
+             other stays at its own dimmed default (see .featured-
+             carousel__indicator in style.css) — same "which one is
+             current" convention as a typical dot-indicator carousel,
+             just diamonds instead of circles per explicit request. -->
+        <div class="featured-carousel__indicators mosaic-reveal" role="tablist" aria-label="Carousel slides"></div>
       </div>
     </section>
 
@@ -1058,20 +1117,69 @@
     </section>
 
     <!-- ============ PARTNER LOGOS ============ -->
-    <!-- Reveals as ONE unit (slide up + fade, same as the hero elements)
-         rather than tile-by-tile per logo. NOT the generic .mosaic-reveal/
-         .mosaic-reveal--slide utility (tried first) — that visibly
-         started already-opaque and only slid, fade and slide not
-         actually together; .partners has its own dedicated rule instead
-         (see style.css), matching the hero title's exact values
-         (translateY(36px), 1.6s, same easing) rather than depending on
-         how the shared utility happens to cascade. See
-         initRevealOnScroll() in main.js: .partners is tracked separately
-         from the staggered targets so it never gets a --reveal-delay. -->
-    <section class="partners">
-      <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
-      <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
-      <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+    <!-- EXPERIMENTAL: infinitely-scrolling marquee variant, per explicit
+         request to see what it'd look like — same continuous-scroll
+         mechanics as #get-involved/#publications (.marquee-banner--
+         scrolling further up: 2 byte-identical .partners__track copies
+         laid side by side, animated by exactly one track's own measured
+         width so the loop point is invisible — see setPartnersMarqueeMetrics()
+         in main.js). NOW also sharing .marquee-banner--scrolling's own
+         scroll-triggered reveal (fades in as one flat unit — see that
+         class in style.css/initRevealOnScroll() in main.js) per explicit
+         follow-up request, instead of the bespoke slide+fade .partners
+         had at first — .partners itself carries only layout now (full-
+         bleed width/overflow), no reveal styling of its own.
+         Logo order: Perelman, Kelly, History & Sociology — per explicit
+         request, Kelly sits between the other two (repeating a 3-item
+         cycle means ONE seam is always Kelly-less; this order puts that
+         seam between Perelman and Kelly's NEXT repeat rather than
+         between the two wordmarks).
+         Logos keep their original static-section heights (76px/100px
+         for Kelly's near-square mark) — same "*" brown-asterisk
+         separator/size as the other marquees. -->
+    <section class="partners marquee-banner--scrolling">
+      <div class="partners__scroll">
+        <p class="partners__track">
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="The Kelly Writers House" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="History &amp; Sociology of Science" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        </p>
+        <p class="partners__track" aria-hidden="true">
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ Perelman.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo partners__logo--kelly" src="assets/images/Sponsor_ Kelly Writers House.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+          <img class="partners__logo" src="assets/images/Sponsor_ History &amp; Sociology of Science.png" alt="" />
+          <img class="partners__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        </p>
+      </div>
     </section>
 
   </main>
@@ -1128,6 +1236,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="js/main.js?v=111" defer></script>
+  <script src="js/main.js?v=126" defer></script>
 </body>
 </html>

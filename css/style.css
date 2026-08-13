@@ -48,7 +48,7 @@
      in between rather than jumping only at breakpoints, and the max end
      pins them back to the original desktop value so nothing above
      720px changes. */
-  --text-body: clamp(18px, 5vw, 24px);
+  --text-body: 22px;
   --text-small: clamp(12.5px, 3.2vw, 15px);
   /* The marquee strips' own unique size (see .marquee-banner) — a
      deliberate third value roughly midway between --text-body and the
@@ -653,8 +653,11 @@ html.skip-intro-splash .intro-splash-layer--grey {
   opacity: 0;
   visibility: hidden;
 }
-/* Opacity set directly (not via `animation`) — instant, so the cream
-   cover is fully opaque from frame 1. Only the SLIDE is animated here;
+/* Opacity/visibility set directly (not via `animation`) — instant, tied
+   to html.show-page-flash ALONE (no .page-flash-ready requirement), so
+   the cream cover is fully opaque from frame 1 regardless. Only the
+   SLIDE is animated (and IS gated on .page-flash-ready — see that
+   class's own comment on initPageFlashReady() in main.js for why);
    the fade-in lives on .page-flash__color below. Holds in place for the
    first 900ms (.page-flash__color's own fade + hold), then slides up
    and off over 900ms (900-1800ms) — same translateY(-100%) technique
@@ -664,6 +667,8 @@ html.skip-intro-splash .intro-splash-layer--grey {
 html.show-page-flash .page-flash {
   opacity: 1;
   visibility: visible;
+}
+html.show-page-flash.page-flash-ready .page-flash {
   animation: page-flash-slide 0.9s cubic-bezier(0.33, 1, 0.68, 1) 900ms forwards;
 }
 @keyframes page-flash-slide {
@@ -684,7 +689,7 @@ html.show-page-flash .page-flash {
    also means the hold below shrinks to 450ms so the total (fade+hold)
    still lands at 900ms, matching .page-flash's own slide delay above
    without needing to touch that number too. */
-html.show-page-flash .page-flash__color {
+html.show-page-flash.page-flash-ready .page-flash__color {
   animation: page-flash-color-fade 0.45s ease-in-out forwards;
 }
 @keyframes page-flash-color-fade {
@@ -704,7 +709,7 @@ html.show-page-flash .page-flash__color {
    +bounce the intro splash's own screens 01/00 use, not just a plain
    fade — the two animations don't fight because they touch different
    properties (this one's `transform`, that one's `opacity`/`translate`). */
-html.show-page-flash .page-flash__asterisk {
+html.show-page-flash.page-flash-ready .page-flash__asterisk {
   animation:
     page-flash-asterisk-jitter 0.7s linear infinite,
     intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
@@ -731,7 +736,7 @@ html.show-page-flash .page-flash__asterisk {
 /* Same intro-splash-flicker-in bounce as the asterisk above, on the
    caption too — matches the intro splash, where screen 01/00's asterisk
    AND caption both bounce in together. */
-html.show-page-flash .page-flash__caption {
+html.show-page-flash.page-flash-ready .page-flash__caption {
   animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 .page-flash--01 { background: var(--color-red); }
@@ -749,10 +754,15 @@ html.show-page-flash .page-flash__caption {
 /* Nav bar: same fade+drop-in treatment as the homepage's own
    .intro-reveal--drop (16px translateY, 0.45s ease-out), timed to start
    the instant .page-flash above finishes sliding away (1.8s) rather
-   than the header just sitting there statically this whole time. */
+   than the header just sitting there statically this whole time. Hidden
+   state stays tied to html.show-page-flash alone (so it can't flash
+   visible before .page-flash-ready arrives); only the animation itself
+   (and its 1.8s countdown) waits on that class — see its own comment. */
 html.show-page-flash .site-header {
   opacity: 0;
   transform: translateY(-16px);
+}
+html.show-page-flash.page-flash-ready .site-header {
   animation: page-flash-header-drop 0.45s ease-out 1.8s forwards;
 }
 @keyframes page-flash-header-drop {
@@ -1637,12 +1647,18 @@ main {
      earlier bump) moved it up too far. -44% per a later follow-up
      ("move it down a tiny bit" from -48%), then -46% per one more
      follow-up, then -49% per "move it up a little", then -47% per "move
-     it down a little" once more. positionAboutHeroTitle()
+     it down a little" once more, then -44% per "moved down more", then
+     -46% per "moved a little too far down", then -47% per "move it up a
+     tiny bit", then -45% per "move hero title img down a little".
+     positionAboutHeroTitle()
      in main.js re-centers the whole group against this value automatically
      on every change, so tuning this alone is always safe — no need to
-     re-tune the wrap-level centering correction to match. */
-  transform: translateY(-47%);
-  --squash-base: translateY(-47%);
+     re-tune the wrap-level centering correction to match (it only ever
+     computes a Y correction on the OUTER wrap, never touches X). X was a
+     flat 14px until "move it a tiny tiny tiny bit to the right" bumped it
+     to 16px. */
+  transform: translateY(-45%) translateX(16px);
+  --squash-base: translateY(-45%) translateX(16px);
   z-index: 2;
 }
 
@@ -1861,18 +1877,28 @@ main {
    tall the tile happened to be). */
 .square--text-gap-30 { gap: 30px; }
 
+/* Shared face/size/weight for every real section title on the site —
+   about.html section 1's "What is Word for Word?", index.html section
+   3's "What else?", and about.html section 2's "Beyond the Page" all
+   carry this class now (alongside their own layout-specific class, e.g.
+   .square__intro-title/.split-cta__title, which still owns margin and
+   any other per-context layout). Previously these lived as duplicated
+   font-family/font-size/font-weight declarations across those 2
+   classes, which had drifted out of sync (.square__intro-title at
+   clamp(32px,9vw,48px), .split-cta__title still at the older
+   clamp(26px,8vw,40px)) — consolidated per explicit request that all 3
+   titles read as the same size, matching section 1's (the larger) one. */
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 9vw, 48px);
+  font-weight: 400;
+}
 /* About page section 1's merged 2x2 "What is Word for Word?" tile —
    title + 3 paragraphs, left-aligned/justified (.square--align-left +
    this rule's own text-align:justify override on the paragraphs) and
    vertically centered as a block via .square's own base
    justify-content:center, matching the reference screenshot. */
 .square__intro-title {
-  /* Same face/size as every other real section title on the site
-     (.split-cta__title, "What else?" — section 3's own heading), per
-     explicit request to match rather than invent a new scale. */
-  font-family: var(--font-display);
-  font-size: clamp(26px, 8vw, 40px);
-  font-weight: 400;
   margin: 0;
 }
 .square__intro-body {
@@ -3317,16 +3343,24 @@ a.diamond-cta {
   gap: 72px;
   align-items: center;
 }
+/* About page's own "Beyond the Page" instance only (see the HTML comment
+   above that section) — widens the text column vs the shared rule above
+   (1fr instead of 0.85fr, narrower 48px gap instead of 72px) so its
+   paragraph lines run longer, extending further into the middle of the
+   section, without touching index.html's own section 3, which shares
+   the plain .split-cta class. */
+.split-cta--beyond-page {
+  grid-template-columns: 1fr 1.3fr;
+  gap: 48px;
+}
 /* Bumped from 60px per explicit request to push the text further right. */
 .split-cta__text { padding-left: 120px; }
 /* <h3> is bold + has its own default margin in the browser's own UA
    stylesheet — reset both (same reason .square__role resets <h3>'s bold
-   default). Instrument Serif per explicit request, sized as a real
-   title against the 24px body copy below it. */
+   default). Face/size/weight now come from the shared .section-title
+   class (see its own comment) — every <h3 class="split-cta__title"> in
+   the markup also carries that class. */
 .split-cta__title {
-  font-family: var(--font-display);
-  font-size: clamp(26px, 8vw, 40px);
-  font-weight: 400;
   margin: 0 0 16px;
 }
 /* The 3 paragraph lines are hardcoded <span>s (see index.html), not one
@@ -3465,22 +3499,151 @@ span.split-cta__text-line {
      replaced (a long history of translateY values — -40 through a
      diagnostic -400px — all lived on this rule before that was caught). */
 }
-/* About page "Beyond the Page" (section 2) skeleton — same .split-cta__
-   illustration-wrap sizing/position as section 3's real artwork box
-   above, but no image chosen yet, so this just outlines where one will
-   go instead of rendering the tile-mosaic + artwork machinery that box
-   normally holds. */
-.split-cta__illustration-wrap--placeholder {
-  border: 2px dashed var(--color-dark);
-  border-radius: 15px;
-  opacity: 0.35;
+/* About page "Beyond the Page" (section 2) — same 90%-width/4:3-ratio
+   sizing as .split-cta__illustration-wrap above (keeps this column
+   matching section 3's proportions), but holds a photo stack instead
+   of the tile-mosaic + artwork machinery that box normally holds. */
+.beyond-page__images {
+  position: relative;
+  width: 90%;
+  aspect-ratio: 4 / 3;
 }
-/* .split-cta__title/.split-cta__text-line's own reveal-on-scroll chain
-   (initSplitCtaReveal() in main.js) only fires once a real illustration
-   image is present — this skeleton section deliberately has neither, so
-   its title/body render plain and immediately visible rather than
-   inheriting classes whose opacity:0 starting state would never get
-   cleared. */
+/* var(--color-tan), same warm-cream swatch used for .square--tan
+   elsewhere — sits behind both photos as the one visible "circle"
+   between them. Centered in .beyond-page__images itself (= centered in
+   the section's right column, since that box already fills it) rather
+   than pinned to an edge. */
+.beyond-page__circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 62%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: var(--color-tan);
+  z-index: 0;
+}
+/* Both source PNGs already bake in their own cream border + drop
+   shadow (see assets/images/Outreach-img1.png / img2.png) — no
+   box-shadow/border added here, that'd double up.
+
+   Entrance: `translate`/`rotate` here are the standalone CSS properties
+   (not the `transform` shorthand) specifically so they can transition
+   independently. Per explicit request, opacity/translate/rotate all
+   fire at once now (a single --reveal-delay, repeated across all 3 —
+   CSS cycles a shorter transition-delay list to match a longer
+   transition list) rather than rotate waiting for translate to finish
+   first — that earlier staged version left a visible pause before the
+   rotate kicked in; this reads as instantaneous instead, just with
+   rotate's own overshooting cubic-bezier still giving it a bouncy feel
+   as it settles into its final tilt while the slide/fade happen
+   alongside it. Centering math lives in the Y value itself
+   (calc(-50% + 40px) -> -50%) so the same `translate` property doubles
+   as both "center this on its top/left point" AND "the 40px slide"
+   without a separate transform.
+
+   --reveal-delay is set by initSplitCtaReveal()'s counterpart override
+   in main.js (a short, explicit 0ms/120ms pair specific to these 2
+   photos — NOT the generic per-sibling stagger .split-cta__
+   illustration-tile uses, which would also count the beige circle as a
+   sibling and space them out further than wanted here) — img--2 settles
+   120ms after img--1, "sooner" than the plain per-sibling math would
+   give. */
+.beyond-page__img {
+  position: absolute;
+  width: 50%;
+  height: auto;
+  /* Promotes each photo to its own GPU compositor layer up front,
+     before the transition ever starts — without this, profiling showed
+     the browser doing an expensive HIGH_RESOLUTION raster pass right as
+     each photo's transition began (its first-ever rotate/translate
+     change forces a late layer promotion + raster at that exact
+     moment), which is exactly the scroll-in stutter reported. */
+  /* transform (the magnetic-repulsion wobble — see
+     initBeyondPageMagneticImages() in main.js) deliberately has NO CSS
+     transition at all: that function drives it with a continuous
+     per-frame lerp instead (same technique the custom-cursor asterisk's
+     own floaty drag already uses elsewhere in this file), which is what
+     actually produces the "floaty," not-jerky feel — a CSS transition
+     retargeting on every raw mousemove event fights the lerp's own
+     easing and reads as choppy. will-change still covers it for the
+     same GPU-layer-promotion reason as opacity/translate/rotate below. */
+  will-change: opacity, translate, rotate, transform;
+  opacity: 0;
+  rotate: 0deg;
+  translate: -50% calc(-50% + 40px);
+  transition:
+    opacity 0.6s ease-out,
+    translate 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 0.6s cubic-bezier(0.34, 1.15, 0.64, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.beyond-page__img.is-visible {
+  opacity: 1;
+  translate: -50% -50%;
+}
+/* Doctor photo — sits behind img--2 (lower z-index), tilted counter-clockwise. */
+.beyond-page__img--1 {
+  top: 40%;
+  left: 30%;
+  z-index: 1;
+}
+.beyond-page__img--1.is-visible {
+  rotate: -3.01deg;
+}
+/* Group/tabling photo — sits in front, tilted clockwise,
+   overlapping img--1's bottom-right corner. */
+.beyond-page__img--2 {
+  width: 47%;
+  top: 66%;
+  left: 66%;
+  z-index: 2;
+}
+.beyond-page__img--2.is-visible {
+  rotate: 8.96deg;
+}
+/* Brown asterisk, top-right of the photo stack — same split-across-2-
+   elements idea index.html's own section 3 uses for its own
+   .split-cta__illustration-asterisk-wrap/__illustration-asterisk: the
+   wrap holds position + a one-shot scroll-triggered pop-in
+   (hero-asterisk-intro, added by initBeyondPageTextReveal() in main.js
+   in sync with the photos' own entrance, not immediately on load), the
+   inner img holds only the separate continuous spin (hero-asterisk-spin,
+   8s linear infinite) — 2 elements because a single element can't run
+   a one-shot animation and an infinite one on the same `transform`
+   property at once, they'd fight instead of composing. Uses the actual
+   pre-colored asset (Brown asterisk.png, also used by
+   .partners__asterisk) rather than section 3's mask-image +
+   background-color recoloring technique — no arbitrary color choice
+   needed here since the asset is already the right brown. z-index above
+   both photos so it always reads as sitting in front, not tucked under
+   whichever photo happens to overlap this corner. */
+.beyond-page__asterisk-wrap {
+  position: absolute;
+  top: 4%;
+  right: 26%;
+  width: 36px;
+  z-index: 3;
+  opacity: 0;
+}
+.beyond-page__asterisk-wrap.is-visible {
+  animation: hero-asterisk-intro 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.beyond-page__asterisk {
+  display: block;
+  width: 100%;
+  aspect-ratio: 180 / 200;
+  animation: hero-asterisk-spin 8s linear infinite;
+}
+/* Per explicit request, this section's title/body now use the SAME
+   .split-cta__text-line fade-up-on-scroll reveal as index.html's own
+   section 3 — initSplitCtaReveal() itself still early-returns here (no
+   .split-cta__illustration-tile/.split-cta__illustration on this page),
+   so initBeyondPageTextReveal() in main.js is a small parallel function
+   that triggers the SAME .split-cta__text-line classes off
+   .beyond-page__img--1 becoming is-visible instead (this section's own
+   "illustration" equivalent). */
 .beyond-page__body {
   font-family: var(--font-body);
   font-size: var(--text-body);
@@ -3800,6 +3963,97 @@ span.split-cta__text-line {
    exactly: the section wrapper just always renders, its mask tiles do
    the actual revealing.
 =================================================================== */
+/* ===================================================================
+   Team bios (About page, below the "Meet the Team" marquee)
+   No fixed/tile-derived height anymore (that was aspect-ratio: 4/1 on
+   .team-bio, matching one row of section 1's 4-column grid) — per
+   explicit request, each row's height is now just whatever the photo
+   itself renders at: .team-bio__photo-wrap gets aspect-ratio: 1/1
+   (matching the source photos, all 1660x1660) at its own 28% flex-basis
+   width, and that's the only thing driving the row's height. align-
+   items: flex-start (not stretch) so the text column top-aligns with
+   the photo instead of being forced to match its height — if a bio's
+   body copy runs longer than the photo is tall, the row simply grows to
+   fit it (text determines the row instead of the other way around). */
+.team-bios {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+.team-bio {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+}
+.team-bio__photo-wrap {
+  flex: 0 0 28%;
+  aspect-ratio: 1 / 1;
+  border-radius: 15px;
+  overflow: hidden;
+}
+.team-bio__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.team-bio__text {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 48px 24px 0;
+}
+.team-bio__name {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 400;
+  margin: 0 0 4px;
+}
+.team-bio__role {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  margin: 0 0 16px;
+}
+.team-bio__body {
+  font-family: var(--font-body);
+  /* 20px, matching .hero__eyebrow's own size — deliberately smaller than
+     --text-body per explicit request, to fix the overflow the previous
+     size caused (see this section's earlier comment above .team-bios in
+     the HTML). */
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.team-bio__body:last-child {
+  margin-bottom: 0;
+}
+/* About page's exploratory swap-in for .quote-block right above (see
+   the HTML comment there) — a plain, roomy section instead of the
+   photo + mosaic-reveal treatment: no image, just centered body text
+   with generous top/bottom breathing room. */
+.slogan-preview {
+  padding: 160px 0;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+.slogan-preview__text {
+  margin: 0;
+}
+/* Same size as .hero__eyebrow (20px) per explicit request — overrides
+   span.split-cta__text-line's own font-size (var(--text-body)) at equal
+   specificity via the extra .slogan-preview ancestor, so this doesn't
+   need to fight that shared rule's own tag+class selector. Each line is
+   its own .split-cta__text-line span (same class index.html's section 3
+   uses for its own line-by-line reveal) purely for the reveal mechanics
+   — fade+slide-up, staggered via that class's own nth-child rules (0ms/
+   90ms) — not for its size, which this overrides. Registered in
+   initRevealOnScroll()'s staggeredTargets (main.js) so checkAll() adds
+   is-visible to these like any other scroll-tracked element; --reveal-
+   delay still gets set on them by that generic per-sibling loop but goes
+   unused here since .split-cta__text-line's own transition-delay is a
+   flat 0s overridden only by its nth-child rules, not var(--reveal-
+   delay). */
+.slogan-preview .split-cta__text-line {
+  font-size: 20px;
+}
 .quote-block {
   position: relative;
   text-align: center;
@@ -4305,7 +4559,8 @@ span.split-cta__text-line {
 .featured-carousel__mask,
 .quote-block__mask,
 .publication-card,
-.marquee-banner--scrolling {
+.marquee-banner--scrolling,
+.team-bio {
   opacity: 0;
   /* filter here too — only .square ever actually changes that property
      (its own hover-leave brightness reset, see .square's base rule),
@@ -4337,7 +4592,8 @@ span.split-cta__text-line {
 .featured-carousel__mask.is-visible,
 .quote-block__mask.is-visible,
 .publication-card.is-visible,
-.marquee-banner--scrolling.is-visible {
+.marquee-banner--scrolling.is-visible,
+.team-bio.is-visible {
   /* Second value pins filter's delay to 0s even once .is-visible is
      present — transition-delay lists repeat cyclically to match
      transition-property's count when there are fewer values than
@@ -4405,6 +4661,19 @@ span.split-cta__text-line {
   filter: brightness(1.07);
   transition: opacity 0.7s ease-out, transform 0.7s ease-out, filter 0.6s cubic-bezier(0.25, 1, 0.5, 1);
   transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0s;
+}
+/* Same fade + slide-up as .publication-card just above — same reasoning
+   for why this needs its own transform override instead of relying on
+   the shared opacity-only list further up (equal specificity, later
+   source order wins the whole shorthand). */
+.team-bio {
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+  transition-delay: 0s, 0s;
+}
+.team-bio.is-visible {
+  transform: none;
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms);
 }
 
 /* Intro sequence — title, then both eyebrow blocks (in sync with each

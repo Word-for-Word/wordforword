@@ -136,6 +136,18 @@
     </header>
     <div class="nav-dim-overlay" aria-hidden="true"></div>
 
+    <!-- Fixed viewport frame — same markup as index.html's own (see that
+         file's HTML comment for the full reasoning); was missing on this
+         page, which is why it lacked the rounded-corner frame every other
+         page has. -->
+    <div class="viewport-frame" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
+    <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
+    <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
+    <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
+
   <!-- ============ HERO ============ -->
   <!-- Was copied verbatim from publications.html's own hero — now this
        page's own copy: "About" (was "Publications"), "Our mission"/
@@ -214,10 +226,10 @@
       </div>
     </div>
     <div class="square square--cream square--align-left square--pad-lg square--text-gap-30" style="grid-column: 3 / span 2; grid-row: 1 / span 2;">
-      <h2 class="square__intro-title">What is Word for Word?</h2>
-      <p class="square__intro-body">In today&rsquo;s society, the power of spoken word is often underutilized and undervalued. <em>Word for Word</em> strives to change that by catalyzing <strong>meaningful conversations about medical and healthcare accessibility</strong>. From the lack of sanitation supplies to the spread of viral diseases, the people in Philadelphia and beyond have stories that deserve to be heard.</p>
-      <p class="square__intro-body">As an organization, we hope to <strong>give underrepresented voices a listening ear</strong>; we hope to illuminate the stories of patients and practitioners; and we hope to garner support for the issues that matter most today.</p>
-      <p class="square__intro-body">Outside of this scope, <em>Word for Word</em> celebrates the medical humanities through poetry, short stories, abstracts, vignettes, and other creative works that explore the <strong>inextricable relationship between medicine and the humanities</strong>.</p>
+      <h2 class="square__intro-title section-title split-cta__text-line">What is Word for Word?</h2>
+      <p class="square__intro-body split-cta__text-line">In today&rsquo;s society, the power of spoken word is often underutilized and undervalued. Word for Word strives to change that by catalyzing <strong>meaningful conversations about medical and healthcare accessibility</strong>. From the lack of sanitation supplies to the spread of viral diseases, the people in Philadelphia and beyond have stories that deserve to be heard.</p>
+      <p class="square__intro-body split-cta__text-line">As an organization, we hope to give underrepresented voices a listening ear; we hope to illuminate the stories of patients and practitioners; and we hope to garner support for the issues that matter most today.</p>
+      <p class="square__intro-body split-cta__text-line">Outside of this scope, <strong>Word for Word celebrates the medical humanities</strong> through poetry, short stories, abstracts, vignettes, and other creative works that explore the <strong>inextricable relationship between medicine and the humanities</strong>.</p>
     </div>
 
     <div class="square square--checker" style="grid-column: 1; grid-row: 2; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
@@ -237,30 +249,135 @@
   <!-- ============ BEYOND THE PAGE ============ -->
   <!-- Section 2 — reuses index.html's own section 3 (.split-cta) grid/
        padding/column-width exactly, so this lands with identical
-       margins/layout without duplicating any of its CSS. Skeleton for
-       now: no CTA (this copy has no link to send anyone to) and no
-       image chosen yet, so the right column is just a dashed
-       placeholder box (see .split-cta__illustration-wrap--placeholder)
-       instead of real artwork — swap it for a real <img> later without
-       touching the surrounding layout. -->
-  <section class="split-cta">
+       margins/layout without duplicating any of its CSS. No CTA (this
+       copy has no link to send anyone to). Right column is a stack of
+       2 real outreach photos over a beige circle (see .beyond-page__
+       images and friends), not the tile-mosaic/artwork machinery
+       .split-cta__illustration-wrap normally holds.
+
+       split-cta--beyond-page is an about.html-only WIDTH modifier (see
+       its own CSS) — .split-cta itself is shared with index.html's
+       section 3, so a plain change to the shared grid/gap would widen
+       that section's text too. -->
+  <section class="split-cta split-cta--beyond-page">
     <div class="split-cta__text">
-      <h3 class="split-cta__title">Beyond the Page</h3>
-      <p class="beyond-page__body"><strong>We knit word into action.</strong> <em>Word for Word</em> hosts food drives with Philabundance and partners with youth organizations in Philadelphia&mdash;and beyond. Through outreach, we bring reading, medicine, and the medical humanities into the community.</p>
-      <p class="beyond-page__body">We strive to respond to the stories shared with us, and to <strong>empower others to do the same.</strong></p>
+      <h3 class="split-cta__title section-title split-cta__text-line">Beyond the Page</h3>
+      <p class="beyond-page__body split-cta__text-line"><strong>We knit word into action.</strong> Word for Word hosts food drives with Philabundance and partners with youth organizations in Philadelphia&mdash;and beyond. Through outreach, we bring reading, medicine, and the medical humanities into the community.</p>
+      <p class="beyond-page__body split-cta__text-line">We strive to respond to the stories shared with us, and to <strong>empower others to do the same.</strong></p>
     </div>
     <div class="split-cta__deco" aria-hidden="true">
-      <div class="split-cta__illustration-wrap split-cta__illustration-wrap--placeholder"></div>
+      <div class="beyond-page__images">
+        <div class="beyond-page__circle"></div>
+        <img class="beyond-page__img beyond-page__img--1" src="assets/images/Outreach-img1.webp" alt="" />
+        <img class="beyond-page__img beyond-page__img--2" src="assets/images/Outreach-img2.webp" alt="" />
+        <div class="beyond-page__asterisk-wrap">
+          <img class="beyond-page__asterisk" src="assets/images/Brown asterisk.png" alt="" />
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- ============ MEET THE TEAM BANNER ============ -->
+  <!-- Same full-bleed scrolling marquee preset as index.html's own
+       #get-involved/#publications (see that file's own comment for the
+       word-span/centering/overflow/scroll-speed reasoning) — same
+       8-cycle script/serif/caps sequence, just this page's own phrase.
+       setMarqueeScrollMetrics() in main.js queries .marquee-banner--
+       scrolling generically, so this new instance picks up the exact
+       same felt scroll speed with no JS changes needed; same for the
+       shared fade-in-on-scroll reveal (.marquee-banner--scrolling is
+       already in initRevealOnScroll()'s staggeredTargets list). -->
+  <section class="marquee-banner marquee-banner--scrolling">
+    <div class="marquee-banner__scroll">
+    <p class="marquee-banner__track">
+      <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; 
+    </p>
+    <p class="marquee-banner__track" aria-hidden="true">
+      <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--script">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--serif">Meet the Team</span> &nbsp;*&nbsp; <span class="marquee-banner__word marquee-banner__word--caps">Meet the Team</span> &nbsp;*&nbsp; 
+    </p>
+    </div>
+  </section>
+
+  <!-- ============ TEAM BIOS ============ -->
+  <!-- Only Samantha's bio has real copy so far (per explicit request) —
+       the other 4 use clearly-labeled placeholder text/roles until the
+       real copy is provided. Real name + photo for each (matching the
+       "About Us - <name>" image files), placeholder role/body only.
+       Each .team-bio is a direct child of .team-bios, so it picks up the
+       same generic sibling-cascade stagger initRevealOnScroll() already
+       gives .square/.publication-card (see main.js) — no extra JS needed
+       beyond adding .team-bio to that shared selector list. -->
+  <section class="team-bios">
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="assets/images/About Us - Samantha Wu.webp" alt="Samantha Wu" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Samantha Wu</h3>
+        <p class="team-bio__role">Co-President of Internal</p>
+        <p class="team-bio__body"><strong>Samantha Wu</strong> is a rising junior in the College of Arts and Sciences studying Neuroscience and Anthropology on the pre-medical track. Her interests include intergenerational epigenetics, maternal health, Indigenous rights, emergency medical services, and the molecular mechanisms of cardiovascular disease.</p>
+        <p class="team-bio__body">Witnessing medical providers offer compassionate, community-based care through her home church's free health clinics, she hopes to serve as a physician while using art and writing to document the injustices faced by disenfranchised communities. She believes that elevating the voices and stories of oft-silenced individuals has the power to bring about healing on both personal and systemic levels.</p>
+        <p class="team-bio__body">In her free time, Samantha enjoys listening to audiobooks and singing musical theater repertoire.</p>
+      </div>
+    </article>
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="assets/images/About Us - Renee Liu.webp" alt="Renee Liu" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Renee Liu</h3>
+        <p class="team-bio__role">Placeholder Role</p>
+        <p class="team-bio__body"><strong>Renee Liu</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
+        <p class="team-bio__body">Placeholder closing line about Renee's interests outside of academics.</p>
+      </div>
+    </article>
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="assets/images/About Us - Ryan Cho.webp" alt="Ryan Cho" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Ryan Cho</h3>
+        <p class="team-bio__role">Placeholder Role</p>
+        <p class="team-bio__body"><strong>Ryan Cho</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
+        <p class="team-bio__body">Placeholder closing line about Ryan's interests outside of academics.</p>
+      </div>
+    </article>
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="assets/images/About Us - Mary Zawalick.webp" alt="Mary Zawalick" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Mary Zawalick</h3>
+        <p class="team-bio__role">Placeholder Role</p>
+        <p class="team-bio__body"><strong>Mary Zawalick</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
+        <p class="team-bio__body">Placeholder closing line about Mary's interests outside of academics.</p>
+      </div>
+    </article>
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="assets/images/About Us - Melody Zhang.webp" alt="Melody Zhang" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Melody Zhang</h3>
+        <p class="team-bio__role">Placeholder Role</p>
+        <p class="team-bio__body"><strong>Melody Zhang</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
+        <p class="team-bio__body">Placeholder closing line about Melody's interests outside of academics.</p>
+      </div>
+    </article>
+  </section>
+
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Exact copy of index.html's own .quote-block (was missing its
-       .quote-block__overlay text entirely) — see that file's own comment
-       above .quote-block for why the class/mosaic-reveal is reused
-       verbatim (fade-in-on-scroll, tile-by-tile mask assembly, comes
-       free from the existing selector list/initQuoteBlockTiles() in
-       main.js). -->
+  <!-- ORIGINAL, commented out for a side-by-side preview per explicit
+       request — exact copy of index.html's own .quote-block (photo +
+       mosaic-reveal overlay). See .slogan-preview right below for the
+       alternate treatment being tried in its place: a plain, roomy
+       text-only section, no photo. Uncomment this and delete
+       .slogan-preview to revert. -->
+  <!--
   <section class="quote-block">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
@@ -268,6 +385,13 @@
     <div class="quote-block__overlay mosaic-reveal">
       <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
     </div>
+  </section>
+  -->
+  <section class="slogan-preview">
+    <p class="slogan-preview__text">
+      <span class="split-cta__text-line">Empowering voices</span>
+      <span class="split-cta__text-line">previously unheard</span>
+    </p>
   </section>
 
   <!-- ============ PARTNER LOGOS ============ -->
