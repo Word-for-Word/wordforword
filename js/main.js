@@ -2,12 +2,11 @@
 
 // This file is shared verbatim across every page, including generated
 // article pages one folder deep (articles/<slug>.html — see
-// templates/_header.html and scripts/build_articles.py). A hardcoded
-// "assets/images/..." path resolves relative to the CURRENT PAGE's own
-// URL, not to this file's location, so it 404s from a subdirectory. Any
-// asset path this file builds up itself (not already written into the
-// page's own HTML) needs this prefix.
-const ASSET_BASE = location.pathname.includes("/articles/") ? "../" : "";
+// templates/_header.html and scripts/build_articles.py). Every page now
+// links assets via a root-absolute "/assets/..." path (see this repo's
+// clean-URL restructuring), so a hardcoded "/assets/images/..." path
+// resolves the same regardless of which folder depth the current page
+// lives at — no per-page prefix needed here anymore.
 
 // How far the hero has to scroll out of view (as a fraction of its own
 // height) before it's treated as "left" for scroll-linked reset purposes.
@@ -415,7 +414,7 @@ function initLogoSecretEntry() {
 
     if (clickCount >= 3) {
       clickCount = 0;
-      window.open(`${ASSET_BASE}admin/`, "_blank");
+      window.open("/admin/", "_blank");
       return;
     }
 
@@ -552,7 +551,7 @@ function initMarqueeAsterisks() {
           const span = document.createElement("span");
           span.className = "marquee-asterisk";
           const img = document.createElement("img");
-          img.src = `${ASSET_BASE}assets/images/Brown asterisk.png`;
+          img.src = "/assets/images/Brown asterisk.png";
           img.alt = "";
           span.appendChild(img);
           track.insertBefore(span, node);
@@ -928,8 +927,8 @@ function whenImageSettled(img) {
 const INTRO_ASSETS_READY_TIMEOUT_MS = 8000;
 function whenIntroAssetsReady() {
   if (SKIP_INTRO_SPLASH || !HAS_ELABORATE_SPLASH) return Promise.resolve();
-  const asteriskUrls = [1, 2, 3, 4].map((n) => `${ASSET_BASE}assets/images/Asterisk ${n}.png`);
-  asteriskUrls.push(`${ASSET_BASE}assets/images/Asterisk - Default, Cream.png`);
+  const asteriskUrls = [1, 2, 3, 4].map((n) => `/assets/images/Asterisk ${n}.png`);
+  asteriskUrls.push("/assets/images/Asterisk - Default, Cream.png");
   const imagesReady = asteriskUrls.map((src) => whenImageSettled(Object.assign(new Image(), { src })));
   return Promise.race([
     Promise.all([document.fonts ? document.fonts.ready : Promise.resolve(), ...imagesReady]),
@@ -2564,7 +2563,7 @@ function initCustomCursor() {
   // every mousemove, and the transition between the 2 fixed colors was
   // an abrupt, discrete jump rather than a true per-pixel contrast fix.
   const glyph = document.createElement("img");
-  glyph.src = `${ASSET_BASE}assets/images/Asterisk - Default.png`;
+  glyph.src = "/assets/images/Asterisk - Default.png";
   glyph.alt = "";
   glyph.className = "custom-cursor-asterisk";
   wrap.appendChild(glyph);

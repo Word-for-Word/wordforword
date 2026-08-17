@@ -192,14 +192,14 @@ def build_article(md_path, css_version, js_version):
         "EDITOR": html.escape(fields["editor"]),
         "DESIGNER": html.escape(fields["designer"]),
         "DATE_SUFFIX": date_suffix,
-        "ILLUSTRATION_SRC": "../" + fields["illustration"],
+        "ILLUSTRATION_SRC": "/" + fields["illustration"],
         "ILLUSTRATION_ALT": html.escape(fields.get("illustration_alt", fields["title"])),
         "ILLUSTRATION_CAPTION_BLOCK": illustration_caption_block,
         "BODY_HTML": render_body_html(body),
-        "BASE": "../",
+        "BASE": "/",
         "CSS_VERSION": css_version,
-        "HEADER": build_partial("_header.html", "../", js_version),
-        "FOOTER": build_partial("_footer.html", "../", js_version),
+        "HEADER": build_partial("_header.html", "/", js_version),
+        "FOOTER": build_partial("_footer.html", "/", js_version),
     }
     output_html = fill(load_template("article.html"), values)
 
@@ -230,9 +230,9 @@ def build_category_page(category, articles_in_category, css_version, js_version)
         for art in sorted(articles_in_category, key=lambda a: a["date"] or datetime.min, reverse=True):
             meta = art["date_display"] or ""
             cards.append(
-                "        <a class=\"article-teaser\" href=\"articles/{slug}.html\">\n"
+                "        <a class=\"article-teaser\" href=\"/articles/{slug}.html\">\n"
                 "          <div class=\"article-teaser__cover\">\n"
-                "            <img src=\"{illustration}\" alt=\"{alt}\" />\n"
+                "            <img src=\"/{illustration}\" alt=\"{alt}\" />\n"
                 "          </div>\n"
                 "          <p class=\"article-teaser__title\">{title}</p>\n"
                 "          <p class=\"article-teaser__summary\">{summary}</p>\n"
@@ -253,24 +253,28 @@ def build_category_page(category, articles_in_category, css_version, js_version)
         "LABEL": label,
         "LABEL_LOWER": label.lower(),
         "BODY_HTML": body,
-        "BASE": "",
+        "BASE": "/",
         "CSS_VERSION": css_version,
-        "HEADER": build_partial("_header.html", "", js_version),
-        "FOOTER": build_partial("_footer.html", "", js_version),
+        "HEADER": build_partial("_header.html", "/", js_version),
+        "FOOTER": build_partial("_footer.html", "/", js_version),
     }
     output_html = fill(load_template("category.html"), values)
-    (ROOT / f"{category}.html").write_text(output_html, encoding="utf-8")
+    category_dir = ROOT / category
+    category_dir.mkdir(exist_ok=True)
+    (category_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
 def build_publications_page(css_version, js_version):
     values = {
-        "BASE": "",
+        "BASE": "/",
         "CSS_VERSION": css_version,
-        "HEADER": build_partial("_header.html", "", js_version),
-        "FOOTER": build_partial("_footer.html", "", js_version),
+        "HEADER": build_partial("_header.html", "/", js_version),
+        "FOOTER": build_partial("_footer.html", "/", js_version),
     }
     output_html = fill(load_template("publications.html"), values)
-    (ROOT / "publications.html").write_text(output_html, encoding="utf-8")
+    publications_dir = ROOT / "publications"
+    publications_dir.mkdir(exist_ok=True)
+    (publications_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
 # The homepage carousel is sized (in both markup and CSS) for exactly this
@@ -280,10 +284,10 @@ CAROUSEL_SLOTS = 4
 
 def build_carousel_slide_html(article, index, is_first):
     number = f"({index + 1:02d})"
-    article_url = f"articles/{article['slug']}.html"
+    article_url = f"/articles/{article['slug']}.html"
     title_attr = html.escape(article["title"], quote=True)
     volume_attr = html.escape(article["volume"], quote=True)
-    image_src = html.escape(article["carousel_image"], quote=True)
+    image_src = "/" + html.escape(article["carousel_image"], quote=True)
     alt_attr = html.escape(article["illustration_alt"], quote=True)
     hover_tiles = "\n".join(
         '              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>' for _ in range(8)
@@ -334,9 +338,9 @@ def build_carousel_html(all_articles):
     slides_html = "\n".join(build_carousel_slide_html(a, i, i == 0) for i, a in enumerate(chosen))
     first = chosen[0]
     caption_html = (
-        f'        <a href="articles/{first["slug"]}.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">'
+        f'        <a href="/articles/{first["slug"]}.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">'
         f'{html.escape(first["title"])}</a>\n'
-        f'        <a href="publications.html" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">'
+        f'        <a href="/publications/" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">'
         f'{html.escape(first["volume"])}</a>\n'
         '        <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>'
     )
@@ -396,10 +400,10 @@ def main():
     by_category = {c: [a for a in all_articles if a["category"] == c] for c in CATEGORIES}
     for category in CATEGORIES:
         build_category_page(category, by_category[category], css_version, js_version)
-        print(f"Built {category}.html")
+        print(f"Built {category}/index.html")
 
     build_publications_page(css_version, js_version)
-    print("Built publications.html")
+    print("Built publications/index.html")
 
     update_homepage_carousel(all_articles)
 
