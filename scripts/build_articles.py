@@ -174,6 +174,11 @@ def build_article(md_path, css_version, js_version):
     date = format_date(fields.get("date", ""), filename)
     date_suffix = f" · {date.strftime('%B %Y')}" if date else ""
 
+    # "true"/"false" as literal unquoted text — that's how Decap's boolean
+    # widget serializes into this project's own flat key:value frontmatter
+    # (see parse_frontmatter's own docstring; this isn't real YAML parsing).
+    show_in_carousel = fields.get("show_in_carousel", "").strip().lower() == "true"
+
     illustration_caption_block = ""
     if fields.get("illustration_caption"):
         illustration_caption_block = (
@@ -210,6 +215,9 @@ def build_article(md_path, css_version, js_version):
         "illustration_alt": fields.get("illustration_alt", fields["title"]),
         "date": date,
         "date_display": date.strftime("%B %Y") if date else "",
+        "show_in_carousel": show_in_carousel,
+        "carousel_image": fields.get("carousel_image", ""),
+        "volume": fields.get("volume", ""),
     }
 
 
@@ -265,6 +273,113 @@ def build_publications_page(css_version, js_version):
     (ROOT / "publications.html").write_text(output_html, encoding="utf-8")
 
 
+# The homepage carousel is sized (in both markup and CSS) for exactly this
+# many slides — see index.html's own comment on .featured-carousel__track.
+CAROUSEL_SLOTS = 4
+
+
+def build_carousel_slide_html(article, index, is_first):
+    number = f"({index + 1:02d})"
+    article_url = f"articles/{article['slug']}.html"
+    title_attr = html.escape(article["title"], quote=True)
+    volume_attr = html.escape(article["volume"], quote=True)
+    image_src = html.escape(article["carousel_image"], quote=True)
+    alt_attr = html.escape(article["illustration_alt"], quote=True)
+    hover_tiles = "\n".join(
+        '              <div class="featured-carousel__hover-tile" aria-hidden="true"></div>' for _ in range(8)
+    )
+    slide_class = "featured-carousel__slide featured-carousel__slide--first" if is_first else "featured-carousel__slide"
+    # Only the first slide gets the mask-reveal treatment (masks + the
+    # mosaic-reveal class on its scrim) — matching the hand-authored
+    # original: the other 3 only ever appear via a click, never a
+    # scroll-into-view, so there's no "first paint" moment for them to
+    # reveal into (see the original HTML comment this replaced).
+    if is_first:
+        masks = "\n".join(
+            '              <div class="featured-carousel__mask" aria-hidden="true"></div>' for _ in range(8)
+        )
+        extra = (
+            '            <div class="featured-carousel__scrim mosaic-reveal" aria-hidden="true"></div>\n'
+            '            <div class="featured-carousel__masks">\n'
+            f"{masks}\n"
+            "            </div>\n"
+        )
+    else:
+        extra = '            <div class="featured-carousel__scrim" aria-hidden="true"></div>\n'
+    return (
+        f'          <div class="{slide_class}" data-title="{title_attr}" data-edition="{volume_attr}" '
+        f'data-number="{number}" data-article-url="{article_url}">\n'
+        f'            <img class="featured-carousel__photo" src="{image_src}" alt="{alt_attr}" />\n'
+        f"{extra}"
+        '            <div class="featured-carousel__hover-tiles">\n'
+        f"{hover_tiles}\n"
+        "            </div>\n"
+        "          </div>"
+    )
+
+
+def build_carousel_html(all_articles):
+    """Picks the CAROUSEL_SLOTS most-recent articles with "Feature in
+    homepage carousel?" checked. Returns (None, count) — meaning: leave
+    index.html's carousel exactly as it already is — unless there are
+    enough. A half-replaced carousel (some real slides, some leftover
+    placeholders) would look like a bug, not a deliberate in-progress
+    state, so this is all-or-nothing rather than a partial swap."""
+    candidates = [a for a in all_articles if a["show_in_carousel"] and a["carousel_image"]]
+    candidates.sort(key=lambda a: a["date"] or datetime.min, reverse=True)
+    chosen = candidates[:CAROUSEL_SLOTS]
+    if len(chosen) < CAROUSEL_SLOTS:
+        return None, len(chosen)
+
+    slides_html = "\n".join(build_carousel_slide_html(a, i, i == 0) for i, a in enumerate(chosen))
+    first = chosen[0]
+    caption_html = (
+        f'        <a href="articles/{first["slug"]}.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">'
+        f'{html.escape(first["title"])}</a>\n'
+        f'        <a href="publications.html" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">'
+        f'{html.escape(first["volume"])}</a>\n'
+        '        <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>'
+    )
+    return (slides_html, caption_html), len(chosen)
+
+
+def replace_between_sentinels(text, start_sentinel, end_sentinel, new_content, filename):
+    """Replaces everything strictly BETWEEN two exact, single-line sentinel
+    comments (kept as-is) with new_content — the sentinels are plain fixed
+    strings (not regex, not spanning any free-form prose), so a human can
+    freely reword the explanatory comments around them without ever
+    breaking this match. Preserves the end sentinel's own original
+    indentation rather than assuming one fixed amount, since
+    CAROUSEL_SLIDES:END and CAROUSEL_CAPTION:END sit at different depths."""
+    start_at = text.find(start_sentinel)
+    end_at = text.find(end_sentinel)
+    if start_at == -1 or end_at == -1 or end_at < start_at:
+        raise ContentError(f"{filename}: couldn't find {start_sentinel} ... {end_sentinel}")
+    line_start = text.rfind("\n", 0, end_at) + 1
+    end_indent = text[line_start:end_at]
+    before = text[: start_at + len(start_sentinel)]
+    after = text[end_at:]
+    return f"{before}\n{new_content}\n{end_indent}{after}"
+
+
+def update_homepage_carousel(all_articles):
+    carousel, qualifying_count = build_carousel_html(all_articles)
+    if carousel is None:
+        print(
+            f"Homepage carousel: {qualifying_count}/{CAROUSEL_SLOTS} articles marked "
+            "\"Feature in homepage carousel?\" — leaving today's placeholder slides in place."
+        )
+        return
+
+    slides_html, caption_html = carousel
+    index_path = ROOT / "index.html"
+    text = index_path.read_text(encoding="utf-8")
+    text = replace_between_sentinels(text, "<!-- CAROUSEL_SLIDES:START -->", "<!-- CAROUSEL_SLIDES:END -->", slides_html, "index.html")
+    text = replace_between_sentinels(text, "<!-- CAROUSEL_CAPTION:START -->", "<!-- CAROUSEL_CAPTION:END -->", caption_html, "index.html")
+    index_path.write_text(text, encoding="utf-8")
+    print(f"Homepage carousel: updated with the {CAROUSEL_SLOTS} most recent featured articles.")
+
+
 def main():
     css_version, js_version = read_current_asset_versions()
 
@@ -285,6 +400,8 @@ def main():
 
     build_publications_page(css_version, js_version)
     print("Built publications.html")
+
+    update_homepage_carousel(all_articles)
 
 
 if __name__ == "__main__":

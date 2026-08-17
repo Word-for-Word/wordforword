@@ -803,18 +803,21 @@ function initIntroReveal() {
   // bound by, rather than a separately-guessed constant that can drift
   // out of sync with it.
   //
-  // Deliberately NOT adding any extra buffer on top (a first attempt
-  // added +SPLASH_SCREEN_MIN_HOLD_MS here) — reported live as making
-  // things WORSE, not better: splashFinalLandedDelayMs already converges
-  // on the same 1600ms floor the splash itself is bound by as elapsed
-  // grows, so stacking another 400ms on top overshot it, pushing the
-  // hero's reveal to START noticeably AFTER the splash had already
-  // finished clearing — a new, MORE visible dead gap (page revealed,
-  // hero sitting blank) in exactly the moderate-slow-load range this was
-  // supposed to fix invisibly. Matching the bound exactly, with no
-  // padding, is what keeps the hero's finish landing shortly AFTER
-  // (never before) the splash's own earliest possible clear time.
-  const splashReadyFloorMs = splashFinalLandedDelayMs;
+  // A prior version floored this at splashFinalLandedDelayMs alone (matching
+  // the splash's own screen-cascade floor, reasoning that landing on "00" is
+  // the splash's "earliest possible clear time"). It isn't: initIntroSplashHold()
+  // still holds "00" up for SPLASH_SCREEN_FINAL_HOLD_MS after it lands, and
+  // THEN the splash needs its own INTRO_SPLASH_SLIDE_MS to physically slide
+  // away — landing on "00" is only the start of that. Missing those two
+  // terms meant the hero's floored delay could undercount the splash's real
+  // remaining screen time by ~1.7s, letting the hero's fade+slide finish
+  // (invisibly) before the splash actually cleared — confirmed live across
+  // a range of elapsed values via getBoundingClientRect() on .intro-splash
+  // itself. (A separate earlier attempt added only +SPLASH_SCREEN_MIN_HOLD_MS
+  // here and made things worse — that's a DIFFERENT, smaller constant, 400ms
+  // short of what's actually needed; the fix is these two terms specifically,
+  // not any fixed buffer.)
+  const splashReadyFloorMs = splashFinalLandedDelayMs + SPLASH_SCREEN_FINAL_HOLD_MS + INTRO_SPLASH_SLIDE_MS;
   for (const el of timedEls) {
     const original = parseFloat(el.style.getPropertyValue("--intro-delay")) || 0;
     el.style.setProperty("--intro-delay", `${Math.max(0, original - elapsed, splashReadyFloorMs)}ms`);
@@ -960,6 +963,22 @@ const SPLASH_SCREEN_MIN_HOLD_MS = 400;
 // is the one screen a viewer is actually meant to read/register, not just
 // glimpse in passing like 01-04.
 const SPLASH_SCREEN_FINAL_HOLD_MS = 700;
+// Matches .intro-splash.is-ready-to-slide's own `intro-splash-slide 1s`
+// duration in style.css — how long the splash itself takes to physically
+// slide off-screen once initIntroSplashHold() decides it's ready. Read by
+// initIntroReveal()'s own splashReadyFloorMs below: splashFinalLandedDelayMs
+// alone only covers "00 has landed," not the FINAL_HOLD dwell on top of it
+// or this slide-away afterward — omitting this (an earlier version of that
+// floor did) let the hero's floored --intro-delay under-count how long the
+// splash is ACTUALLY still covering the screen, so on a moderately slow
+// load (elapsed ~1.2s+, not just the extreme all-clamped case) the hero's
+// entire fade+slide could finish while still hidden behind the still-up
+// splash — confirmed live via getBoundingClientRect() on .intro-splash
+// itself: the hero read opacity:1 before the splash had physically left
+// the viewport, so it just "popped in already done" the instant the splash
+// cleared, no visible motion. Update this if that CSS duration ever
+// changes.
+const INTRO_SPLASH_SLIDE_MS = 1000;
 // Set by initSplashScreens() to the ACTUAL real delay (ms from
 // DOMContentLoaded) at which the final/00 screen lands, once computed
 // below. initIntroSplashHold() reads this — instead of independently

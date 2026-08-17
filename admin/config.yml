@@ -46,6 +46,22 @@ collections:
       - { label: "Illustration", name: "illustration", widget: "image" }
       - { label: "Illustration alt text", name: "illustration_alt", widget: "string", required: false, hint: "Describes the image for screen readers." }
       - { label: "Illustration caption", name: "illustration_caption", widget: "string", required: false }
+      - label: "Feature in homepage carousel?"
+        name: "show_in_carousel"
+        widget: "boolean"
+        default: false
+        required: false
+        hint: "Also needs a Carousel image below. The homepage carousel only ever shows the 4 most recently published articles that have this checked — if fewer than 4 articles are marked, the homepage keeps its current placeholder slides instead of showing a half-empty carousel."
+      - label: "Carousel image"
+        name: "carousel_image"
+        widget: "image"
+        required: false
+        hint: "Only used if 'Feature in homepage carousel?' is checked. Wide image, ideally around 1600×800px (a 2:1 ratio) — it fills a wide frame and crops to fit, so keep the main subject centered."
+      - label: "Volume #"
+        name: "volume"
+        widget: "string"
+        required: false
+        hint: "Shown in the carousel caption, e.g. \"Volume 2\". Only used if 'Feature in homepage carousel?' is checked."
       - label: "Body"
         name: "body"
         widget: "markdown"

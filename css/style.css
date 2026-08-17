@@ -746,7 +746,7 @@ html.show-page-flash.page-flash-ready .page-flash__caption {
    not this unrelated inverted scheme. */
 .page-flash--03 { background: var(--color-tan); }
 .page-flash--04 { background: var(--color-dark); }
-.page-flash__caption--01 { color: var(--color-cream); }
+.page-flash__caption--01 { color: var(--color-tan); }
 .page-flash__caption--02 { color: var(--color-beige-nav); }
 .page-flash__caption--03 { color: var(--color-dark); }
 .page-flash__caption--04 { color: var(--color-grey); }
@@ -1843,6 +1843,27 @@ main {
    stay at the base .square 40px instead. */
 .square--pad-lg {
   padding: 70px;
+}
+/* .square__body's shared flex: 1 (see that rule's own comment — it's
+   there for multi-paragraph tiles where the LAST paragraph should fill
+   whatever height its earlier siblings don't use) stretches a lone
+   paragraph to fill 100% of the tile's available height. Text then
+   flows from the TOP of that stretched box (plain block layout, no
+   internal centering) — so with tile 2 needing a much shorter box for
+   its own text than tile 3, the exact same amount of unused space below
+   the text ends up wildly different per tile, reading as very much NOT
+   vertically centered despite .square's own justify-content:center.
+   flex: none here lets that centering genuinely apply to each
+   paragraph's own natural height instead. IMPORTANT: needs the doubled-
+   up selector (not just .square__body--natural-height alone) — that
+   was equal specificity to .square__body's own flex:1 declared FURTHER
+   DOWN this file, which silently won and made this whole rule a no-op
+   for 3 rounds of edits (confirmed by re-measuring the paragraph's
+   rendered height: it was still 205px, the fully-stretched value, the
+   entire time). Doubling the selector raises specificity so this
+   actually wins regardless of source order. */
+.square__body.square__body--natural-height {
+  flex: none;
 }
 /* Padding is a hard floor min-width:0 (see .square's own comment) can't
    shrink below — content can shrink to nothing, but padding always

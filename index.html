@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=206" />
+  <link rel="stylesheet" href="css/style.css?v=212" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -472,10 +472,10 @@
     <section id="overview" class="square-grid square-grid--4col square-grid--rows-4">
       <div class="square square--checker" style="grid-column: 1; grid-row: 1; --checker-a: var(--color-dark); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       <div class="square square--red square--pad-lg" style="grid-column: 2; grid-row: 1;">
-        <p class="square__body">At Word for Word, we explore the intersection of <strong>medicine and the humanities</strong>.</p>
+        <p class="square__body square__body--natural-height">At Word for Word, we explore the intersection of medicine and the humanities.</p>
       </div>
       <div class="square square--tan square--pad-lg" style="grid-column: 3; grid-row: 1;">
-        <p class="square__body">Through <strong>interviews, scholarship, and creative work</strong>, we illuminate stories from across the healthcare experience.</p>
+        <p class="square__body square__body--natural-height">Through interviews, scholarship, and creative work, we illuminate stories from across the healthcare experience.</p>
       </div>
       <div class="square square--grey square--inset" style="grid-column: 4; grid-row: 1;">
         <img class="square__inset-image" src="assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
@@ -544,7 +544,7 @@
 
       <div class="square square--red square--text-gap-30 square--pad-lg" style="grid-column: 3; grid-row: 2;">
         <p class="square__body">We strive to share their stories as told&mdash;</p>
-        <p class="square__footnote">&mdash;<strong>word for word</strong>.</p>
+        <p class="square__footnote">&mdash;word for word.</p>
       </div>
       <div class="square square--checker" style="grid-column: 4; grid-row: 2; --checker-a: var(--color-tan); --checker-b: var(--color-red);" aria-hidden="true"></div>
 
@@ -666,7 +666,7 @@
       <div class="square square--red square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--display-italic">Interviewer*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Interviewer"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*Interview individuals with experiences in medicine and the humanities, and <strong>shape those conversations into written narratives</strong>.</span></p>
+        <p class="square__role-description"><span>*<strong>Interview individuals with experiences in medicine and the humanities</strong>, and shape those conversations into written narratives.</span></p>
       </div>
       <div class="square square--tan square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--caps">Columnist*</h3>
@@ -676,7 +676,7 @@
       <div class="square square--grey square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--display">Editor*</h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Editor"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*Work closely with columnists and interviewers to <strong>refine clarity, structure, and flow</strong>, while respecting the writer&rsquo;s intent.</span></p>
+        <p class="square__role-description"><span>*<strong>Work closely with columnists and interviewers</strong> to refine clarity, structure, and flow, while respecting the writer&rsquo;s intent.</span></p>
       </div>
       <div class="square square--dark square--role-reveal square--pad-lg">
         <h3 class="square__role square__role--script">Designer*</h3>
@@ -686,10 +686,10 @@
 
       <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       <div class="square square--dark square--content-left">
-        <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br /><strong>Join the team.</strong></p>
+        <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br /><br />Join the team.</p>
       </div>
       <div class="square square--red square--content-left">
-        <p class="square__script square__script--sub">Applications open<br />in the <strong>spring</strong>.</p>
+        <p class="square__script square__script--sub">Applications open<br />in the spring.</p>
         <!-- Was a bare non-interactive div; now a real <a> so it (a)
              actually leads somewhere and (b) matches a[href] in
              initCustomCursor()'s isClickablePoint(), so hovering it
@@ -911,6 +911,13 @@
            initMosaicReveal() runs for section 1. -->
       <div class="featured-carousel">
         <div class="featured-carousel__track">
+          <!-- Regenerated by scripts/build_articles.py once 4+ published
+               articles have "Feature in homepage carousel?" checked (see
+               that script's build_carousel_html()). Until then, this stays
+               exactly as hand-authored below; don't hand-edit the slide
+               markup once that switch happens, since the next build just
+               overwrites everything between the 2 sentinel comments below. -->
+          <!-- CAROUSEL_SLIDES:START -->
           <!-- TODO(future reference): no real article page exists yet for
                this illustration — data-article-url is a "#" placeholder
                (same not-yet-built pattern as about.html/get-involved.html
@@ -988,6 +995,7 @@
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
             </div>
           </div>
+          <!-- CAROUSEL_SLIDES:END -->
         </div>
         <!-- One shared caption, a direct child of .featured-carousel (sibling
              of .track, not inside it) — same "stays fixed, doesn't ride the
@@ -1001,9 +1009,13 @@
              main.js) since it goes to that slide's own article; edition
              always goes to publications.html regardless of slide, so its
              href is just set once here and never touched by JS. -->
+        <!-- Regenerated together with CAROUSEL_SLIDES above, matching
+             slide 1 — see that block's own comment. -->
+        <!-- CAROUSEL_CAPTION:START -->
         <a href="#" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">Caption title goes here</a>
         <a href="publications.html" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">Volume #</a>
         <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>
+        <!-- CAROUSEL_CAPTION:END -->
         <button type="button" class="featured-carousel__nav featured-carousel__nav--prev mosaic-reveal diamond-cta diamond-cta--fill-on-hover diamond-cta--tight" aria-label="Previous carousel item">
           <span class="arrow-glyph">
             <img class="arrow-glyph__default" src="assets/images/Arrow, beige.png" alt="" />
@@ -1236,6 +1248,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="js/main.js?v=126" defer></script>
+  <script src="js/main.js?v=128" defer></script>
 </body>
 </html>
