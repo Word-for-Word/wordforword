@@ -848,6 +848,12 @@ function initIntroReveal() {
       "--intro-delay",
       `${word2Delay + HERO_TITLE_TRANSITION_MS + HERO_ASTERISK_SETTLE_BUFFER_MS}ms`
     );
+    // .is-timed is what actually lets .hero__wordmark-asterisk-wrap's
+    // entrance animation apply (see that rule's own comment in
+    // style.css) — added here, in the same synchronous block that just
+    // set the real --intro-delay above, so the animation can never start
+    // (using a stale HTML-authored delay) before this correction lands.
+    asteriskWrap.classList.add("is-timed");
   }
 
   requestAnimationFrame(() => {

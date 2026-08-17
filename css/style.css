@@ -1428,6 +1428,27 @@ main {
   right: -13%;
   width: var(--hero-asterisk-size);
   opacity: 0;
+}
+/* The intro pop-in only runs once initIntroReveal() in main.js has
+   actually finished deriving this element's real --intro-delay (from
+   word 2's own corrected delay — see that function's comment) and adds
+   .is-timed — NOT unconditionally from first paint the way this used to
+   be written (animation + animation-delay: var(--intro-delay) directly
+   on the bare wrap above). That version worked on a fast/warm load, where
+   JS runs (and corrects --intro-delay) well before the wrap's own static
+   HTML-authored delay would have elapsed on its own. But on a genuinely
+   slow first visit (uncached fonts/images — see whenIntroAssetsReady() in
+   main.js), that correction can land AFTER the static delay already
+   elapsed: a CSS animation already running (or already finished) when its
+   animation-delay custom property changes does NOT reschedule itself —
+   confirmed live via a minimal repro — so the asterisk would silently
+   play its ENTIRE pop-in against the stale HTML-authored delay and just
+   be sitting there, already fully landed, the instant the splash cleared.
+   Gating on a JS-added class (same idiom as the squash-stretch title
+   animation's own :has(...is-visible) gate below) sidesteps the whole
+   problem: nothing can start animating before JS has both computed AND
+   applied the real delay. */
+.hero__wordmark-asterisk-wrap.is-timed {
   animation: hero-asterisk-intro 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: var(--intro-delay, 0ms);
 }
