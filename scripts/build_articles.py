@@ -277,6 +277,53 @@ def build_publications_page(css_version, js_version):
     (publications_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
+# Every hand-authored nav page — kept as a plain list here rather than
+# derived from index.html's own nav markup (there's no reliable way to
+# parse "which hrefs are real pages" back out of that HTML without
+# essentially re-implementing a nav parser). Add to this by hand if a new
+# permanent nav page is ever added; CATEGORIES + the articles loop below
+# already cover everything that varies with content.
+STATIC_PAGES = ["/", "/about/", "/get-involved/"]
+
+
+def build_sitemap(all_articles):
+    """Writes sitemap.xml at the repo root from the SAME site structure
+    this script already tracks — one source of truth, so a new category
+    page or a newly published article shows up here automatically instead
+    of needing a second, hand-maintained list to remember. Reads the
+    domain out of CNAME (rather than hardcoding it a second time here) for
+    the same one-source-of-truth reason.
+
+    Regenerated on every build like every other output in this file — see
+    .gitignore's own comment on why these don't need to live in git
+    history; the GitHub Actions workflow rebuilds it on every push."""
+    domain = (ROOT / "CNAME").read_text(encoding="utf-8").strip()
+    base_url = f"https://{domain}"
+
+    urls = []
+    for path in STATIC_PAGES:
+        urls.append((f"{base_url}{path}", None))
+    for category in CATEGORIES:
+        urls.append((f"{base_url}/{category}/", None))
+    urls.append((f"{base_url}/publications/", None))
+    for article in sorted(all_articles, key=lambda a: a["date"] or datetime.min, reverse=True):
+        lastmod = article["date"].strftime("%Y-%m-%d") if article["date"] else None
+        urls.append((f"{base_url}/articles/{article['slug']}.html", lastmod))
+
+    entries = []
+    for loc, lastmod in urls:
+        lastmod_tag = f"\n    <lastmod>{lastmod}</lastmod>" if lastmod else ""
+        entries.append(f"  <url>\n    <loc>{html.escape(loc, quote=True)}</loc>{lastmod_tag}\n  </url>")
+
+    sitemap_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(entries)
+        + "\n</urlset>\n"
+    )
+    (ROOT / "sitemap.xml").write_text(sitemap_xml, encoding="utf-8")
+
+
 # The homepage carousel is sized (in both markup and CSS) for exactly this
 # many slides — see index.html's own comment on .featured-carousel__track.
 CAROUSEL_SLOTS = 4
@@ -404,6 +451,9 @@ def main():
 
     build_publications_page(css_version, js_version)
     print("Built publications/index.html")
+
+    build_sitemap(all_articles)
+    print("Built sitemap.xml")
 
     update_homepage_carousel(all_articles)
 
