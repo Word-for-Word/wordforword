@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=212" />
+  <link rel="stylesheet" href="/css/style.css?v=235" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -150,29 +150,42 @@
 
   <!-- ============ HERO ============ -->
   <!-- Copied verbatim from publications.html's own hero (same classes,
-       same --intro-delay values, same asset references) so the
-       animations/timing are guaranteed identical — placeholder content
-       ("Our"/"Publications", "Volumes"/"Articles") to be swapped for
-       this page's own copy later. See templates/publications.html's own
-       HTML comment and style.css's --compact comment for the full
-       reasoning behind this system. -->
+       same --intro-delay values, same asset references). Title now
+       swapped to this page's own copy: "Get" (script image, was "Our")
+       above "Involved" (real text, was "Publications") — .hero__wordmark
+       -d-anchor moved to the "d" in "Involved" (was the "s" in
+       "Publications") so main.js's positionHeroAsterisk() anchors the
+       asterisk to Involved's own top-right corner automatically. Kept
+       the white outline treatment (renamed .hero__wordmark-word
+       --publications -> --outlined in style.css since this page now
+       shares it too — see that rule's own comment). Eyebrows swapped to
+       "Join the team!" / "Submit your work." (was "Volumes"/"Articles").
+       See templates/publications.html's own HTML comment and style.css's
+       --compact comment for the full reasoning behind this system. -->
   <section class="hero hero--compact">
     <p class="hero__eyebrow">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Volumes</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;">Join the team!</span>
     </p>
     <div class="hero__wordmark-wrap hero__wordmark-wrap--compact">
-      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--publications" style="--intro-delay: 3420ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3420ms;">Publication<span class="hero__wordmark-d-anchor">s</span></span></span>
+      <!-- Re-staggered to 300ms/step (was bunched into 3 groups 200-300ms
+           apart, with both eyebrows + the asterisk all firing together
+           at the very end) per "make it feel more like a sequential
+           cascade" — now every element gets its own step: eyebrow-left,
+           image, headline, asterisk, eyebrow-right. Same schedule as
+           publications.html's own hero, which this page's hero is
+           copied verbatim from. -->
+      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact hero__wordmark-placeholder--get-involved" aria-hidden="true">
+        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--outlined" style="--intro-delay: 3820ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3820ms;">Involve<span class="hero__wordmark-d-anchor">d</span></span></span>
       </div>
-      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact" style="--intro-delay: 3220ms;" aria-hidden="true">
-        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;" src="/assets/images/Publications Title.png" alt="" />
+      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact" style="--intro-delay: 3520ms;" aria-hidden="true">
+        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3520ms;" src="/assets/images/Get Involved Title.png" alt="" />
       </div>
-      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 3720ms;" aria-hidden="true">
+      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 4120ms;" aria-hidden="true">
         <img class="hero__wordmark-asterisk" src="/assets/images/Asterisk - Default.png" alt="" />
       </div>
     </div>
     <p class="hero__eyebrow hero__eyebrow--right">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Articles</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4420ms;">Submit your work.</span>
     </p>
   </section>
 
@@ -280,6 +293,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=128" defer></script>
+    <script src="/js/main.js?v=140" defer></script>
 </body>
 </html>

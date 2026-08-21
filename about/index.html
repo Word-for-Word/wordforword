@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=212" />
+  <link rel="stylesheet" href="/css/style.css?v=235" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -167,30 +167,35 @@
        get-involved.html/publications.html reuse those same classes for
        the opposite (image-on-top) composition. See style.css for the
        full reasoning behind this system. -->
+  <!-- Eyebrow pair (left "Our mission" + right "Our team") now share
+       ONE delay (4120ms) instead of bookending the whole sequence
+       (previously 3220ms/4420ms, first and last) — per explicit
+       follow-up: the homepage's OWN hero (index.html) is "the true
+       pattern" for this, and there both eyebrow lines share the exact
+       same --intro-delay (4630ms/4870ms per line) so they visibly
+       reveal together, AFTER the title finishes, not straddling it. A
+       prior pass here deliberately staggered all 5 pieces individually
+       ("make it feel more like a sequential cascade") — reverted now
+       that the paired-eyebrow read is what's actually wanted, matching
+       Overview. Title pieces (headline "About" then the "Us" image)
+       keep their own existing order/timing — only unquestioned here. -->
   <section class="hero hero--compact">
     <p class="hero__eyebrow">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Our mission</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Our mission</span>
     </p>
     <div class="hero__wordmark-wrap hero__wordmark-wrap--compact hero__wordmark-wrap--about">
       <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact hero__wordmark-placeholder--about" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact" style="--intro-delay: 3220ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;">Abou<span class="hero__wordmark-d-anchor">t</span></span></span>
+        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact" style="--intro-delay: 3520ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3520ms;">Abou<span class="hero__wordmark-d-anchor">t</span></span></span>
       </div>
-      <!-- --intro-delay swapped with the text above (was 3220ms) per
-           explicit request: "About" should animate in FIRST, then the
-           image — the shared --compact composition (publications.html
-           etc.) has the image lead since it's the smaller flourish
-           bridging into the headline word, but this page's own
-           composition (image below/behind the text) reads better with
-           the headline leading instead. -->
-      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact hero__wordmark-for-wrap--about" style="--intro-delay: 3420ms;" aria-hidden="true">
-        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3420ms;" src="/assets/images/About Us Title.png" alt="" />
+      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact hero__wordmark-for-wrap--about" style="--intro-delay: 3820ms;" aria-hidden="true">
+        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3820ms;" src="/assets/images/About Us Title.png" alt="" />
       </div>
-      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 3720ms;" aria-hidden="true">
+      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 4450ms;" aria-hidden="true">
         <img class="hero__wordmark-asterisk" src="/assets/images/Asterisk - Default.png" alt="" />
       </div>
     </div>
     <p class="hero__eyebrow hero__eyebrow--right">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3720ms;">Our team</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Our team</span>
     </p>
   </section>
 
@@ -315,7 +320,7 @@
       </div>
       <div class="team-bio__text">
         <h3 class="team-bio__name">Samantha Wu</h3>
-        <p class="team-bio__role">Co-President of Internal</p>
+        <p class="team-bio__role">Co-President</p>
         <p class="team-bio__body"><strong>Samantha Wu</strong> is a rising junior in the College of Arts and Sciences studying Neuroscience and Anthropology on the pre-medical track. Her interests include intergenerational epigenetics, maternal health, Indigenous rights, emergency medical services, and the molecular mechanisms of cardiovascular disease.</p>
         <p class="team-bio__body">Witnessing medical providers offer compassionate, community-based care through her home church's free health clinics, she hopes to serve as a physician while using art and writing to document the injustices faced by disenfranchised communities. She believes that elevating the voices and stories of oft-silenced individuals has the power to bring about healing on both personal and systemic levels.</p>
         <p class="team-bio__body">In her free time, Samantha enjoys listening to audiobooks and singing musical theater repertoire.</p>
@@ -327,22 +332,10 @@
       </div>
       <div class="team-bio__text">
         <h3 class="team-bio__name">Renee Liu</h3>
-        <p class="team-bio__role">Placeholder Role</p>
-        <p class="team-bio__body"><strong>Renee Liu</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
-        <p class="team-bio__body">Placeholder closing line about Renee's interests outside of academics.</p>
-      </div>
-    </article>
-    <article class="team-bio">
-      <div class="team-bio__photo-wrap">
-        <img class="team-bio__photo" src="/assets/images/About Us - Ryan Cho.webp" alt="Ryan Cho" loading="lazy" />
-      </div>
-      <div class="team-bio__text">
-        <h3 class="team-bio__name">Ryan Cho</h3>
-        <p class="team-bio__role">Placeholder Role</p>
-        <p class="team-bio__body"><strong>Ryan Cho</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
-        <p class="team-bio__body">Placeholder closing line about Ryan's interests outside of academics.</p>
+        <p class="team-bio__role">Co-President</p>
+        <p class="team-bio__body"><strong>Renee Liu</strong> is a senior in Penn Engineering studying Networked and Social Systems Engineering (NETS), on the pre-med track. Her research interests include health policy/social determinants of health, child development, bioengineering, and network analysis.</p>
+        <p class="team-bio__body">She believes that medicine is not purely about the science, but also about the stories that make up a person and the institutions that interact with them.</p>
+        <p class="team-bio__body">Outside of academics, Renee enjoys exploring new music, learning new languages, and watching bird/cat videos.</p>
       </div>
     </article>
     <article class="team-bio">
@@ -351,10 +344,22 @@
       </div>
       <div class="team-bio__text">
         <h3 class="team-bio__name">Mary Zawalick</h3>
-        <p class="team-bio__role">Placeholder Role</p>
-        <p class="team-bio__body"><strong>Mary Zawalick</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
-        <p class="team-bio__body">Placeholder closing line about Mary's interests outside of academics.</p>
+        <p class="team-bio__role">Vice President of Internal</p>
+        <p class="team-bio__body"><strong>Mary Zawalick</strong> is a senior in the College of Arts and Sciences from San Luis Obispo, California. She studies biochemistry and is minoring in English. She is interested in immunology, oncology, and communication in medicine. At Penn, she conducts research on esophageal diseases and pancreatic cancer, and she works as an emergency medical technician.</p>
+        <p class="team-bio__body">She has been a big reader for her whole life and believes that hearing other people&rsquo;s stories, whether real or fictional, facilitates a greater understanding of yourself and the world.</p>
+        <p class="team-bio__body">Outside of academics, she loves going to the beach, trying new foods, or playing with her rescue dachshund Belle.</p>
+      </div>
+    </article>
+    <article class="team-bio">
+      <div class="team-bio__photo-wrap">
+        <img class="team-bio__photo" src="/assets/images/About Us - Ryan Cho.webp" alt="Ryan Cho" loading="lazy" />
+      </div>
+      <div class="team-bio__text">
+        <h3 class="team-bio__name">Ryan Cho</h3>
+        <p class="team-bio__role">Vice President of External</p>
+        <p class="team-bio__body"><strong>Ryan Cho</strong> is a sophomore in the college studying neuroscience. His research interests span everything related to analyzing noninvasive imaging and data to improve patient outcomes.</p>
+        <p class="team-bio__body">He believes that understanding the humanities as well as medicine is essential to understand how to best understand and approach patients.</p>
+        <p class="team-bio__body">Outside of Word4Word, he enjoys playing the violin, crying over chemistry, and "trying" to get into running.</p>
       </div>
     </article>
     <article class="team-bio">
@@ -363,22 +368,18 @@
       </div>
       <div class="team-bio__text">
         <h3 class="team-bio__name">Melody Zhang</h3>
-        <p class="team-bio__role">Placeholder Role</p>
-        <p class="team-bio__body"><strong>Melody Zhang</strong> — placeholder bio text goes here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        <p class="team-bio__body">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate.</p>
-        <p class="team-bio__body">Placeholder closing line about Melody's interests outside of academics.</p>
+        <p class="team-bio__role">Design Chair</p>
+        <p class="team-bio__body"><strong>Melody Zhang</strong> is a senior in the College of Arts &amp; Sciences studying Design and Consumer Psychology. Although her work lies outside the medical field, she is fascinated by the ways medicine, art, and storytelling intersect. Through illustrating for Word for Word, she has found an opportunity to learn from subjects she might never have encountered otherwise while helping make them more approachable for readers.</p>
+        <p class="team-bio__body">She especially enjoys condensing complex scholarship into illustrations that make an article&rsquo;s ideas easier to understand without losing their nuance. She believes thoughtful design can make knowledge feel both more accessible and more human.</p>
+        <p class="team-bio__body">Outside of the journal, she delights in cowering from horror films and enthusiastically cheering on Godzilla.</p>
       </div>
     </article>
   </section>
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- ORIGINAL, commented out for a side-by-side preview per explicit
-       request — exact copy of index.html's own .quote-block (photo +
-       mosaic-reveal overlay). See .slogan-preview right below for the
-       alternate treatment being tried in its place: a plain, roomy
-       text-only section, no photo. Uncomment this and delete
-       .slogan-preview to revert. -->
-  <!--
+  <!-- Exact copy of index.html's own .quote-block (photo + mosaic-reveal
+       overlay) — swapped back in per explicit request, replacing the
+       text-only .slogan-preview that had been tried here instead. -->
   <section class="quote-block">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="/assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
@@ -386,13 +387,6 @@
     <div class="quote-block__overlay mosaic-reveal">
       <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
     </div>
-  </section>
-  -->
-  <section class="slogan-preview">
-    <p class="slogan-preview__text">
-      <span class="split-cta__text-line">Empowering voices</span>
-      <span class="split-cta__text-line">previously unheard</span>
-    </p>
   </section>
 
   <!-- ============ PARTNER LOGOS ============ -->
@@ -473,6 +467,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=128" defer></script>
+    <script src="/js/main.js?v=140" defer></script>
 </body>
 </html>

@@ -183,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initLogoSecretEntry();
     initNavPageFlash();
     initPublicationsDropdown();
+    initEditionLightbox();
   });
 });
 
@@ -298,6 +299,255 @@ function initHeaderReady() {
   const pageFlashEnd = hasPageFlash ? 2250 : 0; // 1.8s delay + 0.45s duration, see page-flash-header-drop
   const SAFETY_BUFFER_MS = 500;
   setTimeout(markReady, Math.max(introDelay + 450, pageFlashEnd) + SAFETY_BUFFER_MS);
+}
+
+// Lets a finished edition's publication-card (see the data-pdf attribute
+// added to Volume 1's <article> in index.html/publications/index.html —
+// deliberately NOT added to Volume 2/3's cards, which have no finished
+// PDF to show yet) open as a click-through page-by-page viewer instead of
+// sitting there doing nothing. The whole lightbox is built here rather
+// than hand-written in every page's own HTML (same "generated, not
+// duplicated" reasoning as the featured-carousel's indicators above) —
+// one <article data-pdf="..."> is all a page needs to add to opt in.
+//
+// Rendering uses pdf.js (Mozilla's PDF renderer), loaded from a CDN only
+// on first click rather than unconditionally at page load — this site
+// already ships several multi-MB illustration images, and pdf.js itself
+// plus a real edition PDF would add real weight to every single page
+// load for a feature most visitors never open. Deferring the fetch to
+// the actual click means that cost is only ever paid by someone who
+// wants it.
+function initEditionLightbox() {
+  const cards = document.querySelectorAll("[data-pdf]");
+  if (!cards.length) return;
+
+  const PDFJS_VERSION = "3.11.174";
+  const PDFJS_SCRIPT_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`;
+  const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+  // Renders at 2x the page's native size so the canvas stays crisp on
+  // retina displays even though CSS (.edition-lightbox__canvas) then
+  // scales it back down to fit the viewport.
+  const RENDER_SCALE = 2;
+
+  let overlay = null;
+  let canvasEl, pageWrapEl, titleEl, pageCountEl, prevBtn, nextBtn, closeBtn;
+  let pdfjsLoadPromise = null;
+  let currentDoc = null;
+  let currentDocUrl = null;
+  let currentPage = 1;
+  let renderToken = 0; // guards against a slow previous render landing after a newer one started
+  let currentRenderTask = null; // pdf.js refuses a 2nd concurrent render() on the same canvas
+  let lastFocusedEl = null;
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsLoadPromise) return pdfjsLoadPromise;
+    pdfjsLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = PDFJS_SCRIPT_URL;
+      script.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+        resolve(window.pdfjsLib);
+      };
+      script.onerror = () => reject(new Error("pdf.js failed to load"));
+      document.head.appendChild(script);
+    });
+    return pdfjsLoadPromise;
+  }
+
+  function buildOverlay() {
+    const el = document.createElement("div");
+    el.className = "edition-lightbox";
+    // Prev/next/close reuse the site's real .diamond-cta markup shape
+    // (rotated-square diamond + .diamond-cta--tight sizing) — pure
+    // stroke at rest, filling brown (--color-dark) on hover. (An earlier
+    // pass tried a fancier "cream fill with the icon cut out as a hole
+    // revealing the blurred backdrop" effect via an SVG mask — reverted
+    // per explicit follow-up, it didn't read well live; this simpler
+    // brown fill was the fallback offered at the time.)
+    // Close/prev/next are direct children of the overlay itself
+    // (siblings of .edition-lightbox__frame, not inside it) since
+    // they're pinned to the actual SCREEN edges, not to the frame's own
+    // (narrower) content column — see their own CSS.
+    el.innerHTML = `
+      <div class="edition-lightbox__backdrop"></div>
+      <button type="button" class="edition-lightbox__close diamond-cta diamond-cta--tight" aria-label="Close">
+        <span class="edition-lightbox__close-glyph"></span>
+      </button>
+      <button type="button" class="edition-lightbox__nav edition-lightbox__nav--prev diamond-cta diamond-cta--tight" aria-label="Previous page" disabled>
+        <span class="arrow-glyph">
+          <div class="edition-lightbox__nav-arrow" aria-hidden="true"></div>
+        </span>
+      </button>
+      <button type="button" class="edition-lightbox__nav edition-lightbox__nav--next diamond-cta diamond-cta--tight" aria-label="Next page" disabled>
+        <span class="arrow-glyph">
+          <div class="edition-lightbox__nav-arrow" aria-hidden="true"></div>
+        </span>
+      </button>
+      <div class="edition-lightbox__frame" role="dialog" aria-modal="true" aria-label="Edition viewer">
+        <p class="edition-lightbox__title"></p>
+        <div class="edition-lightbox__page-wrap">
+          <div class="edition-lightbox__skeleton" aria-hidden="true"></div>
+          <canvas class="edition-lightbox__canvas"></canvas>
+        </div>
+        <p class="edition-lightbox__page-count"></p>
+      </div>
+    `;
+    document.body.appendChild(el);
+
+    canvasEl = el.querySelector(".edition-lightbox__canvas");
+    pageWrapEl = el.querySelector(".edition-lightbox__page-wrap");
+    titleEl = el.querySelector(".edition-lightbox__title");
+    pageCountEl = el.querySelector(".edition-lightbox__page-count");
+    prevBtn = el.querySelector(".edition-lightbox__nav--prev");
+    nextBtn = el.querySelector(".edition-lightbox__nav--next");
+    closeBtn = el.querySelector(".edition-lightbox__close");
+
+    el.querySelector(".edition-lightbox__backdrop").addEventListener("click", closeLightbox);
+    closeBtn.addEventListener("click", closeLightbox);
+    prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
+    nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
+
+    document.addEventListener("keydown", (e) => {
+      if (!el.classList.contains("is-open")) return;
+      if (e.key === "Escape") closeLightbox();
+      else if (e.key === "ArrowLeft") goToPage(currentPage - 1);
+      else if (e.key === "ArrowRight") goToPage(currentPage + 1);
+    });
+
+    return el;
+  }
+
+  // The page COUNT only ever needs the document's total page count (known
+  // the instant getDocument() resolves, before any page is actually
+  // rendered/rasterized) — updating it here, synchronously with
+  // navigation, is what lets every page turn after the first feel instant
+  // instead of showing a "Loading…" flash while pdf.js rasterizes pixels
+  // it hasn't even started drawing yet.
+  function updatePageUi(pageNum, totalPages) {
+    pageCountEl.textContent = `${pageNum} / ${totalPages}`;
+    prevBtn.disabled = pageNum <= 1;
+    nextBtn.disabled = pageNum >= totalPages;
+  }
+
+  function renderPage(pageNum) {
+    const doc = currentDoc;
+    const token = ++renderToken;
+    // Cancelling (rather than just ignoring) the still-running previous
+    // render is what actually frees the canvas for THIS render to use —
+    // the token check below only guards against a stale render's result
+    // landing late, it doesn't stop pdf.js from still being mid-draw.
+    if (currentRenderTask) {
+      currentRenderTask.cancel();
+      currentRenderTask = null;
+    }
+    doc.getPage(pageNum).then((page) => {
+      if (token !== renderToken) return; // a newer page/doc was requested meanwhile
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      canvasEl.width = viewport.width;
+      canvasEl.height = viewport.height;
+      const ctx = canvasEl.getContext("2d");
+      const task = page.render({ canvasContext: ctx, viewport });
+      currentRenderTask = task;
+      task.promise.then(
+        () => {
+          if (token !== renderToken) return;
+          currentRenderTask = null;
+          // Only actually matters the first time (crossfades the shimmer
+          // skeleton out) — a no-op re-add on every later page turn.
+          pageWrapEl.classList.add("is-ready");
+        },
+        () => {
+          // Rejects when cancel() above interrupts it — expected, not an
+          // error, whichever render actually wins updates the canvas
+          // instead.
+          if (token !== renderToken) return;
+          currentRenderTask = null;
+        }
+      );
+    });
+  }
+
+  function goToPage(pageNum) {
+    if (!currentDoc) return;
+    const clamped = Math.min(Math.max(pageNum, 1), currentDoc.numPages);
+    if (clamped === currentPage) return;
+    currentPage = clamped;
+    updatePageUi(clamped, currentDoc.numPages);
+    renderPage(clamped);
+  }
+
+  function openLightbox(card) {
+    const url = card.dataset.pdf;
+    if (!overlay) overlay = buildOverlay();
+
+    lastFocusedEl = document.activeElement;
+    document.body.classList.add("edition-lightbox-open");
+    titleEl.textContent = card.dataset.pdfTitle || "";
+    // Same double-rAF idiom initPageFlashReady()/initSplitCtaReveal() use
+    // elsewhere in this file for the identical problem: a style change
+    // right after inserting a new element can get coalesced with that
+    // insertion into one style pass, with no committed "before" state to
+    // transition from, so the fade/scale/blur entrance silently never
+    // plays — just jumps straight to the open state. A single forced
+    // reflow (offsetHeight) was tried first here and still wasn't enough
+    // (confirmed live: still snapping straight to fully-open with no
+    // visible fade). One rAF fires before the browser has necessarily
+    // PAINTED the frame it's scheduled against; only the 2nd rAF is
+    // guaranteed to run after that real paint has landed, so THIS is the
+    // first point it's actually safe to start the transition from.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        overlay.classList.add("is-open");
+        closeBtn.focus();
+      });
+    });
+
+    if (currentDocUrl === url && currentDoc) {
+      currentPage = 1;
+      updatePageUi(1, currentDoc.numPages);
+      renderPage(1);
+      return;
+    }
+
+    // A different (or first-ever) edition: the shimmer skeleton is what
+    // covers this wait, not page-count text — reset it so a PREVIOUSLY
+    // opened edition's finished canvas doesn't flash in for a split
+    // second before this one's own first page is ready.
+    pageWrapEl.classList.remove("is-ready");
+    pageCountEl.textContent = "";
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    loadPdfJs()
+      .then((pdfjsLib) => pdfjsLib.getDocument(url).promise)
+      .then((doc) => {
+        currentDoc = doc;
+        currentDocUrl = url;
+        currentPage = 1;
+        updatePageUi(1, doc.numPages);
+        renderPage(1);
+      })
+      .catch(() => {
+        pageCountEl.textContent = "Couldn't load this edition — try again shortly.";
+      });
+  }
+
+  function closeLightbox() {
+    if (!overlay) return;
+    overlay.classList.remove("is-open");
+    document.body.classList.remove("edition-lightbox-open");
+    if (lastFocusedEl) lastFocusedEl.focus();
+  }
+
+  cards.forEach((card) => {
+    card.addEventListener("click", () => openLightbox(card));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openLightbox(card);
+      }
+    });
+  });
 }
 
 function initPublicationsDropdown() {
@@ -477,14 +727,23 @@ function initNavPageFlash() {
   // is paired with skip-intro-splash and stays scoped to the ONE
   // top-level "Overview" nav link, per explicit request (see
   // html.skip-intro-splash's own comment).
+  // Clean directory-style paths (matching every real href on the site —
+  // see index.html's own nav/CTA links) — this map originally used
+  // "publications.html"-style keys, which no href on the site actually
+  // has, so the lookup below never matched anything and every one of
+  // these CTA links (section 1's "Learn more", the publications "View
+  // more"/"Read our latest issue!" tiles, the featured carousel's
+  // "Volume #" link) silently skipped the destination page's flash
+  // entirely. Reported live via "View more" specifically, but the stale
+  // keys meant this was broken for all of them, not just that one link.
   const PAGE_FLASH_SCREEN_BY_HREF = {
-    "publications.html": "02",
-    "interviews.html": "02",
-    "essays.html": "02",
-    "narratives.html": "02",
-    "outreach.html": "02",
-    "about.html": "03",
-    "get-involved.html": "04",
+    "/publications/": "02",
+    "/interviews/": "02",
+    "/essays/": "02",
+    "/narratives/": "02",
+    "/outreach/": "02",
+    "/about/": "03",
+    "/get-involved/": "04",
   };
   document.querySelectorAll("a[href]").forEach((link) => {
     if (link.closest(".nav")) return;
@@ -817,10 +1076,34 @@ function initIntroReveal() {
   // short of what's actually needed; the fix is these two terms specifically,
   // not any fixed buffer.)
   const splashReadyFloorMs = splashFinalLandedDelayMs + SPLASH_SCREEN_FINAL_HOLD_MS + INTRO_SPLASH_SLIDE_MS;
-  for (const el of timedEls) {
-    const original = parseFloat(el.style.getPropertyValue("--intro-delay")) || 0;
-    el.style.setProperty("--intro-delay", `${Math.max(0, original - elapsed, splashReadyFloorMs)}ms`);
-  }
+  // Was Math.max(0, original - elapsed, splashReadyFloorMs) applied to EACH
+  // element independently — reported live as the hero title's pieces
+  // sometimes all fading in together with no stagger, on the "Overview"
+  // nav-link arrival specifically. Root cause: on that path, elapsed
+  // already has SKIP_INTRO_SPLASH_OFFSET_MS (1800) folded in, and
+  // splashReadyFloorMs lands at that same ~1800 by construction — so
+  // word1's corrected delay (3620 - elapsed) crosses below the floor the
+  // moment real load time exceeds roughly 0ms, which is nearly always.
+  // Once word1 AND word2/the image ALSO cross below that SAME shared
+  // floor (any real load time past ~150-500ms, well within normal
+  // variance), Math.max clamped every one of them to the identical
+  // 1800ms value independently — collapsing their whole relative stagger
+  // (only 130-480ms apart to begin with) onto one instant. Subtracting
+  // `elapsed` alone never causes this: every element shifts by the same
+  // amount, so gaps between them are preserved. Only the independent
+  // per-element floor clamp destroys those gaps. Fix: find how far
+  // (if at all) the EARLIEST element's corrected delay sits below the
+  // floor, then shift the WHOLE group later by that same single amount —
+  // preserves every relative gap exactly, still guarantees nothing starts
+  // before splashReadyFloorMs, and is a no-op (identical to the old
+  // behavior) whenever nothing would have been floored anyway.
+  const correctedDelays = [...timedEls].map(
+    (el) => (parseFloat(el.style.getPropertyValue("--intro-delay")) || 0) - elapsed
+  );
+  const groupShiftMs = Math.max(0, splashReadyFloorMs - Math.min(...correctedDelays));
+  timedEls.forEach((el, i) => {
+    el.style.setProperty("--intro-delay", `${Math.max(0, correctedDelays[i] + groupShiftMs)}ms`);
+  });
 
   // Squash-stretch wrappers copy their now-corrected delay straight from
   // their own inner .hero__title-exit child — see this function's own
@@ -1484,29 +1767,44 @@ function initNavHighlight() {
   const indicator = document.querySelector(".nav__indicator");
   if (!topLevelLinks.length || !indicator) return;
 
-  const currentFile = location.pathname.split("/").pop() || "index.html";
-  // Article pages (articles/<slug>.html, never matching a literal nav
-  // href), publications.html itself, and every category page under the
-  // dropdown (interviews.html, essays.html, ...) all count as
+  // Every real page here lives at a directory URL (e.g. "/about/",
+  // "/interviews/") backed by that folder's own index.html — matching
+  // the nav's own literal href values — except article pages, which are
+  // genuine standalone files (articles/<slug>.html). Stripping a
+  // trailing "index.html" (and re-adding the trailing slash) makes
+  // "/about/" and "/about/index.html" both resolve to the same
+  // currentPath as the nav's "/about/" href.
+  // This used to compare against location.pathname.split("/").pop(),
+  // which is "" for every directory URL (nothing follows the trailing
+  // slash) and fell back to the literal string "index.html" — a value
+  // that never matches any real href below, so the indicator always
+  // fell through to topLevelLinks[0] (Overview) no matter which page
+  // was actually loaded.
+  let currentPath = location.pathname;
+  if (currentPath.endsWith("/index.html")) currentPath = currentPath.slice(0, -"index.html".length);
+  else if (currentPath !== "/" && !currentPath.endsWith("/") && !/\.[a-zA-Z0-9]+$/.test(currentPath)) currentPath += "/";
+
+  // Article pages, publications/ itself, and every category page under
+  // the dropdown (interviews/, essays/, ...) all count as
   // "Publications*" for the TOP-LEVEL indicator — the dropdown's own
   // matching sub-link (if any) gets its own SEPARATE underline below,
   // in ADDITION to this one, not instead of it (see that block's own
   // comment for why "Volumes" never qualifies here).
   const isArticlePage = location.pathname.includes("/articles/");
   const isPublicationsFamily =
-    isArticlePage || currentFile === "publications.html" || dropdownLinks.some((link) => link.getAttribute("href") === currentFile);
+    isArticlePage || currentPath === "/publications/" || dropdownLinks.some((link) => link.getAttribute("href") === currentPath);
   const activeTopLink =
-    (isPublicationsFamily && topLevelLinks.find((link) => link.getAttribute("href").endsWith("publications.html"))) ||
-    topLevelLinks.find((link) => link.getAttribute("href") === currentFile) ||
+    (isPublicationsFamily && topLevelLinks.find((link) => link.getAttribute("href") === "/publications/")) ||
+    topLevelLinks.find((link) => link.getAttribute("href") === currentPath) ||
     topLevelLinks[0];
   activeTopLink.classList.add("is-active");
 
   // The dropdown's own sub-link matching the CURRENT page (e.g.
-  // "Interviews" while on interviews.html) gets its own underline too —
+  // "Interviews" while on /interviews/) gets its own underline too —
   // see .nav__dropdown a.is-active in style.css. "Volumes" never matches
-  // since its own href is an in-page anchor on index.html
-  // (index.html#publications), not a distinct currentFile of its own.
-  const activeDropdownLink = dropdownLinks.find((link) => link.getAttribute("href") === currentFile);
+  // since its own href is an in-page anchor on the homepage
+  // ("/#publications"), not a distinct currentPath of its own.
+  const activeDropdownLink = dropdownLinks.find((link) => link.getAttribute("href") === currentPath);
   if (activeDropdownLink) activeDropdownLink.classList.add("is-active");
 
   // getBoundingClientRect() (viewport-relative, then subtracted against

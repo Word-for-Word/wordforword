@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=212" />
+  <link rel="stylesheet" href="/css/style.css?v=235" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -742,7 +742,7 @@
                .split-cta__diamond in style.css) — this one sits directly
                on the cream page, not a colored square, so the other
                instance's tan border/arrow would be low-contrast here. -->
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLScCihpX2HeX_OttkOGviXbyk_KYqVJ2bUszshVnDyyqJZ214A/viewform?usp=header" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--tight split-cta__diamond">
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSfFcjlzbaKAOBRR-n2nIOn6psMB68y413AET4ExFAt-5rEqVQ/viewform" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--tight split-cta__diamond">
             <span class="arrow-glyph">
               <!-- "Arrow, blue.png" is the misnamed file for --color-dark
                    — see the .arrow-glyph comment in style.css. -->
@@ -1070,17 +1070,22 @@
     <!-- ============ PUBLICATIONS ============ -->
     <section class="publications">
       <div class="publications__grid">
-        <article class="publication-card">
+        <!-- publication-card--clickable + data-pdf: opens the edition
+             lightbox (initEditionLightbox() in main.js) instead of doing
+             nothing. Only wired up for editions with a finished PDF —
+             see that function's own comment for why the other 2 cards
+             above are left as plain, non-interactive covers for now. -->
+        <article class="publication-card publication-card--clickable" data-pdf="/assets/pdfs/wfw-vol1-summer-sampler.pdf" data-pdf-title="Volume 1 — Summer Sampler" role="button" tabindex="0">
           <div class="publication-card__cover">
             <img class="publication-card__cover-image" src="/assets/images/Cover_ Volume 1.jpg" alt="Word for Word Volume 1 cover" />
           </div>
           <p class="publication-card__meta">Summer 2024 — Vol. 1</p>
         </article>
-        <article class="publication-card">
+        <article class="publication-card publication-card--clickable" data-pdf="/assets/pdfs/wfw-vol2-fall26.pdf" data-pdf-title="Volume 2 — Fall 2026" role="button" tabindex="0">
           <div class="publication-card__cover">
             <img class="publication-card__cover-image" src="/assets/images/Cover_ Volume 2.jpg" alt="Word for Word Volume 2 cover" />
           </div>
-          <p class="publication-card__meta">Fall 2024 — Vol. 2</p>
+          <p class="publication-card__meta">Fall 2026 — Vol. 2</p>
         </article>
         <article class="publication-card">
           <!-- Real cover template (blank, no art yet) rather than a flat
@@ -1248,6 +1253,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=128" defer></script>
+  <script src="/js/main.js?v=140" defer></script>
 </body>
 </html>

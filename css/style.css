@@ -1502,11 +1502,11 @@ main {
    templates/publications.html's own HTML comment for the full
    reasoning on that recomposition.
 
-   .hero__wordmark-word--publications (further down) layers the stroke
-   treatment on TOP of this — that part IS publications-specific (per
-   its own explicit request), not part of this reusable style, so a
-   future about/get-involved hero can pick up --compact's sizing without
-   inheriting it.
+   .hero__wordmark-word--outlined (further down) layers the stroke
+   treatment on TOP of this — an opt-in per page (publications.html and
+   get-involved.html both use it; about.html's own "About" doesn't), not
+   part of this reusable style, so a future compact hero can pick up
+   --compact's sizing without inheriting it automatically.
 =================================================================== */
 .hero--compact {
   /* Homepage's own .hero is min-height:100vh — deliberately shorter
@@ -1548,7 +1548,14 @@ main {
      this wrap/its own box, so scaling wrap and text together keeps the
      image sized and positioned exactly as relative to the text as it
      was before, just bigger throughout — no separate re-tuning needed. */
-  width: clamp(350px, 50vw, 700px);
+  /* +10% (350/50vw/700 -> 385/55vw/770) per "make the hero titles
+     slightly bigger" — scaled by the SAME factor as the word's own
+     font-size below, for the same reason the earlier 25% bump was (see
+     this rule's own comment above): every position nudge in this
+     system is a percentage of this wrap/its own box, so scaling wrap
+     and text together keeps everything sized and positioned exactly as
+     relative to the text as before, just bigger throughout. */
+  width: clamp(385px, 55vw, 770px);
   aspect-ratio: 560 / 340;
 }
 .hero__wordmark-placeholder--compact {
@@ -1572,8 +1579,10 @@ main {
      this variant's whole point is smaller hero text. Bumped 25%
      (56/8vw/104 -> 70/10vw/130) per explicit request that it read too
      small — see .hero__wordmark-wrap--compact's own comment for why the
-     wrap above is scaled by this exact same factor alongside it. */
-  font-size: clamp(70px, 10vw, 130px);
+     wrap above is scaled by this exact same factor alongside it. +10%
+     (70/10vw/130 -> 77/11vw/143) per "make the hero titles slightly
+     bigger". */
+  font-size: clamp(77px, 11vw, 143px);
 }
 .hero__wordmark-for-wrap--compact {
   /* The homepage's own centers "for" through the middle of both words —
@@ -1608,7 +1617,15 @@ main {
      main.js, not tied to this size. */
   width: calc(var(--hero-asterisk-size) * 0.7);
 }
-.hero__wordmark-word--publications {
+.hero__wordmark-placeholder--get-involved {
+  /* Per explicit request: "Involved" sits lower than the shared
+     --compact rule's plain center (see that rule's own comment) — a
+     page-specific nudge, not an edit to the shared rule, since about.html
+     /publications.html's own words still want the plain centered
+     position. */
+  transform: translateY(2.5%);
+}
+.hero__wordmark-word--outlined {
   /* Per explicit request: a stroke OUTSIDE each letter, not eating into
      the fill — paint-order draws the stroke first and the fill on top,
      so the fill covers the stroke's inner half entirely and only the
@@ -1616,9 +1633,11 @@ main {
      then stroke), the stroke's inner half oversits the fill from
      outside in, reading as thin/hollowed-out letters instead of a solid
      letter with a clean outline. Split from .hero__wordmark-word
-     --compact above (this page also carries that class) so the stroke
-     itself — a publications-specific choice — doesn't tag along
-     automatically wherever --compact's sizing gets reused. */
+     --compact above (these pages also carry that class) so the stroke
+     itself doesn't tag along automatically wherever --compact's sizing
+     gets reused. Originally publications-only (was named --publications);
+     get-involved.html's own "Involved" wanted the same outline, so this
+     is now shared by name instead of duplicated. */
   -webkit-text-stroke: 8px var(--color-cream);
   paint-order: stroke;
 }
@@ -1670,7 +1689,8 @@ main {
      follow-up, then -49% per "move it up a little", then -47% per "move
      it down a little" once more, then -44% per "moved down more", then
      -46% per "moved a little too far down", then -47% per "move it up a
-     tiny bit", then -45% per "move hero title img down a little".
+     tiny bit", then -45% per "move hero title img down a little", then
+     -47% per "move the hero title img up a little".
      positionAboutHeroTitle()
      in main.js re-centers the whole group against this value automatically
      on every change, so tuning this alone is always safe — no need to
@@ -1678,8 +1698,8 @@ main {
      computes a Y correction on the OUTER wrap, never touches X). X was a
      flat 14px until "move it a tiny tiny tiny bit to the right" bumped it
      to 16px. */
-  transform: translateY(-45%) translateX(16px);
-  --squash-base: translateY(-45%) translateX(16px);
+  transform: translateY(-47%) translateX(16px);
+  --squash-base: translateY(-47%) translateX(16px);
   z-index: 2;
 }
 
@@ -2253,6 +2273,16 @@ main {
   opacity: 0;
   transform: translateY(-20px);
   transition: opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* Un-bolds the <strong> portion of the hover-revealed description text
+   below (see .square__role-description strong's own 500-weight rule
+   near the top of this file, shared with a few other Newsreader body-
+   copy spots) — per explicit request, just for this section, so this
+   comes AFTER that shared rule and matches its exact selector to win on
+   cascade order rather than touching the shared rule itself and
+   affecting the other spots that still want the emphasis. */
+.square__role-description strong {
+  font-weight: inherit;
 }
 .square__role-description {
   position: absolute;
@@ -3975,6 +4005,386 @@ span.split-cta__text-line {
 /* Same size as body text elsewhere — was --text-small, a mismatch with
    every other paragraph of running text on the page. */
 .publication-card__meta { margin-top: 12px; font-size: var(--text-body); }
+
+/* Only the covers with a real, finished PDF get this (see data-pdf on the
+   <article> itself in index.html/publications/index.html) — the "Coming
+   soon!" card is deliberately left un-clickable, nothing to open yet. */
+.publication-card--clickable {
+  cursor: pointer;
+}
+.publication-card--clickable:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 4px;
+  border-radius: 15px;
+}
+
+/* ===================================================================
+   Edition lightbox — click a finished cover, flip through its PDF one
+   page at a time. Built entirely in JS (initEditionLightbox() in
+   main.js, same "generated, not hand-written" reasoning as the carousel
+   indicators above) so this markup only has to exist once, not copied
+   into every page that has a publication-card on it.
+=================================================================== */
+/* No opacity/transition of its OWN anymore — see .edition-lightbox__
+   backdrop's own comment below for why a shared parent-level opacity
+   fade (the original approach here) was the actual cause of the
+   fade never visibly playing on real hardware, not a timing bug. */
+.edition-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  /* 0.4s, not 0.35s — matches the SLOWEST of the 3 independent child
+     fades this now gates (backdrop 0.35s, nav/close 0.35s, but
+     .edition-lightbox__frame's own scale+opacity entrance is 0.4s).
+     Hiding visibility any sooner than the slowest one finishes would
+     cut that child's own closing fade off mid-transition, since
+     visibility:hidden stops the whole subtree from rendering at all,
+     independent of whatever any child's own transition still has left. */
+  transition: visibility 0s linear 0.4s;
+}
+.edition-lightbox.is-open {
+  visibility: visible;
+  /* 0s, explicitly — without restating this, the CLOSE transition's own
+     0.35s delay above would otherwise still apply here (a later rule
+     with an unset property doesn't reset it, it just doesn't touch it),
+     making visibility flip to visible 0.35s LATE on open too. */
+  transition: visibility 0s linear 0s;
+}
+/* Frosted-glass look — ONE flat translucent dark tint (no gradient —
+   removed per earlier follow-up, a 2-stop gradient here read as an
+   unwanted extra design decision rather than "just dark glass") plus a
+   real backdrop blur of whatever page sits underneath. Kept quite low-
+   opacity per earlier follow-up ("even more transparent") — the blur
+   itself is what sells the glass read, not a heavy tint on top of it.
+   -webkit- prefix still needed for Safari; unprefixed alone is silently
+   ignored there, not just unsupported gracefully.
+   Owns its OWN opacity fade now, rather than inheriting one from
+   .edition-lightbox's own opacity (the original approach) — that meant
+   THIS element's already-expensive full-viewport blur had to be
+   recomposited every single frame ALONGSIDE the frame's separate scale+
+   opacity entrance and the nav/close buttons' separate opacity entrance,
+   since a parent's opacity multiplies through its whole subtree's
+   render, not just this one element. Reported live as "no animation,
+   just an abrupt appearance after a delay" in real (non-headless)
+   Chrome specifically — a classic backdrop-filter-animation performance
+   trap: the browser silently drops frames trying to re-blur + re-
+   composite everything at once, then the FINAL frame is the only one
+   that actually lands, reading as an instant snap. will-change:opacity
+   hints the browser to promote this specific layer ahead of time so
+   blending its alpha during the fade doesn't require re-running the
+   expensive blur sample pass itself each frame. */
+.edition-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 13, 10, 0.4);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.edition-lightbox.is-open .edition-lightbox__backdrop {
+  opacity: 1;
+}
+.edition-lightbox__frame {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 92vw;
+  /* Own entrance, separate from the overlay's opacity fade above: a
+     slight scale-up + fade reads as the page itself arriving, not just
+     visibility toggling — same "slow in" easing this site already uses
+     for every other reveal (mosaic-reveal, image-mosaic__caption, etc). */
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.edition-lightbox.is-open .edition-lightbox__frame {
+  opacity: 1;
+  transform: scale(1);
+}
+.edition-lightbox__title {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-cream);
+  text-align: center;
+  margin: 0;
+}
+.edition-lightbox__page-wrap {
+  position: relative;
+  /* Skeleton and canvas are stacked in the SAME grid cell (both explicit
+     grid-column:1/grid-row:1 below) so they can crossfade in place
+     without needing matching absolute-positioning math — whichever one
+     is opacity:0 at a given moment just doesn't affect layout, since
+     grid still reserves the cell for both. */
+  display: grid;
+}
+.edition-lightbox__skeleton,
+.edition-lightbox__canvas {
+  grid-column: 1;
+  grid-row: 1;
+}
+.edition-lightbox__canvas {
+  display: block;
+  max-width: 82vw;
+  max-height: 74vh;
+  width: auto;
+  height: auto;
+  /* Reads as a lifted page, same instinct as .publication-card__cover's
+     own hover lift, just always-on here since there's no resting state
+     to lift FROM inside the lightbox. Mostly vertical offset with a
+     tighter blur (was 20px/60px) — per explicit request to angle it
+     more downward, like an overhead light, rather than the softer
+     ambient-from-all-sides look the wider blur read as. */
+  box-shadow: 0 40px 45px rgba(0, 0, 0, 0.45);
+  background: var(--color-cream);
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+.edition-lightbox__page-wrap.is-ready .edition-lightbox__canvas {
+  opacity: 1;
+}
+/* Placeholder shown only until the FIRST page of a freshly-opened
+   edition has actually rendered (see initEditionLightbox()'s own
+   comment on why later page-to-page navigation doesn't need this) —
+   same box dimensions/shadow as the real canvas (1672:2160 is the same
+   cover-art ratio .publication-card__cover already uses) so there's no
+   layout jump once the swap happens, just a crossfade. width uses
+   min() rather than the canvas's own max-width/max-height + auto trick
+   — that trick relies on a REPLACED element's own intrinsic size to
+   resolve "auto", which a plain div has none of. */
+.edition-lightbox__skeleton {
+  width: min(82vw, calc(74vh * 0.7741));
+  aspect-ratio: 1672 / 2160;
+  /* Same downward-angled shadow as the real canvas (see its own comment)
+     — matched deliberately so the crossfade between them doesn't also
+     visibly shift the shadow underneath. */
+  box-shadow: 0 40px 45px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(100deg, var(--color-tan) 30%, var(--color-cream) 50%, var(--color-tan) 70%);
+  background-size: 200% 100%;
+  animation: edition-lightbox-shimmer 1.6s ease-in-out infinite;
+  transition: opacity 0.3s ease-out;
+}
+.edition-lightbox__page-wrap.is-ready .edition-lightbox__skeleton {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes edition-lightbox-shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+.edition-lightbox__page-count {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-cream);
+  margin: 0;
+  /* Reserves this line's own height even while its text is empty (see
+     openLightbox() in main.js: it's blanked out while a fresh edition's
+     PDF is still loading, covered by the shimmer skeleton instead) —
+     without this, an EMPTY paragraph collapses to less height than a
+     populated one, so the moment the page count text actually appears,
+     .edition-lightbox__frame's total height grows, and since the whole
+     frame is centered as a unit inside .edition-lightbox (align-items:
+     center), a taller frame re-centers around the SAME midpoint, moving
+     its OWN top edge — and everything above the page count, including
+     the skeleton/PDF itself — up by roughly half that height gain.
+     Reported live as the PDF "bumping up" right as it finishes loading;
+     this was really that recentering, not anything about the PDF/
+     skeleton crossfade itself. Matches the line-height this text
+     actually renders at once populated (1.4, inherited from body). */
+  min-height: calc(var(--text-small) * 1.4);
+}
+/* Prev/next/close all reuse the site's actual .diamond-cta shape (see
+   that class + .diamond-cta--tight/.arrow-glyph in the "canonical
+   diamond CTA" block above) — same rotated-square outline — but WITHOUT
+   .diamond-cta--fill-on-hover: per explicit request these stay pure
+   stroke, no solid fill on hover, just the border/glyph color itself
+   swapping for feedback. Cream by default, not the shared tan (per
+   explicit follow-up) — hover swaps to tan, the reverse pairing, so
+   there's still a visible state change without introducing a 3rd color.
+   Positioned fixed to the actual SCREEN edges (not the frame/canvas) at
+   --page-margin PLUS the .publications__grid section's own extra 40px
+   margin (see that class up above) — per explicit follow-up asking for
+   these "closer together," using that specific section's own margin
+   instead of the bare page-wide 10px this used at first. Direct children
+   of .edition-lightbox (not the frame or page-wrap) specifically so this
+   positioning is relative to the whole viewport-covering box, not the
+   frame's own (narrower, page-width) content column. */
+.edition-lightbox__nav,
+.edition-lightbox__close {
+  /* Real <button>s, not <a>/<div> like every other existing .diamond-cta
+     instance except .featured-carousel__nav — same native-chrome reset
+     that one already needed (see its own comment): without this, the
+     browser's own default button background/padding shows through as a
+     visible fill INSIDE the diamond's border, which is exactly the
+     "shouldn't have fills" bug this was meant to fix, not a leftover
+     from the removed .diamond-cta--fill-on-hover class. */
+  appearance: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  position: absolute;
+  z-index: 2;
+  margin-top: 0;
+  cursor: pointer;
+  border-color: var(--color-cream);
+  transition: border-color 0.2s ease-out, background-color 0.2s ease-out, opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+  /* Own fade-in, synced with the frame's above rather than instant —
+     otherwise these pop in ahead of the page itself since they aren't
+     nested inside .edition-lightbox__frame's own opacity transition. */
+  opacity: 0;
+}
+.edition-lightbox.is-open .edition-lightbox__nav,
+.edition-lightbox.is-open .edition-lightbox__close {
+  opacity: 1;
+}
+.edition-lightbox__nav {
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+.edition-lightbox.is-open .edition-lightbox__nav {
+  /* Restates the same transform as above — opacity is the only thing
+     actually animating, but the transition shorthand on this element
+     also lists transform, and leaving it unset here would tween FROM
+     whatever .edition-lightbox__nav's own base rule left it at, which
+     is identical anyway; stated explicitly so that stays true even if
+     the base rule's transform value ever changes later. */
+  transform: translateY(-50%) rotate(45deg);
+}
+/* --page-margin + 40px, NOT a plain var(--page-margin) (see this whole
+   block's own intro comment on the "closer together" follow-up) — PLUS
+   7.46px more, for a separate, unrelated reason: .diamond-cta rotates
+   this 45deg around its own center, so the visible DIAMOND's leftmost/
+   rightmost point sits further in than an unrotated box's edge would.
+   Rotating a 36px (.diamond-cta--tight) square 45deg expands its
+   bounding box to 36*sqrt(2)≈50.9px, symmetric around the same center,
+   so the visible tip is (50.9-36)/2≈7.46px further from that center than
+   the unrotated box's own edge was. Confirmed against a real
+   getBoundingClientRect() measurement earlier: a bare inset value here
+   alone lands the visible DIAMOND noticeably closer to the edge than
+   intended — adding this back is what makes the diamond's actual point,
+   not its invisible unrotated bounding box, land at the intended inset. */
+.edition-lightbox__nav--prev {
+  left: calc(var(--page-margin) + 40px + 7.46px);
+}
+.edition-lightbox__nav--next {
+  right: calc(var(--page-margin) + 40px + 7.46px);
+}
+.edition-lightbox__nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Arrow art points right by default (see .arrow-glyph's own comment) —
+   same flip .featured-carousel__nav--prev already uses for the same
+   reason. */
+.edition-lightbox__nav--prev > .arrow-glyph {
+  transform: rotate(-45deg) scaleX(-1);
+}
+/* A true CREAM arrow, not another beige/tan PNG swapped in — none of the
+   4 uploaded arrow files are actually cream (see .arrow-glyph's own
+   misnaming note), so this reuses the exact same mask-image trick
+   .split-cta__diamond-arrow-cream already established elsewhere: the
+   arrow PNG supplies only its ALPHA shape as a mask, and a real
+   background-color paints through it. Switches to brown on hover (see
+   .edition-lightbox__nav:hover below) once the diamond itself fills
+   cream — cream-on-cream would disappear entirely. */
+.edition-lightbox__nav-arrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-image: url("../assets/images/Arrow, blue.png");
+  mask-image: url("../assets/images/Arrow, blue.png");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background-color: var(--color-cream);
+  transition: background-color 0.2s ease-out;
+}
+.edition-lightbox__nav:hover:not(:disabled) .edition-lightbox__nav-arrow {
+  background-color: var(--color-dark);
+}
+/* Hover: the DIAMOND fills cream, the ICON (arrow/×) switches to brown
+   — per explicit follow-up, the reverse pairing of an earlier pass that
+   filled the diamond brown and left the icon cream throughout. Border
+   also cream so the diamond reads as one solid filled shape rather than
+   a fill peeking out past a differently-colored outline. */
+.edition-lightbox__nav:hover:not(:disabled),
+.edition-lightbox__close:hover {
+  background-color: var(--color-cream);
+  border-color: var(--color-cream);
+}
+/* Same --page-margin + 40px + rotation-compensation as the nav diamonds
+   above. */
+.edition-lightbox__close {
+  top: calc(var(--page-margin) + 40px + 7.46px);
+  right: calc(var(--page-margin) + 40px + 7.46px);
+}
+/* The × is built from 2 crossed bars (::before/::after), not the "×"
+   text glyph this used at first — a font character has almost no
+   visual weight next to the nav arrows' own solid mask artwork, which
+   is exactly the "different stroke" mismatch reported live. Measured
+   the actual arrow source art (Arrow, blue.png, 66x42) to match: its
+   shaft is ~6px thick within a 42px-tall box, i.e. ~14% of the glyph's
+   own height — at this span's 16px size, that's ~2px, hence the bars
+   below. This span still ALSO matches the shared ".diamond-cta >
+   span:not(.arrow-glyph)" rule above (still a plain span, still not
+   .arrow-glyph) — that's what supplies its rotate(-45deg) counter-
+   rotation, needed so the two bars (each further rotated their own
+   +/-45deg below) net out to a proper X instead of a "+". That shared
+   rule's OWN font-size/color/font-style no longer matter now that this
+   span holds no text (font-size:0) and the bars paint via their own
+   explicit background-color, not the span's `color` — so unlike the
+   earlier text-glyph version, this one doesn't need matching
+   specificity to win a fight over those, only the transform. */
+.edition-lightbox__close-glyph {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  /* Overrides the shared rule's own font-family/font-size/line-height —
+     none of those matter now that this span holds no text, just 2
+     positioned bars. */
+  font-size: 0;
+}
+.edition-lightbox__close-glyph::before,
+.edition-lightbox__close-glyph::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 2px;
+  background-color: var(--color-cream);
+  transition: background-color 0.2s ease-out;
+}
+.edition-lightbox__close-glyph::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.edition-lightbox__close-glyph::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+/* Same brown switch as the nav arrows — cream-on-cream would otherwise
+   disappear once the diamond itself fills cream on hover. */
+.edition-lightbox__close:hover .edition-lightbox__close-glyph::before,
+.edition-lightbox__close:hover .edition-lightbox__close-glyph::after {
+  background-color: var(--color-dark);
+}
+/* Scroll lock behind the lightbox — same idea as .nav-dim-overlay's own
+   dimming, just for page scroll instead of a click-catcher. */
+body.edition-lightbox-open {
+  overflow: hidden;
+}
 /* Large diamond button (same size/shape as section 1's "Learn more"),
    replacing the old plain underlined text link. Centered via
    margin:auto (this is a block-level flex box — .publications' own
