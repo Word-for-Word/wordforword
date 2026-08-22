@@ -190,11 +190,18 @@
     </section>
 
     <!-- ============ SPOTLIGHT ============ -->
+    <!-- TEMPORARY: hidden (style="display:none;") along with the quote-
+         block and partner-logos sections below it — everything after the
+         3 editions grid, per explicit request, for the same "can't show
+         empty/placeholder content during a presentation" reason as the
+         nav dropdown/Get Involved link above. Remove the 3 display:none
+         styles (this section, .quote-block, .partners further down) once
+         this page has real Spotlight content again. -->
     <!-- Placeholder content, by explicit request — swap the lead + grid
          items here for real ones (sourced from content/articles/*.md,
          same as the per-category listings below already do) once there
          are enough real articles to fill a 1-lead + 5-grid layout. -->
-    <section class="spotlight">
+    <section class="spotlight" style="display:none;">
       <div class="section-eyebrow">
         <span>Spotlight</span>
         <span class="section-eyebrow__rule" aria-hidden="true"></span>
@@ -270,7 +277,7 @@
        sit inside <main>, only the footer partial is outside), so this
        page picks up the SAME main { gap: 60px } spacing between them
        that index.html gets. -->
-  <section class="quote-block">
+  <section class="quote-block" style="display:none;">
     <div class="quote-block__image">
       <img class="quote-block__photo" src="{{BASE}}assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
     </div>
@@ -283,7 +290,7 @@
   <!-- Exact copy of index.html's own .partners marquee (was missing
        entirely) — see that file's own comment above it for the full
        reasoning. -->
-  <section class="partners marquee-banner--scrolling">
+  <section class="partners marquee-banner--scrolling" style="display:none;">
     <div class="partners__scroll">
       <p class="partners__track">
         <img class="partners__logo" src="{{BASE}}assets/images/Sponsor_ Perelman.png" alt="Perelman School of Medicine, University of Pennsylvania" />

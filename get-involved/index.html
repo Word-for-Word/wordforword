@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=235" />
+  <link rel="stylesheet" href="/css/style.css?v=240" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -118,8 +118,12 @@
           <ul class="nav__links">
             <li><a href="/">Overview</a></li>
             <li class="nav__item--publications">
-              <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
-              <div class="nav__dropdown">
+              <!-- TEMPORARY: dropdown + asterisk hidden — Interviews/Essays/
+                   Narratives/Outreach are all still empty and shouldn't be
+                   navigable right now. Remove the two style="display:none;"
+                   below once those pages have real content. -->
+              <a href="/publications/">Publications<span class="nav__link-asterisk" style="display:none;">*</span></a>
+              <div class="nav__dropdown" style="display:none;">
                 <a href="/#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
                 <a href="/interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
                 <a href="/essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
@@ -128,7 +132,12 @@
               </div>
             </li>
             <li><a href="/about/">About Us</a></li>
-            <li><a href="/get-involved/">Get Involved</a></li>
+            <!-- TEMPORARY: points at the interest form instead of this
+                 page itself — placeholder for a specific presentation
+                 (club president can't have the page sit blank), not a
+                 permanent change. Revert to <a href="/get-involved/"> once
+                 the real page has content again. -->
+            <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSekNHyxHjFhO780Tgh72kdI6hmglggJ9eWfJ20KYRUA1DUtww/viewform" target="_blank" rel="noopener">Get Involved</a></li>
             <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
           </ul>
         </nav>
@@ -293,6 +302,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=140" defer></script>
+    <script src="/js/main.js?v=148" defer></script>
 </body>
 </html>

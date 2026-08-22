@@ -324,13 +324,15 @@ function initEditionLightbox() {
   const PDFJS_VERSION = "3.11.174";
   const PDFJS_SCRIPT_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`;
   const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
-  // Renders at 2x the page's native size so the canvas stays crisp on
+  // Renders at 3x the page's native size so the canvas stays crisp on
   // retina displays even though CSS (.edition-lightbox__canvas) then
-  // scales it back down to fit the viewport.
-  const RENDER_SCALE = 2;
+  // scales it back down to fit the viewport — was 2x, bumped to give
+  // setZoomed()'s own full-screen-fill zoom (see its comment) enough
+  // real pixels to upscale into without visibly blurring.
+  const RENDER_SCALE = 3;
 
   let overlay = null;
-  let canvasEl, pageWrapEl, titleEl, pageCountEl, prevBtn, nextBtn, closeBtn;
+  let canvasEl, pageWrapEl, titleEl, pageCountEl, prevBtn, nextBtn, closeBtn, fullscreenBtn;
   let pdfjsLoadPromise = null;
   let currentDoc = null;
   let currentDocUrl = null;
@@ -338,6 +340,177 @@ function initEditionLightbox() {
   let renderToken = 0; // guards against a slow previous render landing after a newer one started
   let currentRenderTask = null; // pdf.js refuses a 2nd concurrent render() on the same canvas
   let lastFocusedEl = null;
+  let isZoomed = false;
+  let dragState = null; // {startX, startY, startScrollLeft, startScrollTop, moved} while a pointer is down
+  let idleTimer = null;
+
+  // 2.5s: long enough that turning a page or nudging the mouse toward a
+  // button doesn't read as a flicker, short enough that it still
+  // actually fades once someone's just sitting there reading.
+  const FULLSCREEN_IDLE_MS = 2500;
+
+  // Guarded on is-fullscreen — the UI never auto-hides in the normal
+  // windowed view (only fullscreen's own "read the page, not the
+  // chrome" framing calls for that), so this is a no-op there rather
+  // than silently arming a timer that'd fade controls someone didn't
+  // ask to have hidden.
+  function armIdleTimer() {
+    if (overlay) overlay.classList.remove("is-idle");
+    clearTimeout(idleTimer);
+    if (!overlay || !overlay.classList.contains("is-fullscreen")) return;
+    idleTimer = setTimeout(() => overlay.classList.add("is-idle"), FULLSCREEN_IDLE_MS);
+  }
+  function clearIdleTimer() {
+    clearTimeout(idleTimer);
+    if (overlay) overlay.classList.remove("is-idle");
+  }
+
+  // Lower bound: guarantees a real zoom even in the unusual case neither
+  // fill ratio below clears 1 (e.g. an oddly tiny page on a small
+  // viewport). Upper bound: stays under RENDER_SCALE's 3x headroom over
+  // the small, windowed (pre-zoom) fitted size — going all the way to 3x
+  // would use up that ENTIRE margin, leaving nothing to spare before real
+  // upscaling-past-rendered-pixels blur sets in.
+  const MIN_ZOOM_SCALE = 1.7;
+  const MAX_ZOOM_SCALE = 2.6;
+
+  // The canvas's own fitted (unzoomed) size, measured once right before
+  // setZoomed(true) applies a scale — kept around (rather than a plain
+  // local variable) so applyZoomScale() below can reuse it without
+  // re-measuring. Cleared back to null once fully zoomed back out, so
+  // the NEXT zoom-in re-measures fresh rather than reusing a stale rect
+  // from before a page turn, a window resize, or a fullscreen toggle
+  // changed what "fitted size" even means.
+  let zoomBaseRect = null;
+
+  // Explicit px width/height (derived from zoomBaseRect), not a CSS
+  // transform: a transform leaves the element's layout box (and so
+  // .edition-lightbox__page-wrap's own scrollable overflow) at its
+  // pre-transform size in some browsers, which would make the zoomed-in
+  // page bigger to look at but impossible to pan around via scroll.
+  // Setting real width/height instead grows the actual layout box, which
+  // is what .edition-lightbox__page-wrap.is-zoomed's own overflow:auto
+  // (see style.css) needs to have anything to scroll.
+  function applyZoomScale(scale) {
+    const clamped = Math.min(MAX_ZOOM_SCALE, Math.max(1, scale));
+    const zoomed = clamped > 1;
+    isZoomed = zoomed;
+    pageWrapEl.classList.toggle("is-zoomed", zoomed);
+    overlay.classList.toggle("is-zoomed", zoomed);
+    canvasEl.style.cursor = zoomed ? "grab" : "zoom-in";
+    if (zoomed) {
+      canvasEl.style.width = `${zoomBaseRect.width * clamped}px`;
+      canvasEl.style.height = `${zoomBaseRect.height * clamped}px`;
+    } else {
+      canvasEl.style.width = "";
+      canvasEl.style.height = "";
+      pageWrapEl.scrollTop = 0;
+      pageWrapEl.scrollLeft = 0;
+      zoomBaseRect = null;
+    }
+  }
+
+  // The click-to-zoom toggle: jumps straight to a scale that FILLS the
+  // screen (like object-fit: cover — the LARGER of the two fill ratios
+  // below, so neither axis comes up short), not just the small windowed
+  // fit enlarged by a flat multiplier — a flat multiplier off a page
+  // that was already letterboxed down to fit 82vw/74vh could still land
+  // smaller than the full viewport in both axes, defeating "fills the
+  // whole screen" per explicit request. Trackpad pinch/ctrl-scroll is
+  // deliberately NOT handled here (or anywhere else in this viewer) —
+  // an earlier pass DID intercept it to scale the canvas directly, which
+  // was reverted per explicit follow-up: that blocked the browser's own
+  // native page-zoom, which is what was actually wanted ("the default
+  // laptop behavior of freely zooming into a page"), not a custom
+  // canvas-relative one. Leaving wheel/gesture events alone here is what
+  // lets that native zoom reach the browser unobstructed.
+  function setZoomed(zoomed) {
+    if (zoomed === isZoomed) return;
+    if (zoomed) {
+      // Measured BEFORE any class toggling below, deliberately — the
+      // .is-zoomed rules that follow strip the canvas's max-width/
+      // max-height (see style.css), so measuring after would read its
+      // native raster size (RENDER_SCALE=3x the page's real size) instead
+      // of the small fitted display size this scale is actually meant to
+      // multiply, landing on a wildly oversized canvas (confirmed live:
+      // several thousand px, most of it scrolled off past the top-left
+      // with no visible way back — this was the actual cause of "only
+      // zooms into the top-left corner").
+      zoomBaseRect = canvasEl.getBoundingClientRect();
+      const fillScale = Math.max(window.innerWidth / zoomBaseRect.width, window.innerHeight / zoomBaseRect.height);
+      applyZoomScale(Math.min(MAX_ZOOM_SCALE, Math.max(MIN_ZOOM_SCALE, fillScale)));
+    } else {
+      applyZoomScale(1);
+    }
+  }
+
+  // Click-to-toggle and drag-to-pan share the same pointer gesture — this
+  // is what actually distinguishes them: a genuine drag moves the pointer
+  // more than DRAG_CLICK_THRESHOLD_PX before release, a plain click
+  // doesn't. Using pointer events (not mouse+touch separately) covers
+  // mouse, touch, and pen through one code path; touch-action:none on
+  // the zoomed canvas (see style.css) stops the browser's own native
+  // touch-scroll from also grabbing the same gesture, which would
+  // otherwise fight this JS-driven scroll for control mid-drag.
+  const DRAG_CLICK_THRESHOLD_PX = 6;
+
+  function onCanvasPointerDown(e) {
+    if (!isZoomed) return;
+    dragState = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startScrollLeft: pageWrapEl.scrollLeft,
+      startScrollTop: pageWrapEl.scrollTop,
+      moved: false,
+    };
+    // Wrapped: real browsers can occasionally reject this (pointer
+    // already gone by the time it's called — e.g. a fast synthetic
+    // pointercancel, some Safari versions historically), and an
+    // uncaught NotFoundError here would abort this handler before
+    // dragState is ever read, breaking the click-vs-drag distinction
+    // for that whole gesture. Losing capture just means a drag that
+    // exits the canvas mid-gesture might stop tracking a bit early —
+    // harmless compared to that.
+    try {
+      canvasEl.setPointerCapture(e.pointerId);
+    } catch {}
+  }
+  function onCanvasPointerMove(e) {
+    if (!dragState) return;
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    if (!dragState.moved && Math.hypot(dx, dy) > DRAG_CLICK_THRESHOLD_PX) {
+      dragState.moved = true;
+      canvasEl.style.cursor = "grabbing";
+    }
+    if (dragState.moved) {
+      pageWrapEl.scrollLeft = dragState.startScrollLeft - dx;
+      pageWrapEl.scrollTop = dragState.startScrollTop - dy;
+    }
+  }
+  function onCanvasPointerUp(e) {
+    // No dragState at all (not zoomed, see onCanvasPointerDown's own
+    // guard) means every pointerdown->pointerup on the canvas is a plain
+    // click — always toggle zoom (on) in that case.
+    const wasDrag = dragState ? dragState.moved : false;
+    if (dragState) {
+      try {
+        canvasEl.releasePointerCapture(e.pointerId);
+      } catch {}
+      canvasEl.style.cursor = "grab";
+      dragState = null;
+    }
+    if (!wasDrag) setZoomed(!isZoomed);
+  }
+  // A cancelled gesture (e.g. the OS interrupting a drag mid-swipe with
+  // its own system gesture) never fires pointerup — without this,
+  // dragState would just stay set, silently panning on the NEXT
+  // unrelated pointermove that happens to fire before another real
+  // pointerdown. No zoom toggle here: a cancel isn't a completed click.
+  function onCanvasPointerCancel() {
+    dragState = null;
+    if (isZoomed) canvasEl.style.cursor = "grab";
+  }
 
   function loadPdfJs() {
     if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
@@ -371,6 +544,10 @@ function initEditionLightbox() {
     // (narrower) content column — see their own CSS.
     el.innerHTML = `
       <div class="edition-lightbox__backdrop"></div>
+      <button type="button" class="edition-lightbox__fullscreen diamond-cta diamond-cta--tight" aria-label="Enter fullscreen">
+        <span class="edition-lightbox__fullscreen-icon edition-lightbox__fullscreen-icon--enter" aria-hidden="true"></span>
+        <span class="edition-lightbox__fullscreen-icon edition-lightbox__fullscreen-icon--exit" aria-hidden="true"></span>
+      </button>
       <button type="button" class="edition-lightbox__close diamond-cta diamond-cta--tight" aria-label="Close">
         <span class="edition-lightbox__close-glyph"></span>
       </button>
@@ -402,16 +579,68 @@ function initEditionLightbox() {
     prevBtn = el.querySelector(".edition-lightbox__nav--prev");
     nextBtn = el.querySelector(".edition-lightbox__nav--next");
     closeBtn = el.querySelector(".edition-lightbox__close");
+    fullscreenBtn = el.querySelector(".edition-lightbox__fullscreen");
 
     el.querySelector(".edition-lightbox__backdrop").addEventListener("click", closeLightbox);
     closeBtn.addEventListener("click", closeLightbox);
     prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
     nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
+    canvasEl.style.cursor = "zoom-in";
+    canvasEl.addEventListener("pointerdown", onCanvasPointerDown);
+    canvasEl.addEventListener("pointermove", onCanvasPointerMove);
+    canvasEl.addEventListener("pointerup", onCanvasPointerUp);
+    canvasEl.addEventListener("pointercancel", onCanvasPointerCancel);
+    fullscreenBtn.addEventListener("click", () => {
+      // Toggling is deliberately just a request out to the browser, not
+      // a class flip here — is-fullscreen only ever actually gets set
+      // from the fullscreenchange listener below, which is the ONE
+      // source of truth for whether we're really in fullscreen (it also
+      // fires for exits this button had nothing to do with — Escape,
+      // the browser's own fullscreen-exit chrome — so a class toggled
+      // straight from this click would drift out of sync with reality
+      // the first time someone left fullscreen any other way).
+      if (document.fullscreenElement) document.exitFullscreen();
+      else el.requestFullscreen().catch(() => {});
+    });
+    document.addEventListener("fullscreenchange", () => {
+      const active = document.fullscreenElement === el;
+      el.classList.toggle("is-fullscreen", active);
+      fullscreenBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+      // Fullscreen mode fits each WHOLE page to the screen (contain —
+      // see .edition-lightbox.is-fullscreen .edition-lightbox__canvas in
+      // style.css); the click-to-zoom feature deliberately overflows
+      // instead (cover, for inspecting fine detail — see setZoomed()'s
+      // own comment). Leaving a stale zoom active across THIS switch
+      // would size the canvas off whichever base it was measured against
+      // before the switch, mismatched against the new one.
+      setZoomed(false);
+      if (active) armIdleTimer();
+      else clearIdleTimer();
+    });
+    // Auto-hide the UI/title (fullscreen only — see armIdleTimer()'s own
+    // guard) after a stretch with no cursor activity, per explicit
+    // request: a page filling the whole screen reads more like actually
+    // looking at the page, not a viewer chrome, once the controls aren't
+    // permanently sitting on top of it. pointerdown (not just
+    // pointermove) also counts as activity — a click-to-zoom or a
+    // prev/next tap without any preceding hover (a touch, or a mouse
+    // that was already sitting still directly over a button) should
+    // reset the timer too, not just wait for movement that never comes.
+    el.addEventListener("pointermove", armIdleTimer);
+    el.addEventListener("pointerdown", armIdleTimer);
 
     document.addEventListener("keydown", (e) => {
       if (!el.classList.contains("is-open")) return;
-      if (e.key === "Escape") closeLightbox();
-      else if (e.key === "ArrowLeft") goToPage(currentPage - 1);
+      if (e.key === "Escape") {
+        // The browser's own fullscreen handling already exits fullscreen
+        // on Escape by itself (fires the fullscreenchange listener
+        // above) — closing the WHOLE lightbox on the same keystroke,
+        // on top of that, would skip a step every fullscreen video
+        // player's own convention trains people to expect: Escape backs
+        // out one layer at a time, not both at once.
+        if (document.fullscreenElement) return;
+        closeLightbox();
+      } else if (e.key === "ArrowLeft") goToPage(currentPage - 1);
       else if (e.key === "ArrowRight") goToPage(currentPage + 1);
     });
 
@@ -472,6 +701,10 @@ function initEditionLightbox() {
     if (!currentDoc) return;
     const clamped = Math.min(Math.max(pageNum, 1), currentDoc.numPages);
     if (clamped === currentPage) return;
+    // Reset before, not after, navigating — a stale zoomed-in px size
+    // measured off the OLD page would otherwise briefly stretch/misfit
+    // the new page's own canvas until the next render() replaces it.
+    setZoomed(false);
     currentPage = clamped;
     updatePageUi(clamped, currentDoc.numPages);
     renderPage(clamped);
@@ -484,6 +717,7 @@ function initEditionLightbox() {
     lastFocusedEl = document.activeElement;
     document.body.classList.add("edition-lightbox-open");
     titleEl.textContent = card.dataset.pdfTitle || "";
+    setZoomed(false);
     // Same double-rAF idiom initPageFlashReady()/initSplitCtaReveal() use
     // elsewhere in this file for the identical problem: a style change
     // right after inserting a new element can get coalesced with that
@@ -534,8 +768,15 @@ function initEditionLightbox() {
 
   function closeLightbox() {
     if (!overlay) return;
+    // Otherwise closing the lightbox from INSIDE fullscreen would leave
+    // the browser sitting in fullscreen with nothing of ours left in it
+    // — the fullscreenchange listener's own el.classList.toggle("is-
+    // fullscreen", ...) still runs once this resolves, so is-fullscreen
+    // doesn't need clearing here too.
+    if (document.fullscreenElement === overlay) document.exitFullscreen();
     overlay.classList.remove("is-open");
     document.body.classList.remove("edition-lightbox-open");
+    setZoomed(false);
     if (lastFocusedEl) lastFocusedEl.focus();
   }
 
@@ -551,6 +792,13 @@ function initEditionLightbox() {
 }
 
 function initPublicationsDropdown() {
+  // TEMPORARY: disabled entirely — the dropdown panel itself is already
+  // display:none (see templates/_header.html and the 3 hand-authored
+  // pages' own nav markup, same TEMPORARY comment there), but hovering
+  // still added .nav__dropdown-is-open below, which expands the header
+  // to make room for a panel that's no longer actually showing anything.
+  // Remove this early return once the dropdown itself comes back.
+  return;
   const trigger = document.querySelector(".nav__item--publications");
   const header = document.querySelector(".site-header");
   const hoverZone = document.querySelector(".nav__dropdown-hover-zone");

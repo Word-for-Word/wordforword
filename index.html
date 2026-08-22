@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=235" />
+  <link rel="stylesheet" href="/css/style.css?v=240" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -313,8 +313,12 @@
         <ul class="nav__links">
           <li><a href="/">Overview</a></li>
           <li class="nav__item--publications">
-            <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
-            <div class="nav__dropdown">
+            <!-- TEMPORARY: dropdown + asterisk hidden — Interviews/Essays/
+                 Narratives/Outreach are all still empty and shouldn't be
+                 navigable right now. Remove the two style="display:none;"
+                 below once those pages have real content. -->
+            <a href="/publications/">Publications<span class="nav__link-asterisk" style="display:none;">*</span></a>
+            <div class="nav__dropdown" style="display:none;">
               <a href="/#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
               <a href="/interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
               <a href="/essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
@@ -323,7 +327,12 @@
             </div>
           </li>
           <li><a href="/about/">About Us</a></li>
-          <li><a href="/get-involved/">Get Involved</a></li>
+          <!-- TEMPORARY: points at the interest form instead of the real
+               /get-involved/ page — placeholder for a specific presentation
+               (club president can't have the page sit blank), not a
+               permanent change. Revert to <a href="/get-involved/"> once
+               the real page has content again. -->
+          <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSekNHyxHjFhO780Tgh72kdI6hmglggJ9eWfJ20KYRUA1DUtww/viewform" target="_blank" rel="noopener">Get Involved</a></li>
           <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
         </ul>
       </nav>
@@ -689,13 +698,16 @@
         <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br /><br />Join the team.</p>
       </div>
       <div class="square square--red square--content-left">
-        <p class="square__script square__script--sub">Applications open<br />in the spring.</p>
+        <p class="square__script square__script--sub">Applications open soon. Fill out our interest form to stay in the know.</p>
         <!-- Was a bare non-interactive div; now a real <a> so it (a)
              actually leads somewhere and (b) matches a[href] in
              initCustomCursor()'s isClickablePoint(), so hovering it
              triggers the asterisk cursor's clickable state like every
-             other real link/button on the page. -->
-        <a href="/get-involved/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--red diamond-cta--tight">
+             other real link/button on the page. Points at the interest
+             form (external Google Form) now, not /get-involved/ — same
+             target="_blank"/rel="noopener" pattern as the guest-
+             publication CTA's own external form link further down. -->
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSekNHyxHjFhO780Tgh72kdI6hmglggJ9eWfJ20KYRUA1DUtww/viewform" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--red diamond-cta--tight">
           <span class="arrow-glyph">
             <img class="arrow-glyph__default" src="/assets/images/Arrow, beige.png" alt="" />
             <img class="arrow-glyph__hover" src="/assets/images/Arrow, red.png" alt="" />
@@ -923,7 +935,7 @@
                (same not-yet-built pattern as about.html/get-involved.html
                were before they existed). Point this at the real article
                URL once it's built. -->
-          <div class="featured-carousel__slide featured-carousel__slide--first" data-title="Caption title goes here" data-edition="Volume #" data-number="(01)" data-article-url="#">
+          <div class="featured-carousel__slide featured-carousel__slide--first" data-title="Online articles coming soon!" data-edition="Illustration from Volume 2" data-number="(01)" data-article-url="#">
             <img class="featured-carousel__photo" src="/assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="Illustration: The Consumptive's Kiss" />
             <div class="featured-carousel__scrim mosaic-reveal" aria-hidden="true"></div>
             <div class="featured-carousel__masks">
@@ -949,7 +961,7 @@
           </div>
           <!-- TODO(future reference): no real article page yet — see the
                same TODO on the first slide above. -->
-          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(02)" data-article-url="#">
+          <div class="featured-carousel__slide" data-title="Online articles coming soon!" data-edition="Illustration from Volume 2" data-number="(02)" data-article-url="#">
             <img class="featured-carousel__photo" src="/assets/images/carousel/ILLUST The Doctor as Writer.jpg" alt="Illustration: The Doctor as Writer" />
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
             <div class="featured-carousel__hover-tiles">
@@ -965,7 +977,7 @@
           </div>
           <!-- TODO(future reference): no real article page yet — see the
                same TODO on the first slide above. -->
-          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(03)" data-article-url="#">
+          <div class="featured-carousel__slide" data-title="Online articles coming soon!" data-edition="Illustration from Volume 2" data-number="(03)" data-article-url="#">
             <img class="featured-carousel__photo" src="/assets/images/carousel/ILLUST Demystifying the Hispanic Paradox.jpg" alt="Illustration: Demystifying the Hispanic Paradox" />
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
             <div class="featured-carousel__hover-tiles">
@@ -981,7 +993,7 @@
           </div>
           <!-- TODO(future reference): no real article page yet — see the
                same TODO on the first slide above. -->
-          <div class="featured-carousel__slide" data-title="Caption title goes here" data-edition="Volume #" data-number="(04)" data-article-url="#">
+          <div class="featured-carousel__slide" data-title="Online articles coming soon!" data-edition="Illustration from Volume 2" data-number="(04)" data-article-url="#">
             <div class="featured-carousel__photo-placeholder" aria-hidden="true"></div>
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
             <div class="featured-carousel__hover-tiles">
@@ -1012,8 +1024,8 @@
         <!-- Regenerated together with CAROUSEL_SLIDES above, matching
              slide 1 — see that block's own comment. -->
         <!-- CAROUSEL_CAPTION:START -->
-        <a href="#" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">Caption title goes here</a>
-        <a href="/publications/" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">Volume #</a>
+        <a href="#" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">Online articles coming soon!</a>
+        <a href="/publications/" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">Illustration from Volume 2</a>
         <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>
         <!-- CAROUSEL_CAPTION:END -->
         <button type="button" class="featured-carousel__nav featured-carousel__nav--prev mosaic-reveal diamond-cta diamond-cta--fill-on-hover diamond-cta--tight" aria-label="Previous carousel item">
@@ -1253,6 +1265,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=140" defer></script>
+  <script src="/js/main.js?v=148" defer></script>
 </body>
 </html>

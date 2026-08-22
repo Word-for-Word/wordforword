@@ -4126,6 +4126,71 @@ span.split-cta__text-line {
      grid still reserves the cell for both. */
   display: grid;
 }
+/* Click-to-zoom (setZoomed() in main.js) — per explicit request, fills
+   the ENTIRE screen edge-to-edge, not just the same 82vw/74vh window
+   .edition-lightbox__canvas below normally fits within. Deliberately
+   NOT position:fixed on this element to get there: .edition-lightbox
+   __frame (this element's own parent) carries a `transform` for its own
+   scale+opacity entrance (see that rule), and ANY transform value other
+   than none makes an element the containing block for its own
+   position:fixed descendants — confirmed live, a fixed-positioned wrap
+   here actually sized/positioned itself relative to the (92vw-capped)
+   FRAME, not the true viewport, undermining the whole point. Growing
+   this element to a real 100vw/100vh IN NORMAL FLOW instead, with the
+   frame's own max-width raised to match (see .edition-lightbox.is-zoomed
+   .edition-lightbox__frame below) and title/page-count removed from that
+   flow entirely (display:none, same rule) sidesteps the containing-block
+   question altogether — nothing here is fixed-positioned, so no
+   ancestor's transform can retarget it. Close/prev/next stay reachable
+   on top regardless, since they're positioned against .edition-lightbox
+   itself (z-index:2 there), a sibling of .edition-lightbox__frame
+   (z-index:1), not a descendant of it. overscroll-behavior keeps a
+   scroll/drag that hits an edge from chaining through to the page
+   underneath the (already scroll-locked) overlay. touch-action:none
+   hands touch-drag panning entirely to the same JS pointer handlers
+   driving mouse-drag (see onCanvasPointerMove() in main.js) instead of
+   letting the browser's own native touch-scroll ALSO try to claim the
+   same gesture. */
+.edition-lightbox__page-wrap.is-zoomed {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+/* Lets the page-wrap rule above actually reach a full 100vw — this
+   element's own max-width:92vw (see its base rule) would otherwise still
+   clip it, even though the wrap itself isn't position:fixed and so isn't
+   escaping normal flow/clipping the way a fixed element would. Title/
+   page-count hiding moved further down (see the comment there for why
+   it has to come AFTER the fullscreen-mode block specifically). */
+.edition-lightbox.is-zoomed .edition-lightbox__frame {
+  max-width: 100vw;
+}
+/* Subtle contact shadow (not the site's usual soft/wide ambient shadow —
+   this needs to read as a thin dark HALO right at each button's own
+   edge, since it has to keep contrasting against WHATEVER busy part of
+   the zoomed page happens to sit behind it, not just a plain backdrop)
+   per explicit request: close/prev/next can otherwise disappear against
+   a light or cream-heavy region of the page once it fills the whole
+   screen behind them. filter:drop-shadow, not box-shadow — these are
+   rotated 45deg diamonds with real transparent corners outside the
+   diamond itself (see .edition-lightbox__nav/__close's own comments);
+   box-shadow would draw a rectangular shadow around that whole invisible
+   bounding box, while drop-shadow hugs the actual rendered (diamond +
+   arrow/×/corners) alpha shape. Also applies in is-fullscreen, not just
+   is-zoomed — that's the state this matters most for (a full-bleed page
+   behind these buttons is the normal case there, not an occasional one). */
+.edition-lightbox.is-zoomed .edition-lightbox__nav,
+.edition-lightbox.is-zoomed .edition-lightbox__close,
+.edition-lightbox.is-zoomed .edition-lightbox__fullscreen,
+.edition-lightbox.is-fullscreen .edition-lightbox__nav,
+.edition-lightbox.is-fullscreen .edition-lightbox__close,
+.edition-lightbox.is-fullscreen .edition-lightbox__fullscreen {
+  filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.55));
+}
 .edition-lightbox__skeleton,
 .edition-lightbox__canvas {
   grid-column: 1;
@@ -4147,9 +4212,20 @@ span.split-cta__text-line {
   background: var(--color-cream);
   opacity: 0;
   transition: opacity 0.3s ease-out;
+  cursor: zoom-in;
 }
 .edition-lightbox__page-wrap.is-ready .edition-lightbox__canvas {
   opacity: 1;
+}
+/* is-zoomed's own width/height comes from an explicit inline px style
+   (set in main.js, off the canvas's own just-before-zoom fitted size —
+   see setZoomed()'s own comment for why that has to be real width/
+   height, not a transform: scale()) — max-width/max-height:none here is
+   what lets that inline size actually take effect instead of staying
+   clamped back down to this rule's own 82vw/74vh. */
+.edition-lightbox__page-wrap.is-zoomed .edition-lightbox__canvas {
+  max-width: none;
+  max-height: none;
 }
 /* Placeholder shown only until the FIRST page of a freshly-opened
    edition has actually rendered (see initEditionLightbox()'s own
@@ -4218,7 +4294,8 @@ span.split-cta__text-line {
    positioning is relative to the whole viewport-covering box, not the
    frame's own (narrower, page-width) content column. */
 .edition-lightbox__nav,
-.edition-lightbox__close {
+.edition-lightbox__close,
+.edition-lightbox__fullscreen {
   /* Real <button>s, not <a>/<div> like every other existing .diamond-cta
      instance except .featured-carousel__nav — same native-chrome reset
      that one already needed (see its own comment): without this, the
@@ -4242,7 +4319,8 @@ span.split-cta__text-line {
   opacity: 0;
 }
 .edition-lightbox.is-open .edition-lightbox__nav,
-.edition-lightbox.is-open .edition-lightbox__close {
+.edition-lightbox.is-open .edition-lightbox__close,
+.edition-lightbox.is-open .edition-lightbox__fullscreen {
   opacity: 1;
 }
 .edition-lightbox__nav {
@@ -4320,7 +4398,8 @@ span.split-cta__text-line {
    also cream so the diamond reads as one solid filled shape rather than
    a fill peeking out past a differently-colored outline. */
 .edition-lightbox__nav:hover:not(:disabled),
-.edition-lightbox__close:hover {
+.edition-lightbox__close:hover,
+.edition-lightbox__fullscreen:hover {
   background-color: var(--color-cream);
   border-color: var(--color-cream);
 }
@@ -4379,6 +4458,166 @@ span.split-cta__text-line {
 .edition-lightbox__close:hover .edition-lightbox__close-glyph::before,
 .edition-lightbox__close:hover .edition-lightbox__close-glyph::after {
   background-color: var(--color-dark);
+}
+/* Fullscreen toggle — mirrors .edition-lightbox__close's own top-RIGHT
+   inset onto the opposite top-LEFT corner (same --page-margin + 40px +
+   rotation-compensation math, see that rule's own comment for why the
+   extra 7.46px). Icon built the same way the nav arrows already are
+   (mask-image supplies an alpha shape, background-color paints through
+   it — see .edition-lightbox__nav-arrow's own comment) rather than a
+   new PNG asset: an inline SVG data URI needs no separate file and
+   costs nothing extra to add a 2nd (exit) shape alongside it. */
+.edition-lightbox__fullscreen {
+  top: calc(var(--page-margin) + 40px + 7.46px);
+  left: calc(var(--page-margin) + 40px + 7.46px);
+}
+.edition-lightbox__fullscreen-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Counter-rotates the diamond's own 45deg (see .edition-lightbox__nav
+     's shared base rule) so the icon reads upright, same reasoning as
+     .edition-lightbox__nav--prev's own scaleX(-1) counter-flip. */
+  transform: rotate(-45deg);
+  -webkit-mask-size: 60%;
+  mask-size: 60%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background-color: var(--color-cream);
+  transition: background-color 0.2s ease-out;
+}
+/* 4 corner brackets, vertex AT each corner — the universal "expand to
+   fill the screen" shape (same read as a camera viewfinder's own
+   corners). */
+.edition-lightbox__fullscreen-icon--enter {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'/%3E%3C/svg%3E");
+}
+/* Same 4 brackets, each translated 5 units in toward the center — the
+   mirror-image "shrink back down" shape once already fullscreen. */
+.edition-lightbox__fullscreen-icon--exit {
+  display: none;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M9 14V9h5M10 9h5v5M15 10v5h-5M14 15H9v-5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M9 14V9h5M10 9h5v5M15 10v5h-5M14 15H9v-5'/%3E%3C/svg%3E");
+}
+.edition-lightbox.is-fullscreen .edition-lightbox__fullscreen-icon--enter {
+  display: none;
+}
+.edition-lightbox.is-fullscreen .edition-lightbox__fullscreen-icon--exit {
+  display: block;
+}
+/* Same brown switch as the nav arrows/close × — cream-on-cream would
+   otherwise disappear once the diamond itself fills cream on hover. */
+.edition-lightbox__fullscreen:hover .edition-lightbox__fullscreen-icon {
+  background-color: var(--color-dark);
+}
+/* ===================================================================
+   Fullscreen MODE (persists across page turns — unlike is-zoomed, which
+   setZoomed() deliberately resets on every goToPage()/open/close, see
+   its own comments) — per explicit request: each page fills the real
+   screen (requestFullscreen() on THIS element, not just a CSS-only
+   imitation — see the fullscreenBtn click handler in main.js — so the
+   browser's own chrome gets out of the way too, not just our overlay's
+   82vw/74vh window), with the existing close/prev/next/fullscreen-exit
+   controls still reachable ON TOP of it, per explicit request.
+=================================================================== */
+.edition-lightbox.is-fullscreen .edition-lightbox__frame {
+  max-width: 100vw;
+}
+/* Raising the SAME max-width/max-height .edition-lightbox__canvas
+   already fits within (82vw/74vh normally) to a full 100vw/100vh —
+   width:auto/height:auto (that rule's own base values, untouched here)
+   already do all the "shrink to fit, preserve aspect ratio" math as a
+   plain replaced-element contain-fit against whatever max-width/
+   max-height it's given, same as an <img>'s own intrinsic-ratio
+   sizing — no JS measurement needed, and it re-fits itself for free on
+   any window resize since it's live CSS, not a one-time computed px
+   value (contrast setZoomed()'s own inline width/height, which
+   deliberately IS a one-time px snapshot instead, for the different
+   reasons given in that function's own comment). */
+.edition-lightbox.is-fullscreen .edition-lightbox__canvas {
+  max-width: 100vw;
+  max-height: 100vh;
+}
+/* Title/page-count stay VISIBLE in fullscreen (per explicit request:
+   "ui over them," not gone) — but pulled out of the frame's own flex
+   flow into an absolutely-positioned HUD instead of leaving them as
+   flex siblings, which would keep reserving their own height + the
+   flex gap alongside the canvas, eating into the 100vh it just gained
+   above. Centered the same way .edition-lightbox__title/page-count
+   already read (this frame's own align-items:center normally does
+   that job; position:absolute opts back out of it, so it has to be
+   restated by hand here). z-index above the canvas (that element's own
+   stacking context is otherwise unordered relative to this) so the HUD
+   text stays legible over it rather than sitting behind it. */
+.edition-lightbox.is-fullscreen .edition-lightbox__title,
+.edition-lightbox.is-fullscreen .edition-lightbox__page-count {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  margin: 0;
+  /* A portrait page fills the full 100vh with no letterboxing above/
+     below it (only the sides letterbox — see .edition-lightbox__canvas
+     above) confirmed live: this HUD text lands directly on top of
+     whatever the page itself drew at that exact spot, not on a plain
+     backdrop, same "needs to keep contrasting against whatever's behind
+     it" problem the close/nav/fullscreen buttons already have their own
+     drop-shadow for (see that rule's own comment) — same fix, just
+     text-shadow instead of filter:drop-shadow since there's no
+     transparent-cutout diamond shape here to hug. */
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+.edition-lightbox.is-fullscreen .edition-lightbox__title {
+  top: calc(var(--page-margin) + 40px);
+}
+.edition-lightbox.is-fullscreen .edition-lightbox__page-count {
+  bottom: calc(var(--page-margin) + 40px);
+}
+/* Auto-hide (armIdleTimer()/clearIdleTimer() in main.js, fullscreen-only
+   — see that function's own guard) per explicit request: once there's
+   been no cursor activity for a few seconds, the controls AND the title/
+   page-count HUD fade out, reading as "looking at the page itself," not
+   a viewer's chrome sitting permanently on top of it — any pointer
+   movement (or a fresh tap/click) fades them back in. pointer-events:
+   none while faded, not just opacity:0, so an invisible button can't
+   still eat the FIRST click of "move the mouse back" (which would
+   otherwise both reveal the UI and silently activate whatever sat under
+   the cursor, one click doing two unrelated things). Extra specificity
+   from the 3rd class (.is-idle, on top of .edition-lightbox.is-fullscreen
+   already on every other rule here) is what lets this win over the
+   plain .edition-lightbox.is-open opacity:1 rules further up without
+   needing !important. */
+.edition-lightbox.is-fullscreen.is-idle .edition-lightbox__nav,
+.edition-lightbox.is-fullscreen.is-idle .edition-lightbox__close,
+.edition-lightbox.is-fullscreen.is-idle .edition-lightbox__fullscreen,
+.edition-lightbox.is-fullscreen.is-idle .edition-lightbox__title,
+.edition-lightbox.is-fullscreen.is-idle .edition-lightbox__page-count {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease-out;
+}
+/* Click-to-zoom still works WHILE fullscreen (setZoomed() just measures
+   whatever the canvas's own current fitted size happens to be at that
+   moment, fullscreen or not) — but the two states fighting over
+   title/page-count (is-zoomed wants them hidden entirely; the
+   fullscreen HUD rules above want them visible) needs one deliberate
+   winner. Equal specificity either way (2 classes + 1 element each), so
+   it comes down to source order: this rule has to stay AFTER the
+   fullscreen block above, not before, so zooming in temporarily hides
+   the HUD even while already fullscreen, then has it reappear once
+   zoom toggles back off (fullscreen itself never left). Title/
+   page-count go to display:none rather than just opacity:0: this frame
+   is a flex column (gap:14px between each child) — invisible-but-still-
+   in-flow siblings would keep reserving their own height/gap alongside
+   the now-fullscreen wrap, visibly shrinking it and/or pushing it off-
+   center instead of the wrap alone filling the whole frame. */
+.edition-lightbox.is-zoomed .edition-lightbox__title,
+.edition-lightbox.is-zoomed .edition-lightbox__page-count {
+  display: none;
 }
 /* Scroll lock behind the lightbox — same idea as .nav-dim-overlay's own
    dimming, just for page scroll instead of a click-catcher. */
