@@ -6140,6 +6140,118 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .article-teaser-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ===================================================================
+   Applications toast — bottom-right "Applications are open!" banner
+   (initApplicationsToast() in main.js). Built in JS, not hand-written
+   per page, same "generated, not duplicated" reasoning as the edition
+   lightbox above. Animates in once this page's own intro sequence has
+   genuinely finished (the homepage's real hero choreography, or the
+   near-immediate equivalent on every other page — see that function's
+   own comment), self-dismisses after 30s or on its own close button.
+=================================================================== */
+.applications-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  max-width: min(480px, calc(100vw - 48px));
+  padding: 26px 30px;
+  border-radius: 16px;
+  background: var(--color-dark);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  /* Same "slow in" cubic-bezier this site already uses for every other
+     reveal (mosaic-reveal, image-mosaic__caption, etc.) — see those
+     rules' own comments — so this reads as one more piece of the same
+     system, not a one-off animation. Opacity/transform own separate
+     durations (0.5s/0.45s): matches the slight lag a real physical
+     object settling into place would have between "arrived" and
+     "stopped moving," rather than both finishing in perfect lockstep. */
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.applications-toast.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+.applications-toast__text {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(16px, 2.4vw, 19px);
+  color: var(--color-cream);
+  line-height: 1.4;
+}
+.applications-toast__link {
+  color: var(--color-cream);
+  /* Own underline — needed now more than ever: this matches the
+     surrounding sentence's own color (was a distinct red before, per
+     explicit follow-up), so the underline is what actually marks it as
+     clickable rather than a color difference. Same reasoning as the
+     footer links elsewhere on this site, which are plain cream/tan text
+     distinguished the same way. */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.applications-toast__link:hover {
+  color: var(--color-red);
+}
+/* Same crossed-2-bars technique as .edition-lightbox__close-glyph
+   (see that rule's own comment for the full reasoning) — smaller here
+   to match this toast's own more modest scale. */
+.applications-toast__close {
+  flex-shrink: 0;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 6px;
+  margin: -6px;
+  cursor: pointer;
+}
+.applications-toast__close-glyph {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.applications-toast__close-glyph::before,
+.applications-toast__close-glyph::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 2px;
+  background-color: var(--color-cream);
+  transition: background-color 0.2s ease-out;
+}
+.applications-toast__close-glyph::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.applications-toast__close-glyph::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.applications-toast__close:hover .applications-toast__close-glyph::before,
+.applications-toast__close:hover .applications-toast__close-glyph::after {
+  background-color: var(--color-red);
+}
+@media (max-width: 480px) {
+  /* Full-width-minus-margins rather than the fixed 380px cap above —
+     that max-width already accounts for viewport width via calc(), but
+     the RIGHT-anchored positioning alone still reads as awkwardly
+     off-center on a narrow phone screen; centering it as a full-width
+     bar along the bottom matches how this site already treats other
+     small-viewport UI (e.g. .edition-lightbox__frame's own full-width
+     behavior there). */
+  .applications-toast {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .square,
   .image-mosaic__mask,
@@ -6158,7 +6270,8 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-reveal--slide-slow,
   .intro-reveal--drop,
   .mosaic-reveal,
-  .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
+  .mosaic-reveal--slide,
+  .applications-toast { transition: none; opacity: 1; transform: none; }
   .image-mosaic__mask,
   .featured-carousel__mask,
   .quote-block__mask { opacity: 0; }

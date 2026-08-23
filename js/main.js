@@ -126,6 +126,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // the "00" screen lands.
     initSplashScreens();
     initIntroReveal();
+    // Must run AFTER initIntroReveal() — it checks body.intro-finished
+    // synchronously as a first resort (see its own comment), which that
+    // call is what sets, on the (common, every-non-homepage-page) path
+    // where it's set immediately rather than after a timeout.
+    initApplicationsToast();
     initIntroSplashHold();
     initIntroScrollLock();
     // Reads the header's own --intro-delay, which initIntroReveal() just
@@ -789,6 +794,65 @@ function initEditionLightbox() {
       }
     });
   });
+}
+
+// Bottom-right toast, per explicit request: "Applications are open! Click
+// to apply." — animates in once the intro sequence has genuinely finished
+// (the homepage's own elaborate hero choreography, or — on every other
+// page — the near-immediate point initIntroReveal() itself treats as
+// "finished" there, see that function's own early-return for pages with
+// no .intro-reveal elements), not on a fixed timer of its own that could
+// land mid-hero and compete with it for attention. Self-dismisses after
+// TOAST_AUTO_DISMISS_MS, or immediately on the close button — whichever
+// comes first.
+function initApplicationsToast() {
+  const APPLICATIONS_FORM_URL = "https://forms.gle/FvvYMk5uPS1Q1AtG7";
+  const TOAST_AUTO_DISMISS_MS = 30000;
+
+  function show() {
+    const el = document.createElement("div");
+    el.className = "applications-toast";
+    el.setAttribute("role", "status");
+    el.innerHTML = `
+      <p class="applications-toast__text">Applications are open! <a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Apply now.</a></p>
+      <button type="button" class="applications-toast__close" aria-label="Dismiss">
+        <span class="applications-toast__close-glyph"></span>
+      </button>
+    `;
+    document.body.appendChild(el);
+
+    let dismissTimer = null;
+    let dismissed = false;
+    function dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      clearTimeout(dismissTimer);
+      el.classList.remove("is-open");
+      // Removed only after its own exit transition finishes (see
+      // .applications-toast's own opacity/transform transition duration
+      // in style.css) — matches that number; not read from it live since
+      // there's nothing else on this page that needs the two kept in
+      // sync automatically the way, say, setZoomed()'s own CSS-driven
+      // sizing does.
+      setTimeout(() => el.remove(), 400);
+    }
+    el.querySelector(".applications-toast__close").addEventListener("click", dismiss);
+    dismissTimer = setTimeout(dismiss, TOAST_AUTO_DISMISS_MS);
+
+    // Same double-rAF idiom used elsewhere in this file (openLightbox(),
+    // initPageFlashReady()) for the identical problem: adding is-open in
+    // the SAME task that just inserted the element can get coalesced
+    // into one style pass with no committed "before" state to transition
+    // from, silently skipping the fade/slide-in entirely.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add("is-open");
+      });
+    });
+  }
+
+  if (document.body.classList.contains("intro-finished")) show();
+  else document.addEventListener("introfinished", show, { once: true });
 }
 
 function initPublicationsDropdown() {
