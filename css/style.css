@@ -556,19 +556,20 @@ ul { list-style: none; margin: 0; padding: 0; }
    (translateY only, no fade) since these are also just quick slides,
    not fades.
 
-   Known, accepted gap: these delays are still fixed/absolute (2980ms,
-   3180ms below), NOT tied to .intro-splash's own now-conditional slide
-   (see .intro-splash.is-ready-to-slide and initIntroSplashHold() in
-   main.js). On a connection slow enough that the splash actually gets
-   held past ~3180ms, these layers will have already finished their own
-   slide (invisible, stacked behind the still-present splash) by the
-   time it finally clears — the rapidfire brown/grey flash gets skipped
-   entirely and the real page just appears directly. That's a lost
-   decorative flourish, not a broken/blank-page bug, and only on
-   connections slow enough to trigger the hold in the first place —
-   left as-is rather than converting this cascade to also be
-   JS-triggered, which felt like more machinery than a cosmetic-only gap
-   justified. */
+   JS-triggered now (.is-triggered, added by initIntroSplashHold() in
+   main.js), not fixed/absolute CSS delays like this used to be — those
+   old delays (2980ms/3180ms) were guesses tied to .intro-splash's own
+   ONCE-fixed slide-away timing; once that became real-readiness-based
+   instead (.intro-splash.is-ready-to-slide, same function), a
+   connection slow enough to actually trigger the hold left this
+   cascade's own fixed delays already elapsed by the time the splash
+   FINALLY cleared — these layers had already finished sliding,
+   invisible, stacked behind the still-present splash, so the whole
+   rapidfire brown/grey flash silently never appeared at all (reported
+   live on the deployed site). Hooking these off the SAME real moment
+   the splash itself starts sliding — not a fixed guess — is what
+   actually fixes that: no CSS-declared animation at rest, so there's
+   nothing TO have already finished before the real trigger fires. */
 .intro-splash-layer {
   position: fixed;
   inset: 0;
@@ -577,22 +578,22 @@ ul { list-style: none; margin: 0; padding: 0; }
 .intro-splash-layer--brown {
   background: var(--color-dark);
   z-index: 9998;
-  /* Starts once the splash is HALFWAY through its own slide (2480 +
-     0.5*1000 = 2980ms) — sooner than the ~80% convention used
-     elsewhere, so the cascade reads as rapidfire rather than a polite
-     handoff. */
-  animation: intro-splash-slide 0.4s cubic-bezier(0.33, 1, 0.68, 1) 2980ms forwards;
 }
 .intro-splash-layer--grey {
   background: var(--color-grey);
   z-index: 9997;
-  /* Same idea — starts halfway through brown's slide (2980 + 0.5*400 =
-     3180ms). The REST of the intro (see the HTML comment above
-     <header>) starts at 60% (not 80%) through THIS layer's own slide —
-     3180 + 0.6*400 = 3420ms — a little sooner than the ~80% convention
-     used everywhere else, per feedback that the hero felt like it took
-     too long to start after the splash cleared. */
-  animation: intro-splash-slide 0.4s cubic-bezier(0.33, 1, 0.68, 1) 3180ms forwards;
+}
+/* Delay is 0 on both — the "starts halfway through the previous layer's
+   own slide" relationship (500ms into .intro-splash's 1s slide; 200ms
+   into brown's own 0.4s slide) is baked into WHEN main.js adds these
+   classes (via its own setTimeout pair, both anchored to is-ready-to-
+   slide) rather than into a CSS animation-delay, so it stays correct
+   however late that real moment ends up landing. */
+.intro-splash-layer--brown.is-triggered {
+  animation: intro-splash-slide 0.4s cubic-bezier(0.33, 1, 0.68, 1) 0ms forwards;
+}
+.intro-splash-layer--grey.is-triggered {
+  animation: intro-splash-slide 0.4s cubic-bezier(0.33, 1, 0.68, 1) 0ms forwards;
 }
 
 /* Set synchronously in index.html's <head> (the inline script right

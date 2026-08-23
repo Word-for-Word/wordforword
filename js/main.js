@@ -1365,8 +1365,8 @@ function initIntroReveal() {
   // before this so the value is ready here), itself bounded BELOW by a
   // hard constant regardless of how large elapsed gets — see that
   // function's own SPLASH_SCREEN_MIN_HOLD_MS floor: 4 screen transitions
-  // at a guaranteed minimum 400ms real gap each can never finish faster
-  // than 1600ms, no matter how long asset loading took. --intro-delay
+  // at a guaranteed minimum 550ms real gap each can never finish faster
+  // than 2200ms, no matter how long asset loading took. --intro-delay
   // above has no equivalent lower bound (clamps all the way to 0), which
   // is the actual asymmetry: flooring it at splashFinalLandedDelayMs
   // closes that gap using the EXACT same number the splash itself is
@@ -1543,14 +1543,21 @@ function whenIntroAssetsReady() {
 // is no separate "hide time," each screen's hide IS the next one's cut).
 const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
 // Floor on real time between two consecutive screen swaps — see the
-// comment inside initSplashScreens() below for why this exists. 400 (was
-// 220) — screen 01 now plays its own 120ms-delay + 240ms bounce-in (see
-// .intro-splash__asterisk--1.is-cut in style.css), and this floor is
-// what guarantees screen 01 stays on-screen long enough for that full
-// 360ms sequence to actually finish even in the worst-case (every moment
-// clamped) slow-load scenario — 220ms would have let screen 2 cut in
-// mid-bounce.
-const SPLASH_SCREEN_MIN_HOLD_MS = 400;
+// comment inside initSplashScreens() below for why this exists. 550 (was
+// 400, before that 220) — screen 01 plays its own 120ms-delay + 240ms
+// bounce-in (see .intro-splash__asterisk--1.is-cut in style.css), so
+// 400 left only a ~40ms buffer of genuinely settled, non-blank, non-
+// bouncing visible time in the worst-case (every moment clamped)
+// slow-load scenario — just barely enough for the animation to finish,
+// not enough to actually REGISTER as its own screen. Reported live as
+// "screen 01 skipped" on a slow real-world load: nothing in the code
+// was skipping it (screen 01 always cuts in at delay 0, before anything
+// else can), but a ~40ms settled window right after a long blank wait
+// reads as skipped to an actual person even though it technically
+// wasn't. 550 leaves a ~190ms settled window instead — comfortably
+// perceptible — at the cost of the worst-case total sequence stretching
+// from 1.6s to 2.2s, still fast.
+const SPLASH_SCREEN_MIN_HOLD_MS = 550;
 // How long the FINAL "00" screen specifically must stay up once it lands
 // before initIntroSplashHold() is allowed to consider the splash ready to
 // slide away — separate from SPLASH_SCREEN_MIN_HOLD_MS above, which only
@@ -1559,7 +1566,7 @@ const SPLASH_SCREEN_MIN_HOLD_MS = 400;
 // initIntroSplashHold()'s own MIN_VISUAL_MS-elapsed correction clamp to
 // (or below) splashFinalLandedDelayMs, so "ready to slide" can fire in the
 // same instant "00" lands — reported live as "skips past 00 way too
-// quickly." 700ms — longer than the 400ms inter-screen floor since this
+// quickly." 700ms — longer than the 550ms inter-screen floor since this
 // is the one screen a viewer is actually meant to read/register, not just
 // glimpse in passing like 01-04.
 const SPLASH_SCREEN_FINAL_HOLD_MS = 700;
@@ -1778,6 +1785,20 @@ function initIntroSplashHold() {
 
   Promise.all([minVisualTime, readiness]).then(() => {
     splash.classList.add("is-ready-to-slide");
+    // Rapidfire brown/grey cascade underneath (see .intro-splash-layer
+    // in style.css) — triggered off THIS real moment now, not a fixed
+    // guess from page load, which is what let a slow-enough connection
+    // (one that actually triggers this hold) skip the whole cascade
+    // silently: those old fixed delays could already have elapsed
+    // before the splash even started sliding. 500ms/700ms preserve the
+    // exact same relationship the old fixed delays were going for —
+    // half of .intro-splash's own 1s slide, then half of brown's own
+    // 0.4s slide — just anchored to whenever THIS actually fires
+    // instead of assuming it's always ~1930ms after page load.
+    const brownLayer = document.querySelector(".intro-splash-layer--brown");
+    const greyLayer = document.querySelector(".intro-splash-layer--grey");
+    if (brownLayer) setTimeout(() => brownLayer.classList.add("is-triggered"), 500);
+    if (greyLayer) setTimeout(() => greyLayer.classList.add("is-triggered"), 700);
   });
 }
 
