@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=244" />
+  <link rel="stylesheet" href="/css/style.css?v=246" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -1257,8 +1257,23 @@
        DOMContentLoaded (and therefore the whole intro reveal, main
        content included) for however long it takes to arrive — see
        initLuxuryScroll() in main.js for the retry that picks it up once
-       it actually loads. -->
-  <script src="https://unpkg.com/lenis@1/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
+       it actually loads.
+
+       Pinned to an exact version (was "lenis@1", floating to whatever
+       the newest 1.x release happens to be at request time) — confirmed
+       live: 1.3.26 (2026-08-05) added a new default, respectReducedMotion
+       :true, that forces lerp to 1 (i.e. NO smoothing, snap straight to
+       target every frame) on wheel-driven scrolling specifically for
+       visitors with prefers-reduced-motion:reduce on — reported as the
+       custom scroll's own drift suddenly vanishing ("still has custom
+       gravity, but stops abruptly") despite nothing in this codebase
+       changing. That reduced-motion behavior is being kept (it's
+       consistent with how the rest of this site already treats that
+       preference elsewhere — see the @media (prefers-reduced-motion)
+       blocks in style.css), so this pin isn't undoing the fix — it's
+       making sure the NEXT upstream release can't silently change this
+       again without it being a deliberate version bump here. -->
+  <script src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
   <!-- defer: runs after parsing completes but doesn't block on it, and
        — unlike a plain synchronous <script> here — isn't held up
        waiting on the (potentially slow, external) Google Fonts

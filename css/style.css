@@ -6161,8 +6161,9 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   max-width: min(480px, calc(100vw - 48px));
   padding: 26px 30px;
   border-radius: 16px;
-  background: var(--color-dark);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-red);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
   /* Same "slow in" cubic-bezier this site already uses for every other
      reveal (mosaic-reveal, image-mosaic__caption, etc.) — see those
      rules' own comments — so this reads as one more piece of the same
@@ -6182,17 +6183,16 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   margin: 0;
   font-family: var(--font-body);
   font-size: clamp(16px, 2.4vw, 19px);
-  color: var(--color-cream);
+  color: var(--color-dark);
   line-height: 1.4;
 }
 .applications-toast__link {
-  color: var(--color-cream);
-  /* Own underline — needed now more than ever: this matches the
-     surrounding sentence's own color (was a distinct red before, per
-     explicit follow-up), so the underline is what actually marks it as
-     clickable rather than a color difference. Same reasoning as the
-     footer links elsewhere on this site, which are plain cream/tan text
-     distinguished the same way. */
+  color: var(--color-dark);
+  /* Own underline — matches the surrounding sentence's own color, so
+     the underline is what actually marks it as clickable rather than a
+     color difference. Same reasoning as the footer links elsewhere on
+     this site, which are plain cream/tan text distinguished the same
+     way. */
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -6225,7 +6225,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   left: 50%;
   width: 16px;
   height: 2px;
-  background-color: var(--color-cream);
+  background-color: var(--color-dark);
   transition: background-color 0.2s ease-out;
 }
 .applications-toast__close-glyph::before {
