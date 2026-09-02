@@ -95,6 +95,7 @@ window.scrollTo(0, 0);
 
 document.addEventListener("DOMContentLoaded", () => {
   window.scrollTo(0, 0);
+  initViewportFrameSync();
   initPageFlashReady();
   initNavHighlight();
   initLuxuryScroll();
@@ -253,6 +254,30 @@ document.addEventListener("DOMContentLoaded", () => {
 // flash ALONE still covers the real page instantly (see .page-flash's
 // own opacity/visibility in the CSS, deliberately NOT gated on this) —
 // only the animated portions wait.
+// Keeps --real-vh (used by .viewport-frame and its corner patches/speck
+// in style.css, in place of bottom:0) in sync with the ACTUAL visible
+// viewport height, via the visualViewport API — per explicit report,
+// mobile browsers resizing their address bar/toolbar while scrolling was
+// leaving the cream frame's bottom edge visibly lagging/bouncing behind
+// real content for a moment, since a plain `bottom:0` on position:fixed
+// doesn't reliably repaint in sync with that resize on every device
+// (documented mobile rendering quirk). visualViewport specifically fires
+// its own resize/scroll events live DURING that toolbar animation
+// (unlike plain window "resize", which mobile browsers often only fire
+// once it settles), so re-reading its height on those is what actually
+// tracks the transition smoothly instead of jumping at the end of it.
+// Falls back to nothing (CSS's own 100vh fallback takes over) on
+// browsers without visualViewport support.
+function initViewportFrameSync() {
+  if (!window.visualViewport) return;
+  function sync() {
+    document.documentElement.style.setProperty("--real-vh", `${window.visualViewport.height}px`);
+  }
+  sync();
+  window.visualViewport.addEventListener("resize", sync);
+  window.visualViewport.addEventListener("scroll", sync);
+}
+
 function initPageFlashReady() {
   if (!document.documentElement.classList.contains("show-page-flash")) return;
   requestAnimationFrame(() => {
@@ -814,12 +839,38 @@ function initApplicationsToast() {
     el.className = "applications-toast";
     el.setAttribute("role", "status");
     el.innerHTML = `
-      <p class="applications-toast__text">Applications are open! <a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Apply now.</a></p>
-      <button type="button" class="applications-toast__close" aria-label="Dismiss">
-        <span class="applications-toast__close-glyph"></span>
-      </button>
+      <div class="applications-toast__surface">
+        <p class="applications-toast__text">Applications are open! <a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Apply now.</a></p>
+        <button type="button" class="applications-toast__close" aria-label="Dismiss">
+          <span class="applications-toast__close-glyph"></span>
+        </button>
+      </div>
     `;
     document.body.appendChild(el);
+
+    // The toast style: this shell (which shrink-wraps to __surface, see
+    // .applications-toast's own comment in style.css) starts clipped
+    // down to a small SQUARE flush against the right edge, then grows
+    // into its full natural box via clip-path — real MEASURED values,
+    // not guessed numbers, so this holds up regardless of viewport width
+    // or how long the message text ends up being. An earlier version of
+    // this animated __surface's actual `width` instead, which made
+    // __close (positioned via justify-content:space-between) visibly
+    // jump partway through as the growing container crossed the
+    // content's own natural width — clip-path never touches layout, so
+    // el is always rendered at its true final size and there's nothing
+    // for __close to jump to.
+    const naturalWidth = el.offsetWidth;
+    const naturalHeight = el.offsetHeight;
+    const squareSize = naturalHeight;
+    const squareClip = `inset(0 0 0 calc(100% - ${squareSize}px) round 16px)`;
+    const fullClip = "inset(0 round 16px)";
+    // Matches the CSS reduced-motion override on .applications-toast
+    // (transition dropped entirely) — skip straight to the fully-open
+    // clip instead of animating through the square at all, so there's
+    // no motion for this function to accidentally reintroduce.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.style.clipPath = reduceMotion ? fullClip : squareClip;
 
     let dismissTimer = null;
     let dismissed = false;
@@ -828,13 +879,21 @@ function initApplicationsToast() {
       dismissed = true;
       clearTimeout(dismissTimer);
       el.classList.remove("is-open");
-      // Removed only after its own exit transition finishes (see
-      // .applications-toast's own opacity/transform transition duration
-      // in style.css) — matches that number; not read from it live since
-      // there's nothing else on this page that needs the two kept in
-      // sync automatically the way, say, setZoomed()'s own CSS-driven
-      // sizing does.
-      setTimeout(() => el.remove(), 400);
+      // Shrinks back to the exact same square it grew from, in step
+      // with __text/__close fading out (that opacity transition is what
+      // removing is-open above actually drives) — mirrors the entrance
+      // instead of leaving a full-length, empty-looking card sitting
+      // there while only the text fades. Skipped under reduced motion —
+      // el is already at fullClip and was never animated open, so
+      // snapping it down to a square right before removal would just be
+      // a new, unrelated bit of motion this function has no business
+      // introducing there.
+      if (!reduceMotion) el.style.clipPath = squareClip;
+      // Matches .applications-toast's own clip-path transition duration
+      // (0.5s) — not read from it live since there's nothing else on
+      // this page that needs the two kept in sync automatically the
+      // way, say, setZoomed()'s own CSS-driven sizing does.
+      setTimeout(() => el.remove(), 500);
     }
     el.querySelector(".applications-toast__close").addEventListener("click", dismiss);
     dismissTimer = setTimeout(dismiss, TOAST_AUTO_DISMISS_MS);
@@ -843,10 +902,11 @@ function initApplicationsToast() {
     // initPageFlashReady()) for the identical problem: adding is-open in
     // the SAME task that just inserted the element can get coalesced
     // into one style pass with no committed "before" state to transition
-    // from, silently skipping the fade/slide-in entirely.
+    // from, silently skipping the fade/slide-in (now grow-in) entirely.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         el.classList.add("is-open");
+        el.style.clipPath = fullClip;
       });
     });
   }
@@ -856,13 +916,6 @@ function initApplicationsToast() {
 }
 
 function initPublicationsDropdown() {
-  // TEMPORARY: disabled entirely — the dropdown panel itself is already
-  // display:none (see templates/_header.html and the 3 hand-authored
-  // pages' own nav markup, same TEMPORARY comment there), but hovering
-  // still added .nav__dropdown-is-open below, which expands the header
-  // to make room for a panel that's no longer actually showing anything.
-  // Remove this early return once the dropdown itself comes back.
-  return;
   const trigger = document.querySelector(".nav__item--publications");
   const header = document.querySelector(".site-header");
   const hoverZone = document.querySelector(".nav__dropdown-hover-zone");
@@ -1541,23 +1594,24 @@ function whenIntroAssetsReady() {
 // "screen i cuts in" AND "screen i-1 hides" (a deliberate no-gap flash-
 // straight-into-each-other look, per earlier explicit request — there
 // is no separate "hide time," each screen's hide IS the next one's cut).
-const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 720, 1140, 1560, 1980];
-// Floor on real time between two consecutive screen swaps — see the
-// comment inside initSplashScreens() below for why this exists. 550 (was
-// 400, before that 220) — screen 01 plays its own 120ms-delay + 240ms
-// bounce-in (see .intro-splash__asterisk--1.is-cut in style.css), so
-// 400 left only a ~40ms buffer of genuinely settled, non-blank, non-
-// bouncing visible time in the worst-case (every moment clamped)
-// slow-load scenario — just barely enough for the animation to finish,
-// not enough to actually REGISTER as its own screen. Reported live as
-// "screen 01 skipped" on a slow real-world load: nothing in the code
-// was skipping it (screen 01 always cuts in at delay 0, before anything
-// else can), but a ~40ms settled window right after a long blank wait
-// reads as skipped to an actual person even though it technically
-// wasn't. 550 leaves a ~190ms settled window instead — comfortably
-// perceptible — at the cost of the worst-case total sequence stretching
-// from 1.6s to 2.2s, still fast.
-const SPLASH_SCREEN_MIN_HOLD_MS = 550;
+// 01-04 sped up relative to one another per explicit request (450ms each,
+// was ~550-720) — the 04->00 moment (last entry) deliberately keeps its
+// original spacing so "00" itself, the mic-drop beat, doesn't feel rushed.
+const SPLASH_SCREEN_CUT_DELAYS_MS = [0, 450, 900, 1350, 1900];
+// Per-TRANSITION floor on real time between two consecutive screen swaps
+// (indexed by transition, i.e. MIN_HOLD_MS[i-1] gates moment i — see the
+// comment inside initSplashScreens() below for why a floor exists at
+// all). Was a single scalar (550, before that 400, before that 220)
+// applied to every transition alike; now split so 01-04 can speed up
+// without also rushing the 04->00 handoff, which stays at the original
+// 550. All 5 screens play the same 120ms-delay + 240ms bounce-in (see
+// .intro-splash__asterisk--1.is-cut etc. in style.css, 360ms total) —
+// 450 leaves a ~90ms settled buffer after the bounce finishes in the
+// worst-case (every moment clamped) slow-load scenario, comfortably
+// above the ~40ms that was previously reported as reading like a skipped
+// screen (see the old single-550 comment this replaced). The final
+// (04->00) floor is untouched at 550, preserving its old ~190ms buffer.
+const SPLASH_SCREEN_MIN_HOLD_MS = [450, 450, 450, 550];
 // How long the FINAL "00" screen specifically must stay up once it lands
 // before initIntroSplashHold() is allowed to consider the splash ready to
 // slide away — separate from SPLASH_SCREEN_MIN_HOLD_MS above, which only
@@ -1643,12 +1697,14 @@ let splashFinalLandedDelayMs = 0;
 // 00, none of the preceding splashes visible." Per explicit follow-up
 // feedback, the splash must always visibly start on 01 no matter what —
 // higher priority than keeping the sequence's total length constant, so
-// each step is now scheduled at least SPLASH_SCREEN_MIN_HOLD_MS after
-// the previous one ACTUALLY fired (not just after its own ideal
-// moment), guaranteeing a real paintable gap between every swap even in
-// the all-clamped-to-0 case. On a normal-speed load this is a no-op —
-// the natural 420ms gaps between real momentMs values already exceed
-// this floor, so Math.max just keeps the original ideal delay.
+// each step is now scheduled at least that transition's own
+// SPLASH_SCREEN_MIN_HOLD_MS entry after the previous one ACTUALLY fired
+// (not just after its own ideal moment), guaranteeing a real paintable
+// gap between every swap even in the all-clamped-to-0 case. On a
+// normal-speed load this floor is still the actual binding constraint
+// (not a no-op) — SPLASH_SCREEN_CUT_DELAYS_MS's own deltas are set equal
+// to each transition's floor precisely so the two agree, rather than the
+// floor silently overriding a larger intended gap.
 //
 // Trade-off, deliberately accepted: screen 1 no longer appears before
 // DOMContentLoaded (it used to, as pure CSS, independent of JS) — on a
@@ -1678,7 +1734,7 @@ function initSplashScreens() {
     // Never schedule sooner than SPLASH_SCREEN_MIN_HOLD_MS after the
     // PREVIOUS moment's own scheduled (not ideal) delay — guarantees a
     // real gap even when every idealDelay above has collapsed to 0.
-    scheduledDelay = i === 0 ? idealDelay : Math.max(idealDelay, scheduledDelay + SPLASH_SCREEN_MIN_HOLD_MS);
+    scheduledDelay = i === 0 ? idealDelay : Math.max(idealDelay, scheduledDelay + SPLASH_SCREEN_MIN_HOLD_MS[i - 1]);
     if (i === lastMomentIndex) splashFinalLandedDelayMs = scheduledDelay;
     setTimeout(
       () => {
@@ -1930,18 +1986,98 @@ function positionHeroAsterisk() {
   const isCompact = asteriskWrap.classList.contains("hero__wordmark-asterisk-wrap--compact");
   const extraRight = isCompact ? 4 : 0;
   const extraUp = isCompact ? -6 : 0;
-  asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp}px`;
-  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight}px`;
+  // Extra clearance on top of the fixed 34/6 straddle above, scaled to
+  // the "d" glyph's OWN current rendered size rather than another flat
+  // px constant — per explicit request, so the asterisk never visibly
+  // touches the letter no matter how big the word itself renders. A
+  // flat px addition here would just be one more number that happens to
+  // work at today's glyph size and quietly stops working the next time
+  // it changes: confirmed live, bumping the mobile word's font-size in a
+  // separate change (independent clamp() from this wrap's own sizing,
+  // see this file's other notes on that mismatch) was enough on its own
+  // to make the asterisk start clipping into the "d". Tying the buffer
+  // to anchor.offsetHeight/Width instead means it grows and shrinks
+  // right along with the letter, so "slightly further away" keeps
+  // holding at any size, not just the one it was eyeballed against.
+  const clearanceY = anchor.offsetHeight * 0.08;
+  const clearanceX = anchor.offsetWidth * 0.08;
+  asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp - clearanceY}px`;
+  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight + clearanceX}px`;
   asteriskWrap.style.right = "auto";
+}
+
+// Same root problem as positionHeroAsterisk() above (.hero__wordmark-wrap's
+// width and the words' own font-size are independent clamp()s that only
+// stay proportional to each other in a narrow band), applied to the "for"
+// image overlay instead of the asterisk. That overlay used to just be
+// flex-centered in the wrap plus a small fixed-pixel nudge
+// (transform: translate(5px, 7px) in the CSS, still there as a no-JS
+// fallback) — tuned by eye at desktop size. Below that band the nudge
+// itself doesn't shrink with the box, so it reads as an increasingly
+// large downward drift the smaller the viewport gets — confirmed live,
+// reported as the image sitting noticeably too low specifically on
+// phone widths. This measures where "Word"/"Wor d" actually landed and
+// centers the image on the real midpoint between them instead of
+// guessing, so it holds regardless of viewport size, same as the
+// asterisk fix.
+function positionHeroWordmarkFor() {
+  const wrap = document.querySelector(".hero__wordmark-wrap");
+  const word1 = document.querySelector(".hero__wordmark-word--1");
+  const word2 = document.querySelector(".hero__wordmark-word--2");
+  const forWrap = document.querySelector(".hero__wordmark-for-wrap");
+  if (!wrap || !word1 || !word2 || !forWrap) return;
+
+  // Same offsetTop/Left-based approach as positionHeroAsterisk() above —
+  // ignores every transform up the chain (transient scroll-exit ones
+  // included), then adds back only the PERMANENT design nudges
+  // (.hero__wordmark-placeholder's translateY(-10px) and each word's own
+  // translateY) via getTranslateY, a plain read with no risk of
+  // interrupting any live transition. See that function's own comment
+  // for the full reasoning.
+  const placeholder = document.querySelector(".hero__wordmark-placeholder");
+  const placeholderNudge = placeholder ? getTranslateY(placeholder) : 0;
+
+  const word1Bottom =
+    offsetRelativeTo(word1, wrap).top +
+    word1.offsetHeight +
+    placeholderNudge +
+    getTranslateY(word1);
+  const word2Top = offsetRelativeTo(word2, wrap).top + placeholderNudge + getTranslateY(word2);
+
+  // forWrap is flex-centered (align-items: center) over the wrap's FULL
+  // height by default — i.e. naturally sitting at wrapHeight / 2. The
+  // translateY below is just the delta from that natural center to the
+  // real midpoint between the two words, so it composes with (rather
+  // than replaces) the existing centering.
+  const midpoint = (word1Bottom + word2Top) / 2;
+  const translateY = midpoint - wrap.offsetHeight / 2;
+
+  // Horizontal nudge (5px) is left as-is — only the vertical position
+  // was reported as drifting. --squash-base has to be kept in sync with
+  // this same value: it's the base the intro squash-stretch entrance
+  // animation composes with (see @keyframes hero-title-squash-stretch),
+  // and that animation OVERRIDES a plain `transform` for as long as it's
+  // running — a stale --squash-base would make the entrance land on the
+  // old guessed position for a moment before this function's own next
+  // trigger corrected it.
+  const transformValue = `translate(5px, ${translateY.toFixed(1)}px)`;
+  forWrap.style.transform = transformValue;
+  forWrap.style.setProperty("--squash-base", transformValue);
 }
 
 function initHeroAsteriskPosition() {
   const wrap = document.querySelector(".hero__wordmark-wrap");
   const anchor = document.querySelector(".hero__wordmark-d-anchor");
+  const word1 = document.querySelector(".hero__wordmark-word--1");
+  const word2 = document.querySelector(".hero__wordmark-word--2");
   positionHeroAsterisk();
+  positionHeroWordmarkFor();
   // Re-measure once the real web font is actually in — same fallback-vs-
   // real-font reflow reasoning as initNavHighlight()'s placeIndicator.
-  document.fonts.ready.then(positionHeroAsterisk);
+  document.fonts.ready.then(() => {
+    positionHeroAsterisk();
+    positionHeroWordmarkFor();
+  });
   // Both a ResizeObserver AND the window "resize" event — deliberately
   // redundant (positionHeroAsterisk is cheap and idempotent, so firing
   // twice for the same change is harmless). Neither alone covers every
@@ -1958,13 +2094,22 @@ function initHeroAsteriskPosition() {
   // 900px position, since the wrap's own box genuinely never resized.
   // Observing the anchor covers that (its box does change with
   // font-size), and "resize" covers it unconditionally regardless of
-  // which element's box happens to change.
+  // which element's box happens to change. Same reasoning applies to
+  // positionHeroWordmarkFor(), so word1/word2 are observed too — it
+  // depends on both of them independently, not just the anchor inside
+  // word2.
+  const positionAll = () => {
+    positionHeroAsterisk();
+    positionHeroWordmarkFor();
+  };
   if (window.ResizeObserver && wrap) {
-    const ro = new ResizeObserver(positionHeroAsterisk);
+    const ro = new ResizeObserver(positionAll);
     ro.observe(wrap);
     if (anchor) ro.observe(anchor);
+    if (word1) ro.observe(word1);
+    if (word2) ro.observe(word2);
   }
-  window.addEventListener("resize", positionHeroAsterisk);
+  window.addEventListener("resize", positionAll);
 }
 
 // Centers about.html's own text+image hero title group (see .hero__

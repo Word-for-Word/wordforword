@@ -22,12 +22,8 @@
           <ul class="nav__links">
             <li><a href="{{BASE}}">Overview</a></li>
             <li class="nav__item--publications">
-              <!-- TEMPORARY: dropdown + asterisk hidden — Interviews/Essays/
-                   Narratives/Outreach are all still empty and shouldn't be
-                   navigable right now. Remove the two style="display:none;"
-                   below once those pages have real content. -->
-              <a href="{{BASE}}publications/">Publications<span class="nav__link-asterisk" style="display:none;">*</span></a>
-              <div class="nav__dropdown" style="display:none;">
+              <a href="{{BASE}}publications/">Publications<span class="nav__link-asterisk">*</span></a>
+              <div class="nav__dropdown">
                 <a href="{{BASE}}#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
                 <a href="{{BASE}}interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
                 <a href="{{BASE}}essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
@@ -36,12 +32,7 @@
               </div>
             </li>
             <li><a href="{{BASE}}about/">About Us</a></li>
-            <!-- TEMPORARY: points at the interest form instead of the real
-                 /get-involved/ page — placeholder for a specific presentation
-                 (club president can't have the page sit blank), not a
-                 permanent change. Revert to <a href="{{BASE}}get-involved/">
-                 once the real page has content again. -->
-            <li><a href="https://forms.gle/FvvYMk5uPS1Q1AtG7" target="_blank" rel="noopener">Get Involved</a></li>
+            <li><a href="{{BASE}}get-involved/">Get Involved</a></li>
             <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
           </ul>
         </nav>

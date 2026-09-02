@@ -48,7 +48,14 @@
      in between rather than jumping only at breakpoints, and the max end
      pins them back to the original desktop value so nothing above
      720px changes. */
-  --text-body: 22px;
+  /* clamp()'d per explicit request, matching --text-small's own pattern
+     right below — the comment above already documented this as the
+     intent ("checked against 320-430px viewports") but this was left as
+     a flat value. 17px floor holds through small phones (up to ~378px,
+     where 4.5vw crosses it), then grows back to the original 22px by
+     ~489px — bigger phones/phablets read at the same size as desktop;
+     only genuinely narrow screens get the reduction. */
+  --text-body: clamp(17px, 4.5vw, 22px);
   --text-small: clamp(12.5px, 3.2vw, 15px);
   /* The marquee strips' own unique size (see .marquee-banner) — a
      deliberate third value roughly midway between --text-body and the
@@ -121,9 +128,25 @@
 html, body { margin: 0; padding: 0; }
 html {
   background: var(--color-cream);
-  overscroll-behavior-y: none;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* legacy Edge */
+}
+/* overscroll-behavior-y:none (both here and on body below) kills the
+   rubber-band/bounce overshoot at the top/bottom of the page — per
+   explicit request, wanted on DESKTOP only, where it read as fighting
+   Lenis's own smoothed wheel scroll (see initLuxuryScroll() in main.js).
+   Mobile never actually goes through Lenis in the first place — Lenis's
+   smoothTouch defaults to false, so touch scrolling is already 100%
+   native there — meaning this rule was the ONLY thing suppressing the
+   bounce on phones too, not a deliberate mobile choice. (hover: hover),
+   not a max-width breakpoint: this is genuinely about which input the
+   device has, same reasoning as .applications-toast::before's own
+   hover-only reveal elsewhere in this file — a touch tablet at desktop
+   width should still get the native bounce back, same as a phone. */
+@media (hover: hover) {
+  html {
+    overscroll-behavior-y: none;
+  }
 }
 html::-webkit-scrollbar {
   display: none; /* Chrome / Safari */
@@ -154,7 +177,26 @@ body {
   font-weight: 300;
   line-height: 1.4;
   padding: var(--page-margin);
-  overscroll-behavior-y: none;
+}
+/* See html's own (hover: hover)-scoped override above — same reasoning,
+   just the body side of the same property. */
+@media (hover: hover) {
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+/* Per explicit request: body text "the slightest bit thicker" on
+   mobile. Newsreader is a real variable font (weight axis 200-800, see
+   the @font-face comment above), so this isn't limited to jumping to
+   the next named weight (400/Regular, a much bigger jump from 300) —
+   360 is a small step up, already used elsewhere on this site (the
+   intro splash caption) as an established "a bit heavier than the
+   default Light" value, reused here rather than inventing a new
+   one-off number. */
+@media (max-width: 720px) {
+  body {
+    font-weight: 360;
+  }
 }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
@@ -289,7 +331,11 @@ ul { list-style: none; margin: 0; padding: 0; }
   position: relative;
   width: calc(var(--hero-asterisk-size) * 0.65);
   aspect-ratio: 184 / 200;
-  animation: intro-splash-asterisk-jitter-settle 1980ms linear forwards;
+  /* 1900ms matches the final/00 screen's real landing time now that
+     01-04 were sped up (see SPLASH_SCREEN_CUT_DELAYS_MS in main.js,
+     was 1980ms) — keyframe percentages below are unchanged, so the decay
+     tail still lands right as "00" cuts in. */
+  animation: intro-splash-asterisk-jitter-settle 1900ms linear forwards;
 }
 @keyframes intro-splash-asterisk-jitter-settle {
   0%   { transform: translate(0, 0); }
@@ -394,18 +440,22 @@ ul { list-style: none; margin: 0; padding: 0; }
 .intro-splash__caption--final.is-cut {
   opacity: 1;
 }
-/* Screens 01 and 00/final only (02/03/04 keep the plain hard cut above:
-   0 -> 1 opacity, no transition) — per explicit request, these two
-   instead stay blank a split-second longer, then blink in with a quick
-   vertical bounce. animation (not transition) is what makes the "blank
-   pause" possible in the first place — 120ms delay with fill mode
+/* All 5 numbered/final screens share this now (trying out the bounce on
+   02/03/04 too, not just 01 and 00/final) — each stays blank a split-
+   second longer, then blinks in with a quick vertical bounce, instead of
+   the plain hard cut. animation (not transition) is what makes the
+   "blank pause" possible in the first place — 120ms delay with fill mode
    `both` holds the keyframes' 0% state (opacity:0) for that whole
    window before the animation itself starts, where a transition has no
    equivalent concept of a pre-start hold. This wins over the shared
    opacity:1 rule just above for these same selectors regardless of
    source order/specificity — a running (or delayed-but-pending, via
    `backwards` fill) CSS animation always overrides a plain property
-   declaration for the properties it animates. Composes fine with
+   declaration for the properties it animates. Each screen's own visible
+   window (720/420/420/420ms for 1/2/3/4, per SPLASH_SCREEN_CUT_DELAYS_MS
+   in main.js) comfortably outlasts this animation's 360ms total (120ms
+   delay + 240ms run), so the bounce always finishes settling before the
+   next screen cuts in. Composes fine with
    .intro-splash__asterisk-wrap's own continuous jitter-settle animation
    (a DIFFERENT element — the wrapper around all 5 numbered asterisks,
    see that class below) since nested elements' own `transform`s stack
@@ -423,16 +473,36 @@ ul { list-style: none; margin: 0; padding: 0; }
    is its own independent property (composes with `transform` rather than
    overwriting it, applied before it per spec), so animating THAT instead
    leaves the caption's centering transform completely untouched. */
+/* 1-4's own blank pause shortened to 40ms (was 120ms, still shared with
+   00/final below) per explicit request — that delay is the actual
+   "blank space" between transitions here (the bounce itself doesn't
+   start until it elapses), and 4/5 screens paying the longer 120ms
+   pause added up to feel sluggish even after the per-screen hold times
+   themselves got faster. 00/final keeps the original 120ms (see its own
+   rule below) — same "mic drop shouldn't feel rushed" reasoning as
+   SPLASH_SCREEN_MIN_HOLD_MS's own last entry in main.js. 40ms + this
+   animation's 240ms run = 280ms total, still comfortably inside every
+   screen's own 450ms visible window (per SPLASH_SCREEN_CUT_DELAYS_MS in
+   main.js) with room to spare. */
 .intro-splash__asterisk--1.is-cut,
 .intro-splash__caption--1.is-cut,
-/* Screen 00/final gets the same treatment, per explicit follow-up
-   request — reuses the identical animation/timing verbatim rather than
-   a second near-duplicate keyframes block. Nothing else on this screen
-   depends on its own cut-in being instantaneous: the cream->red
-   background crossfade is a separate, JS-driven inline style set in the
-   SAME callback that adds is-cut (see initSplashScreens() in main.js),
-   so it still flips right on schedule regardless of how long this
-   element's own blank-pause-then-bounce takes to visually finish. */
+.intro-splash__asterisk--2.is-cut,
+.intro-splash__caption--2.is-cut,
+.intro-splash__asterisk--3.is-cut,
+.intro-splash__caption--3.is-cut,
+.intro-splash__asterisk--4.is-cut,
+.intro-splash__caption--4.is-cut {
+  animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 40ms both;
+}
+/* Screen 00/final gets the same bounce, per explicit follow-up request —
+   reuses the identical animation/keyframes verbatim, just its own
+   original 120ms delay (not 1-4's shortened one just above) — see that
+   rule's own comment for why. Nothing else on this screen depends on its
+   own cut-in being instantaneous: the cream->red background crossfade is
+   a separate, JS-driven inline style set in the SAME callback that adds
+   is-cut (see initSplashScreens() in main.js), so it still flips right
+   on schedule regardless of how long this element's own blank-pause-
+   then-bounce takes to visually finish. */
 .intro-splash__asterisk--final.is-cut,
 .intro-splash__caption--final.is-cut {
   animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
@@ -1202,7 +1272,23 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   top: calc(var(--nav-height) - 2px);
   left: 0;
   right: 0;
-  bottom: 0;
+  /* height instead of bottom:0 — per explicit report, the frame's own
+     bottom edge visibly lagged/bounced during scroll on mobile,
+     exposing real page content in the gap where the border should be.
+     Root cause: mobile browsers resize the ACTUAL visible viewport as
+     their address bar/toolbar shows and hides while scrolling, but a
+     plain `bottom:0` on position:fixed doesn't reliably repaint in sync
+     with that resize on every device — a well-documented mobile
+     rendering quirk, not a bug in this layout. --real-vh (set by
+     initViewportFrameSync() in main.js, via the visualViewport API,
+     which fires live during exactly this kind of resize) is what
+     actually tracks the CURRENT visible height smoothly; 100vh is a
+     static no-JS/unsupported-browser fallback only, same idiom as this
+     file's other JS-corrected-with-CSS-fallback values (e.g. the hero
+     asterisk's position). Subtracting this element's own top offset is
+     what makes an explicit height equivalent to the bottom:0 it
+     replaces. */
+  height: calc(var(--real-vh, 100vh) - (var(--nav-height) - 2px));
   border-radius: 25px;
   border: var(--page-margin) solid var(--color-cream);
   pointer-events: none;
@@ -1249,16 +1335,25 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    top) to help hide a slightly-short patch, so the same 30px size that
    fully closed the top left a faint sliver visible here — sized up a
    bit on just these two rather than growing all four. */
+/* top instead of bottom:-20px — same --real-vh reasoning as
+   .viewport-frame's own height above: these need to stay locked to
+   THAT element's bottom edge (which they're patching the corner
+   rounding of), so they have to track the exact same live-corrected
+   value or the two drift apart independently during the same mobile
+   toolbar resize that motivated the switch in the first place.
+   top = viewport bottom - 20px reproduces bottom:-20px on a 40px-tall
+   box exactly (bottom edge lands 20px past the real viewport bottom,
+   same as before). */
 .viewport-frame-patch--bottom-left {
   width: 40px;
   height: 40px;
-  bottom: -20px;
+  top: calc(var(--real-vh, 100vh) - 20px);
   left: -20px;
 }
 .viewport-frame-patch--bottom-right {
   width: 40px;
   height: 40px;
-  bottom: -20px;
+  top: calc(var(--real-vh, 100vh) - 20px);
   right: -20px;
 }
 
@@ -1267,7 +1362,10 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    circle patch's own edge ends, extending a bit further in. */
 .viewport-frame-speck {
   position: fixed;
-  bottom: 0;
+  /* Same --real-vh switch as .viewport-frame-patch--bottom-* just
+     above, same reasoning — top = viewport bottom - own height
+     reproduces the original bottom:0. */
+  top: calc(var(--real-vh, 100vh) - var(--page-margin));
   width: 25px;
   height: var(--page-margin);
   background: var(--color-cream);
@@ -1333,7 +1431,20 @@ main {
    eyebrow text by 375px. */
 @media (max-width: 720px) {
   .hero__wordmark-wrap {
-    width: clamp(140px, 45vw, 380px);
+    /* ~20% bigger than the previous clamp(140px, 45vw, 380px) — same
+       1.2x factor applied to both this and .hero__wordmark-word's own
+       mobile clamp below, so the wrap (which .hero__wordmark-for's
+       width:48% sizes off) and the word text grow together as one
+       cluster, keeping their existing proportions. Ceiling (380px)
+       untouched — same shared desktop max as before, so this only
+       affects sizes below that. The asterisk is DELIBERATELY not
+       touched here: --hero-asterisk-size (see :root) is its own
+       viewport-width-based clamp, entirely independent of this wrap's
+       width, so growing the wrap doesn't grow it. Its POSITION still
+       scales with the title regardless, since positionHeroAsterisk() in
+       main.js measures the "d" glyph's real rendered position on every
+       resize rather than assuming a fixed relationship. */
+    width: clamp(168px, 54vw, 380px);
   }
 }
 /* Each word is two nested elements on purpose: the OUTER span (.hero__wordmark-word)
@@ -1371,7 +1482,12 @@ main {
    accommodate new screen sizes." */
 @media (max-width: 720px) {
   .hero__wordmark-word {
-    font-size: clamp(56px, 20vw, 192px);
+    /* Another ~20% bump on top of the previous clamp(70px, 25vw, 192px)
+       — same 1.2x factor as .hero__wordmark-wrap's own clamp just above,
+       so the letters and the wrap (and the "for" image it sizes) keep
+       growing together as one cluster. Ceiling stays 192px, matching
+       desktop's own max. */
+    font-size: clamp(84px, 30vw, 192px);
   }
 }
 .hero__wordmark-word .intro-reveal { display: inline-block; }
@@ -1395,7 +1511,16 @@ main {
   z-index: 1;
   /* Nudge lives here, not on .hero__wordmark-for itself — that img
      carries .intro-reveal--slide-slow, which animates its own
-     transform for the slide-in. */
+     transform for the slide-in.
+
+     translate(5px, 7px) below is a no-JS fallback only, same idea as
+     .hero__wordmark-asterisk-wrap's own top/right fallback (see that
+     rule's comment) — positionHeroWordmarkFor() in main.js measures
+     where the two words actually landed and overrides both this
+     transform and --squash-base with the real midpoint between them,
+     since a fixed guess drifts at viewport widths where the wrap's
+     width and the words' font-size (two independent clamp()s) stop
+     scaling together. It only shows if JS hasn't run yet. */
   transform: translate(5px, 7px);
   /* See .hero__wordmark-word--1's own --squash-base comment. */
   --squash-base: translate(5px, 7px);
@@ -1475,11 +1600,11 @@ main {
      to sit bigger than nav/caption text but isn't part of the 2-size
      body/UI scale either. Sized up from 18px per explicit request. */
   font-size: 20px;
-  /* Back to the site-wide Light (400 -> 300) per explicit request — was
-     previously bumped to Book (400) specifically to read heavier than
-     this default; reverting that override now reads as lighter, as
-     asked. */
-  font-weight: 300;
+  /* No font-weight of its own anymore, per explicit request to match
+     body text's own thickness exactly — this now just inherits body's
+     (300 by default, 360 on mobile, see that rule) rather than carrying
+     a separate hardcoded 300 that would silently drift out of sync the
+     next time body's own weight changes. */
   /* Tighter than body's inherited 1.5 — these are 2 short fragments of
      one thought, not real paragraph copy, so they read better sitting
      close together. 1.2 (tried first) read as too cramped — the two
@@ -1488,6 +1613,21 @@ main {
 }
 .hero__eyebrow--right { text-align: right; margin-left: auto; }
 .hero__eyebrow-line { display: block; }
+/* Mobile-only merged eyebrow block (see @media (max-width: 720px) below
+   for where it's actually shown) — the two desktop blocks flank the
+   wordmark left/right, but their line breaks ("The University of" /
+   "Pennsylvania's only" and "undergraduate medical" / "humanities
+   journal") don't line up with the 3-line breakdown wanted once
+   everything stacks into one column on mobile ("The University of
+   Pennsylvania's" / "only undergraduate" / "medical humanities
+   journal") — the word groupings genuinely don't share span boundaries,
+   so this is separate markup with the SAME full text re-wrapped, not a
+   CSS reflow of the existing spans. Hidden by default (desktop); the
+   two split blocks are hidden instead once the mobile query below takes
+   over. display:none on whichever pair is inactive also means it's
+   removed from the accessibility tree entirely, so nothing gets
+   announced twice. */
+.hero__eyebrow--stacked { display: none; }
 
 /* ===================================================================
    Hero — "compact" variant: a shorter, smaller-scale hero for secondary
@@ -4313,6 +4453,19 @@ span.split-cta__text-line {
   margin-top: 0;
   cursor: pointer;
   border-color: var(--color-cream);
+  /* Difference blend, not the plain cream this used to be alone — per
+     explicit request, so the outline stays visible against ANY page
+     color behind it (a light/cream-heavy PDF page especially, once
+     is-zoomed/is-fullscreen puts the actual page directly behind these,
+     not just the dark blurred backdrop — see the drop-shadow halo just
+     below, which this complements rather than replaces: the halo helps
+     against BUSY/textured content, this handles flat-color content the
+     halo alone can't). Reset to normal on :hover below — once hovered,
+     the diamond fills a SOLID opaque cream with a dark icon (see that
+     rule), which is already self-contained contrast that doesn't depend
+     on whatever's behind it; blending a solid near-white fill would
+     invert it toward invisible against a light page, undoing that. */
+  mix-blend-mode: difference;
   transition: border-color 0.2s ease-out, background-color 0.2s ease-out, opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1);
   /* Own fade-in, synced with the frame's above rather than instant —
      otherwise these pop in ahead of the page itself since they aren't
@@ -4388,10 +4541,17 @@ span.split-cta__text-line {
   -webkit-mask-position: center;
   mask-position: center;
   background-color: var(--color-cream);
+  /* Same difference-blend visibility trick as the diamond outline itself
+     (see .edition-lightbox__nav/__close/__fullscreen's own comment) —
+     the icon needs it independently since it's a separate painted layer,
+     not something the parent's blend-mode carries down automatically.
+     Reset to normal on hover below, matching the parent's own reset. */
+  mix-blend-mode: difference;
   transition: background-color 0.2s ease-out;
 }
 .edition-lightbox__nav:hover:not(:disabled) .edition-lightbox__nav-arrow {
   background-color: var(--color-dark);
+  mix-blend-mode: normal;
 }
 /* Hover: the DIAMOND fills cream, the ICON (arrow/×) switches to brown
    — per explicit follow-up, the reverse pairing of an earlier pass that
@@ -4403,6 +4563,11 @@ span.split-cta__text-line {
 .edition-lightbox__fullscreen:hover {
   background-color: var(--color-cream);
   border-color: var(--color-cream);
+  /* Undoes the resting state's difference blend (see that rule's own
+     comment) — once filled solid cream + a dark icon, this diamond is
+     already opaque and self-contrasting, so blending it would invert the
+     fill toward invisible against a light page instead of helping. */
+  mix-blend-mode: normal;
 }
 /* Same --page-margin + 40px + rotation-compensation as the nav diamonds
    above. */
@@ -4446,6 +4611,9 @@ span.split-cta__text-line {
   width: 16px;
   height: 2px;
   background-color: var(--color-cream);
+  /* Same difference-blend visibility trick as the diamond outline itself
+     (see .edition-lightbox__nav/__close/__fullscreen's own comment). */
+  mix-blend-mode: difference;
   transition: background-color 0.2s ease-out;
 }
 .edition-lightbox__close-glyph::before {
@@ -4459,6 +4627,7 @@ span.split-cta__text-line {
 .edition-lightbox__close:hover .edition-lightbox__close-glyph::before,
 .edition-lightbox__close:hover .edition-lightbox__close-glyph::after {
   background-color: var(--color-dark);
+  mix-blend-mode: normal;
 }
 /* Fullscreen toggle — mirrors .edition-lightbox__close's own top-RIGHT
    inset onto the opposite top-LEFT corner (same --page-margin + 40px +
@@ -4488,6 +4657,9 @@ span.split-cta__text-line {
   -webkit-mask-position: center;
   mask-position: center;
   background-color: var(--color-cream);
+  /* Same difference-blend visibility trick as the diamond outline itself
+     (see .edition-lightbox__nav/__close/__fullscreen's own comment). */
+  mix-blend-mode: difference;
   transition: background-color 0.2s ease-out;
 }
 /* 4 corner brackets, vertex AT each corner — the universal "expand to
@@ -4514,6 +4686,7 @@ span.split-cta__text-line {
    otherwise disappear once the diamond itself fills cream on hover. */
 .edition-lightbox__fullscreen:hover .edition-lightbox__fullscreen-icon {
   background-color: var(--color-dark);
+  mix-blend-mode: normal;
 }
 /* ===================================================================
    Fullscreen MODE (persists across page turns — unlike is-zoomed, which
@@ -5175,12 +5348,38 @@ body.edition-lightbox-open {
      as one neatly stacked block. Packs the rows (title + both eyebrow
      lines) together instead, with just `gap` between them. */
   .hero { grid-template-columns: 1fr; align-content: center; gap: 28px; text-align: center; padding: 48px 32px; }
-  /* DOM order is eyebrow-left, wordmark, eyebrow-right (desktop reads
-     left-to-right across the 3-column grid), so stacking to 1 column
-     without reordering put an eyebrow line ABOVE the title. Per
-     explicit request: title on top, both eyebrow lines stacked neatly
-     below it, in their original left-then-right reading order. */
-  .hero__eyebrow { order: 2; text-align: center; margin: 0 auto; }
+  /* DOM order is eyebrow-left, wordmark, eyebrow-right, stacked (desktop
+     reads left-to-right across the 3-column grid; the merged stacked
+     block sits last, invisible on desktop). Stacking to 1 column without
+     reordering would put a hidden eyebrow-left ahead of the title in
+     source order — moot for layout once it's display:none, but order:2
+     below still puts the one VISIBLE eyebrow (stacked) below the title,
+     per the original explicit request for that reading order. */
+  /* Both split blocks (left AND right — .hero__eyebrow--right included,
+     via the shared .hero__eyebrow class) give way to the single merged
+     .hero__eyebrow--stacked block below once everything's one column;
+     see that class's own comment in the base rules above for why this
+     is separate markup rather than a reflow of the same spans. */
+  .hero__eyebrow { display: none; }
+  /* max-width:none + its own smaller font-size — the base .hero__eyebrow
+     rule's max-width:12em and 20px font-size were both tuned for the
+     desktop split's shorter per-line fragments ("The University of" /
+     "Pennsylvania's only"). This block's own first line, "The
+     University of Pennsylvania's," is the same words but NOT split, so
+     at that size/width it wraps to 2 lines instead of reading as the
+     single line it's meant to — confirmed live, reported as an
+     unwanted mid-sentence break. Dropping the cap and sizing down a bit
+     gives it room to actually fit on one line down to real small-phone
+     widths (~375px) without needing to shrink so far it stops looking
+     like the same eyebrow style used everywhere else. */
+  .hero__eyebrow--stacked {
+    display: block;
+    order: 2;
+    text-align: center;
+    margin: 0 auto;
+    max-width: none;
+    font-size: clamp(14px, 4.4vw, 18px);
+  }
   /* .hero__wordmark-wrap's base rule (way above) hard-codes
      grid-column: 2 for the desktop 3-column layout. .hero only has ONE
      explicit column here, so that stale "2" was creating an IMPLICIT
@@ -5194,7 +5393,6 @@ body.edition-lightbox-open {
      text-align:center (that only centers TEXT/inline content, not a
      block-level grid item's own box within its cell). */
   .hero__wordmark-wrap { order: 1; grid-column: 1; margin: 0 auto; }
-  .hero__eyebrow--right { order: 3; text-align: center; margin: 0 auto; }
   .split-cta { grid-template-columns: 1fr; }
   /* .split-cta__text's 120px left padding is tuned for sitting beside
      .split-cta__deco in the desktop 2-column layout above — once that
@@ -5542,6 +5740,13 @@ body.intro-finished .hero__eyebrow-line {
    nothing left mid-flight for a quick reversal to catch. */
 body.intro-finished .hero__eyebrow-line.is-visible:nth-child(2) {
   transition-delay: 90ms;
+}
+/* .hero__eyebrow--stacked (mobile-only, see its own comment further up)
+   is the only block with a 3rd line — this only ever matches there,
+   same "line by line" reasoning as nth-child(2) above, just one more
+   step down the stagger. */
+body.intro-finished .hero__eyebrow-line.is-visible:nth-child(3) {
+  transition-delay: 180ms;
 }
 body.intro-finished .hero__eyebrow-line:not(.is-visible) {
   /* transition-duration:0 (not the whole shorthand — property list and
@@ -6150,34 +6355,150 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
    near-immediate equivalent on every other page — see that function's
    own comment), self-dismisses after 30s or on its own close button.
 =================================================================== */
+/* Positioning shell only — deliberately carries NO background/border of
+   its own now (see .applications-toast__surface below for the actual
+   visible card). A negative z-index on ::before was tried first and
+   DOESN'T work for "behind THIS element's own background" the way it
+   sounds like it should: per the CSS stacking spec, an element's own
+   background is always painted first/bottom within its own stacking
+   context, BEFORE any child at any z-index, negative included — a
+   negative-z child only ever sinks below OTHER normal-flow content, never
+   below its own parent's background. .publication-card::before achieves
+   the "peeking out from behind" look a different way: THAT parent also
+   carries no background of its own, so its ::before and its real
+   .publication-card__cover sibling are just two plain same-level layers,
+   and the cover (later in source order) naturally paints over the
+   pseudo — no z-index involved at all. Mirroring that structure here
+   (background moved onto a real __surface child, ::before staying on
+   this backgroundless parent) is what actually gets the red rectangle
+   behind the cream card. */
 .applications-toast {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 5000;
+  max-width: min(480px, calc(100vw - 48px));
+  /* The entrance: clip-path reveals this shell (and BOTH its children —
+     __surface, the visible cream card, AND ::before, the red peek behind
+     it — see that rule's own comment for why clipping THIS ancestor
+     specifically is what keeps the two in sync) starting from a small
+     square flush against the right edge, growing to the full box.
+     initApplicationsToast() in main.js measures the real natural
+     width/height, sets the starting square clip, then swaps it for the
+     fully-open clip once .is-open lands.
+
+     Deliberately NOT a `width` transition on __surface (an earlier
+     version of this did that instead): animating actual layout width
+     meant __surface's flex content (justify-content:space-between, see
+     that rule) had genuinely different free space to distribute at
+     every frame, so __close visibly hitched/jumped the moment the
+     growing box crossed the content's own natural width — confirmed
+     live, reported as the close button ending up "too far right,"
+     since that jump landed it past where the padding-respecting
+     space-between position was ever meant to put it. clip-path never
+     touches layout at all: __surface renders at its true final size for
+     the ENTIRE animation, so space-between places __close in its real
+     resting spot (flush against the padding, no extra margin hack
+     needed — see __surface's own comment) from frame one, and only the
+     PAINTED reveal grows. Nothing left to jump.
+
+     No `.is-open { clip-path: ... }` rule here on purpose: main.js sets
+     BOTH the starting square AND the fully-open target directly via
+     inline style (el.style.clipPath), and an inline style always wins
+     over a stylesheet rule regardless of class — a CSS-declared target
+     for .is-open would just be dead weight, never actually able to
+     override JS's own later inline value. This transition declaration
+     is the only thing that needs to live here: it's what makes each of
+     those inline value changes actually animate. */
+  transition: clip-path 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* Same "solid colored rectangle peeking out from behind" trick as
+   .publication-card::before, not a blurred box-shadow — a flat,
+   un-blurred var(--color-red) card sitting directly behind
+   .applications-toast__surface, offset straight down (matching this
+   site's own shadow convention elsewhere: 0 12px 20px / 0 40px 45px,
+   always pure-vertical, never diagonal) so it shows only as a red sliver
+   below the bottom edge. inset:0 sizes it to match .applications-toast's
+   own box exactly, which — since that parent carries no padding/border
+   of its own — shrink-wraps to exactly __surface's own rendered size. */
+.applications-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: var(--color-red);
+  /* 5px, not 10px — on hover this stacks with __surface's own -6px lift
+     (see that rule) for an ~11px total reveal, was reading as too much
+     red per explicit follow-up; halving both trims the peek without
+     losing the effect. Also the resting/mobile-visible sliver size,
+     since __surface never lifts there. */
+  transform: translateY(5px);
+  /* Visible from the start by default (covers touch/mobile, where
+     there's no hover to reveal it on) — the hover-only behavior just
+     below is opt-in for devices that actually have a real pointer, per
+     explicit request. (hover: hover), not a max-width breakpoint: this
+     is genuinely about pointer capability, not screen size — a touch
+     tablet at desktop width still needs the always-on behavior, same as
+     a phone. */
+  opacity: 1;
+  transition: opacity 0.2s ease-out;
+}
+@media (hover: hover) {
+  .applications-toast::before {
+    opacity: 0;
+  }
+  .applications-toast:hover::before {
+    opacity: 1;
+  }
+}
+/* The actual visible card — see .applications-toast's own comment above
+   for why this lives on a separate child rather than the fixed-position
+   shell itself. position:relative + being LATER in source order than
+   ::before (not z-index) is what lands this on top of the red rectangle. */
+.applications-toast__surface {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 20px;
-  max-width: min(480px, calc(100vw - 48px));
-  padding: 26px 30px;
+  /* Vertical padding brought down from 26px per explicit request ("too
+     tall") — horizontal stays at 30px, unrelated to height. The square
+     entrance's starting size (main.js reads this element's own real
+     offsetHeight) shrinks right along with it automatically, no JS
+     change needed there. */
+  padding: 16px 30px;
   border-radius: 16px;
   background: var(--color-cream);
   border: 1.5px solid var(--color-red);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
-  /* Same "slow in" cubic-bezier this site already uses for every other
-     reveal (mosaic-reveal, image-mosaic__caption, etc.) — see those
-     rules' own comments — so this reads as one more piece of the same
-     system, not a one-off animation. Opacity/transform own separate
-     durations (0.5s/0.45s): matches the slight lag a real physical
-     object settling into place would have between "arrived" and
-     "stopped moving," rather than both finishing in perfect lockstep. */
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+  /* space-between, unconditionally (not just at the ≤480px full-width-bar
+     breakpoint): above that breakpoint __surface shrink-wraps to its own
+     content (see .applications-toast's own comment on why), so free
+     space is ~0 and this is a no-op there — text and __close just sit
+     adjacent, same as flex-start would give. At ≤480px this is what
+     actually pins __close to the row's real right end, flush against
+     the padding (30px, same inset the text itself sits at) with no
+     extra margin trick needed — see .applications-toast's own comment
+     for why an earlier margin-right:-30px override existed and why it's
+     gone now: this only works cleanly because __surface's WIDTH never
+     animates (the grow is a clip-path on the ancestor instead, see
+     that rule) — space-between over a constant width has the same free
+     space on every frame, so __close never has to jump partway through
+     the entrance the way it did when the container itself was growing
+     out from under it. */
+  justify-content: space-between;
+  transition: transform 0.2s ease-out;
 }
-.applications-toast.is-open {
-  opacity: 1;
-  transform: translateY(0);
+/* (hover: hover)-scoped per explicit request — un-scoped, this also
+   fired as a lingering :hover on tap on touch devices (most mobile
+   browsers apply :hover briefly, sometimes until the next tap
+   elsewhere), lifting the card and exposing more of ::before's red
+   peek underneath it — read as an unwanted "activated/pressed" state
+   on mobile. Same reasoning/idiom as ::before's own (hover: hover)
+   scoping right above: this is genuinely about pointer capability, not
+   screen size. */
+@media (hover: hover) {
+  .applications-toast__surface:hover {
+    transform: translateY(-6px);
+  }
 }
 .applications-toast__text {
   margin: 0;
@@ -6185,6 +6506,12 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   font-size: clamp(16px, 2.4vw, 19px);
   color: var(--color-dark);
   line-height: 1.4;
+  /* __surface itself always renders at full size now (see
+     .applications-toast's own comment on why the grow is a clip-path,
+     not a real width change) — this isn't load-bearing for the
+     animation anymore, just a plain safeguard against this one-line
+     message ever wrapping awkwardly at an odd viewport width. */
+  white-space: nowrap;
 }
 .applications-toast__link {
   color: var(--color-dark);
@@ -6211,6 +6538,21 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   margin: -6px;
   cursor: pointer;
 }
+/* "text appears at the same time" as __surface's own width grow, per
+   explicit request — same duration/curve as that width transition
+   above so both finish together, not one trailing the other. Shared
+   between __text and __close (not the whole __surface) since the
+   square START state still needs to actually show its cream/red card
+   styling immediately, just with nothing legible inside it yet. */
+.applications-toast__text,
+.applications-toast__close {
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.applications-toast.is-open .applications-toast__text,
+.applications-toast.is-open .applications-toast__close {
+  opacity: 1;
+}
 .applications-toast__close-glyph {
   position: relative;
   display: block;
@@ -6224,7 +6566,8 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   top: 50%;
   left: 50%;
   width: 16px;
-  height: 2px;
+  /* Thinner per explicit request (was 2px). */
+  height: 1.5px;
   background-color: var(--color-dark);
   transition: background-color 0.2s ease-out;
 }
@@ -6271,8 +6614,17 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-reveal--slide-slow,
   .intro-reveal--drop,
   .mosaic-reveal,
-  .mosaic-reveal--slide,
-  .applications-toast { transition: none; opacity: 1; transform: none; }
+  .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
+  /* The square-grow entrance lives on .applications-toast's own
+     clip-path (set inline by initApplicationsToast() in main.js, which
+     checks this SAME media query and skips straight to the fully-open
+     clip with no square-then-grow step when it matches) plus
+     __text/__close's opacity, both neutralized here. __surface's own
+     hover-lift transform transition is untouched — that one was never
+     part of what this media query is meant to silence. */
+  .applications-toast { transition: none; }
+  .applications-toast__text,
+  .applications-toast__close { transition: none; opacity: 1; }
   .image-mosaic__mask,
   .featured-carousel__mask,
   .quote-block__mask { opacity: 0; }

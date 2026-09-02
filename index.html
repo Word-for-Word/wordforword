@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=246" />
+  <link rel="stylesheet" href="/css/style.css?v=266" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -313,12 +313,8 @@
         <ul class="nav__links">
           <li><a href="/">Overview</a></li>
           <li class="nav__item--publications">
-            <!-- TEMPORARY: dropdown + asterisk hidden — Interviews/Essays/
-                 Narratives/Outreach are all still empty and shouldn't be
-                 navigable right now. Remove the two style="display:none;"
-                 below once those pages have real content. -->
-            <a href="/publications/">Publications<span class="nav__link-asterisk" style="display:none;">*</span></a>
-            <div class="nav__dropdown" style="display:none;">
+            <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
+            <div class="nav__dropdown">
               <a href="/#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
               <a href="/interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
               <a href="/essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
@@ -327,12 +323,7 @@
             </div>
           </li>
           <li><a href="/about/">About Us</a></li>
-          <!-- TEMPORARY: points at the interest form instead of the real
-               /get-involved/ page — placeholder for a specific presentation
-               (club president can't have the page sit blank), not a
-               permanent change. Revert to <a href="/get-involved/"> once
-               the real page has content again. -->
-          <li><a href="https://forms.gle/FvvYMk5uPS1Q1AtG7" target="_blank" rel="noopener">Get Involved</a></li>
+          <li><a href="/get-involved/">Get Involved</a></li>
           <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
         </ul>
       </nav>
@@ -464,6 +455,17 @@
     <p class="hero__eyebrow hero__eyebrow--right">
       <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4630ms;">undergraduate medical</span>
       <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4870ms;">humanities journal</span>
+    </p>
+    <!-- Mobile-only merged eyebrow (see .hero__eyebrow--stacked in
+         style.css for why this is separate markup, not a CSS reflow, of
+         the same text as the two blocks above) — hidden on desktop,
+         shown in place of both split blocks once the hero collapses to
+         one column. Same full sentence, re-wrapped into the 3 lines
+         that read best stacked. -->
+    <p class="hero__eyebrow hero__eyebrow--stacked">
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4630ms;">The University of Pennsylvania&rsquo;s</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4870ms;">only undergraduate</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 5110ms;">medical humanities journal</span>
     </p>
   </section>
 
@@ -1280,6 +1282,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=151" defer></script>
+  <script src="/js/main.js?v=158" defer></script>
 </body>
 </html>
