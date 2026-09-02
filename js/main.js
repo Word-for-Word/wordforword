@@ -1980,12 +1980,31 @@ function positionHeroAsterisk() {
   // with anything's timeline). Added back explicitly below. Neither of
   // these transforms is horizontal, so LEFT was never affected by any
   // of this — anchor.offsetWidth/offsetLeft is used as-is.
+  //
+  // The TOP reference is word2's own box, not anchor's — confirmed by
+  // direct measurement that .hero__wordmark-d-anchor (the bare "d" span)
+  // renders a taller box than its parent word (250px vs. word2's own
+  // 192px at one tested size, via both getBoundingClientRect AND this
+  // same offsetTop-based method — not a transform artifact, a genuine
+  // per-element line-box difference for this specific glyph/font
+  // combination), padded evenly above and below. Reading anchorTop from
+  // the inner span put the whole calculation ~29px above where the word
+  // actually renders — confirmed live as the asterisk reading as
+  // floating too far above the letter rather than sitting near it, at
+  // every viewport size (the padding scales with font-size, so it never
+  // showed up as a "some sizes only" bug). word2's own box has no such
+  // inflation (it's what line-height: 1 is actually controlling), so
+  // it's the reliable reference for vertical position. Horizontal still
+  // reads from the "d" span specifically (anchorRight below) — that's
+  // legitimately about the glyph's own right edge, and wasn't affected
+  // by this (word2's right edge ends at the same point regardless).
   const anchorOffset = offsetRelativeTo(anchor, wrap);
   const placeholder = document.querySelector(".hero__wordmark-placeholder");
   const word2 = document.querySelector(".hero__wordmark-word--2");
+  const word2Offset = offsetRelativeTo(word2, wrap);
   const permanentNudgeY =
     (placeholder ? getTranslateY(placeholder) : 0) + (word2 ? getTranslateY(word2) : 0);
-  const anchorTop = anchorOffset.top + permanentNudgeY;
+  const anchorTop = word2Offset.top + permanentNudgeY;
   const anchorRight = anchorOffset.left + anchor.offsetWidth;
 
   // asteriskWrap's own size still needs offsetWidth/Height, not
