@@ -6427,29 +6427,9 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   inset: 0;
   border-radius: 16px;
   background: var(--color-red);
-  /* 5px, not 10px — on hover this stacks with __surface's own -6px lift
-     (see that rule) for an ~11px total reveal, was reading as too much
-     red per explicit follow-up; halving both trims the peek without
-     losing the effect. Also the resting/mobile-visible sliver size,
-     since __surface never lifts there. */
+  /* 5px — the resting sliver size, shown at all times now (no hover
+     reveal). */
   transform: translateY(5px);
-  /* Visible from the start by default (covers touch/mobile, where
-     there's no hover to reveal it on) — the hover-only behavior just
-     below is opt-in for devices that actually have a real pointer, per
-     explicit request. (hover: hover), not a max-width breakpoint: this
-     is genuinely about pointer capability, not screen size — a touch
-     tablet at desktop width still needs the always-on behavior, same as
-     a phone. */
-  opacity: 1;
-  transition: opacity 0.2s ease-out;
-}
-@media (hover: hover) {
-  .applications-toast::before {
-    opacity: 0;
-  }
-  .applications-toast:hover::before {
-    opacity: 1;
-  }
 }
 /* The actual visible card — see .applications-toast's own comment above
    for why this lives on a separate child rather than the fixed-position
@@ -6485,20 +6465,6 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      the entrance the way it did when the container itself was growing
      out from under it. */
   justify-content: space-between;
-  transition: transform 0.2s ease-out;
-}
-/* (hover: hover)-scoped per explicit request — un-scoped, this also
-   fired as a lingering :hover on tap on touch devices (most mobile
-   browsers apply :hover briefly, sometimes until the next tap
-   elsewhere), lifting the card and exposing more of ::before's red
-   peek underneath it — read as an unwanted "activated/pressed" state
-   on mobile. Same reasoning/idiom as ::before's own (hover: hover)
-   scoping right above: this is genuinely about pointer capability, not
-   screen size. */
-@media (hover: hover) {
-  .applications-toast__surface:hover {
-    transform: translateY(-6px);
-  }
 }
 .applications-toast__text {
   margin: 0;
@@ -6619,9 +6585,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      clip-path (set inline by initApplicationsToast() in main.js, which
      checks this SAME media query and skips straight to the fully-open
      clip with no square-then-grow step when it matches) plus
-     __text/__close's opacity, both neutralized here. __surface's own
-     hover-lift transform transition is untouched — that one was never
-     part of what this media query is meant to silence. */
+     __text/__close's opacity, both neutralized here. */
   .applications-toast { transition: none; }
   .applications-toast__text,
   .applications-toast__close { transition: none; opacity: 1; }

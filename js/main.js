@@ -17,6 +17,11 @@
 // contradict what the ongoing check computes moments later.
 const HERO_EXIT_THRESHOLD = 0.6;
 
+// Shared between initApplicationsToast() (the "Apply now" link) and
+// initGetInvolvedLinkSwap() (the nav item itself) so both point at the
+// same form without the URL being hand-copied in two places.
+const APPLICATIONS_FORM_URL = "https://forms.gle/FvvYMk5uPS1Q1AtG7";
+
 // Only ever true when index.html's own inline <head> script (right after
 // __pageLoadStart) found the one-shot sessionStorage flag set — meaning
 // this navigation came from clicking the "Overview" nav link (see
@@ -101,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLuxuryScroll();
   initHeroAsteriskPosition();
   initAboutHeroTitlePosition();
+  initGetInvolvedLinkSwap();
   // Gated on whenIntroAssetsReady() — see that function's own comment.
   // Previously this whole block ran unconditionally on DOMContentLoaded,
   // which fires once parsing is done regardless of whether the splash's
@@ -831,7 +837,6 @@ function initEditionLightbox() {
 // TOAST_AUTO_DISMISS_MS, or immediately on the close button — whichever
 // comes first.
 function initApplicationsToast() {
-  const APPLICATIONS_FORM_URL = "https://forms.gle/FvvYMk5uPS1Q1AtG7";
   const TOAST_AUTO_DISMISS_MS = 30000;
 
   function show() {
@@ -913,6 +918,29 @@ function initApplicationsToast() {
 
   if (document.body.classList.contains("intro-finished")) show();
   else document.addEventListener("introfinished", show, { once: true });
+}
+
+// Only on the real public domain: sends the nav's own "Get Involved" item
+// straight to the applications form instead of the /get-involved/ page
+// itself — that page is still a genuine work in progress, so visitors
+// landing on pennwordforword.org shouldn't be able to reach it from the
+// nav while it's unfinished. Everywhere else (localhost during
+// development, the trycloudflare.com tunnel used for real-device
+// testing, a future staging domain) keeps the plain in-site link, since
+// those are for building/reviewing the page, not for the public to land
+// on. Matched by href rather than by class/id — the link is hand-authored
+// per page (index.html, about/index.html, get-involved/index.html) AND
+// generated from templates/_header.html for the article/category pages,
+// so this one selector covers all of them without needing a shared class
+// added to each.
+function initGetInvolvedLinkSwap() {
+  const isPublicSite = /(^|\.)pennwordforword\.org$/.test(location.hostname);
+  if (!isPublicSite) return;
+  document.querySelectorAll('a[href$="get-involved/"]').forEach((a) => {
+    a.href = APPLICATIONS_FORM_URL;
+    a.target = "_blank";
+    a.rel = "noopener";
+  });
 }
 
 function initPublicationsDropdown() {
@@ -1968,13 +1996,41 @@ function positionHeroAsterisk() {
   const asteriskWidth = asteriskWrap.offsetWidth;
   const asteriskHeight = asteriskWrap.offsetHeight;
 
-  // Centers the asterisk box ON the "d"'s top-right corner point (not
-  // flush against it) — reads as the asterisk straddling the corner,
-  // matching how it originally sat when the two clamp()s above happened
-  // to briefly agree. Right-nudge bumped repeatedly per explicit
-  // follow-up feedback: +2 -> +4 -> +5 -> +6. Down-nudge bumped
-  // repeatedly per explicit follow-up feedback: +5 -> +20 -> +35 -> +34
-  // (1px up).
+  // Straddles the "d"'s top-right corner: the asterisk's BOTTOM edge (its
+  // inner edge, the one nearest the letter) is pinned a fixed STRADDLE_Y
+  // below the glyph's own top edge, and the box then grows/shrinks
+  // upward from that fixed edge as --hero-asterisk-size's own clamp
+  // changes its rendered size — see initHeroAsteriskPosition()'s
+  // ResizeObserver, which re-runs this on exactly that kind of resize.
+  //
+  // This used to instead center the box on a fixed point (anchorTop + a
+  // down-nudge) and let it grow symmetrically around that center. That
+  // meant a BIGGER asterisk always sat deeper into the letter than a
+  // smaller one, even at a viewport width where the glyph itself wasn't
+  // changing size at all: confirmed by direct measurement across
+  // 700-3200px viewports (Playwright, real rendered layout, intro
+  // splash skipped) — the vertical overlap between the asterisk box and
+  // the glyph's own box grew from ~30px to ~41px purely from
+  // --hero-asterisk-size's clamp(28.6px, 2.86vw, 49.4px) growing, over a
+  // range where the glyph's own clamp(104px, 14.85vw, 192px) had
+  // already hit its ceiling and stopped growing entirely — i.e. the
+  // asterisk visibly crept further up into the letter on wide/"long"
+  // screens even though the letter itself was no longer changing size.
+  // Anchoring the inner edge instead of the center removes asteriskHeight
+  // from the overlap equation completely: whatever size the box renders
+  // at, its bottom edge — the only edge that can ever actually reach the
+  // letter — sits at the exact same spot relative to the glyph, so the
+  // overlap can't grow no matter how big either element renders.
+  //
+  // Horizontal positioning (left, below) keeps the ORIGINAL fixed-point-
+  // plus-clearance approach — only the vertical "moves too far up as it
+  // grows" symptom was ever reported, and same-axis reasoning doesn't
+  // carry over: the glyph's own width (used for clearanceX) and the
+  // asterisk's own width both still move together closely enough in
+  // practice that this wasn't observed to drift the same way.
+  const STRADDLE_Y = 30;
+  // Right-nudge bumped repeatedly per explicit follow-up feedback:
+  // +2 -> +4 -> +5 -> +6.
   //
   // The reusable --compact hero (see its own comment in style.css —
   // publications.html today, about.html/get-involved.html potentially
@@ -1986,22 +2042,14 @@ function positionHeroAsterisk() {
   const isCompact = asteriskWrap.classList.contains("hero__wordmark-asterisk-wrap--compact");
   const extraRight = isCompact ? 4 : 0;
   const extraUp = isCompact ? -6 : 0;
-  // Extra clearance on top of the fixed 34/6 straddle above, scaled to
-  // the "d" glyph's OWN current rendered size rather than another flat
-  // px constant — per explicit request, so the asterisk never visibly
-  // touches the letter no matter how big the word itself renders. A
-  // flat px addition here would just be one more number that happens to
-  // work at today's glyph size and quietly stops working the next time
-  // it changes: confirmed live, bumping the mobile word's font-size in a
-  // separate change (independent clamp() from this wrap's own sizing,
-  // see this file's other notes on that mismatch) was enough on its own
-  // to make the asterisk start clipping into the "d". Tying the buffer
-  // to anchor.offsetHeight/Width instead means it grows and shrinks
-  // right along with the letter, so "slightly further away" keeps
-  // holding at any size, not just the one it was eyeballed against.
-  const clearanceY = anchor.offsetHeight * 0.08;
+  // Extra clearance scaled to the "d" glyph's OWN current rendered
+  // width rather than a flat px constant — per explicit request, so the
+  // asterisk never visibly touches the letter no matter how big the
+  // word itself renders horizontally. Tying the buffer to
+  // anchor.offsetWidth means it grows and shrinks right along with the
+  // letter, so "slightly further away" keeps holding at any glyph size.
   const clearanceX = anchor.offsetWidth * 0.08;
-  asteriskWrap.style.top = `${anchorTop - asteriskHeight / 2 + 34 - extraUp - clearanceY}px`;
+  asteriskWrap.style.top = `${anchorTop + STRADDLE_Y - extraUp - asteriskHeight}px`;
   asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight + clearanceX}px`;
   asteriskWrap.style.right = "auto";
 }
