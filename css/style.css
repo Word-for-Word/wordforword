@@ -6388,14 +6388,26 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   bottom: 24px;
   z-index: 5000;
   max-width: min(480px, calc(100vw - 48px));
-  /* The entrance: clip-path reveals this shell (and BOTH its children —
-     __surface, the visible cream card, AND ::before, the red peek behind
-     it — see that rule's own comment for why clipping THIS ancestor
-     specifically is what keeps the two in sync) starting from a small
-     square flush against the right edge, growing to the full box.
-     initApplicationsToast() in main.js measures the real natural
-     width/height, sets the starting square clip, then swaps it for the
-     fully-open clip once .is-open lands.
+  /* The entrance: scales this shell up from near-nothing to full size,
+     anchored at the same bottom-right corner it's already positioned at
+     (transform-origin below) — reads as the whole card, __surface's
+     cream fill AND its red border AND ::before's red peek behind it,
+     genuinely growing outward from that corner, since transform scales
+     everything painted for this element (pseudo-elements included) as
+     one unit.
+
+     This used to be a clip-path reveal instead (a fixed-size square
+     window sliding open over an already-full-size card) — technically
+     avoided the `width`-transition flex jank below, but per explicit
+     follow-up feedback read as "not actually growing, more like it's
+     being revealed": clip-path never resizes what's painted, just masks
+     more of it into view, so a border painted at its full final
+     thickness from frame one looks abruptly cut off along whichever
+     edge the clip hasn't reached yet, rather than extending the way a
+     genuinely growing border would. Scale doesn't have that problem —
+     the border shrinks down proportionally with the rest of the card at
+     small scale and grows back in step with everything else, which is
+     what "growing" actually looks like.
 
      Deliberately NOT a `width` transition on __surface (an earlier
      version of this did that instead): animating actual layout width
@@ -6405,22 +6417,18 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      growing box crossed the content's own natural width — confirmed
      live, reported as the close button ending up "too far right,"
      since that jump landed it past where the padding-respecting
-     space-between position was ever meant to put it. clip-path never
-     touches layout at all: __surface renders at its true final size for
-     the ENTIRE animation, so space-between places __close in its real
-     resting spot (flush against the padding, no extra margin hack
-     needed — see __surface's own comment) from frame one, and only the
-     PAINTED reveal grows. Nothing left to jump.
-
-     No `.is-open { clip-path: ... }` rule here on purpose: main.js sets
-     BOTH the starting square AND the fully-open target directly via
-     inline style (el.style.clipPath), and an inline style always wins
-     over a stylesheet rule regardless of class — a CSS-declared target
-     for .is-open would just be dead weight, never actually able to
-     override JS's own later inline value. This transition declaration
-     is the only thing that needs to live here: it's what makes each of
-     those inline value changes actually animate. */
-  transition: clip-path 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+     space-between position was ever meant to put it. transform, like
+     clip-path before it, never touches layout at all: __surface renders
+     at its true final size for the entire animation, so space-between
+     places __close in its real resting spot from frame one — only the
+     PAINTED result is scaled down, nothing about the layout itself
+     changes, so there's nothing left to jump. */
+  transform-origin: bottom right;
+  transform: scale(0.15);
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.applications-toast.is-open {
+  transform: scale(1);
 }
 /* Same "solid colored rectangle peeking out from behind" trick as
    .publication-card::before, not a blurred box-shadow — a flat,
@@ -6591,12 +6599,14 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-reveal--drop,
   .mosaic-reveal,
   .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
-  /* The square-grow entrance lives on .applications-toast's own
-     clip-path (set inline by initApplicationsToast() in main.js, which
-     checks this SAME media query and skips straight to the fully-open
-     clip with no square-then-grow step when it matches) plus
-     __text/__close's opacity, both neutralized here. */
-  .applications-toast { transition: none; }
+  /* The grow entrance lives on .applications-toast's own transform (see
+     that rule's own comment) plus __text/__close's opacity, both
+     neutralized here. transform: scale(1) on the base (non-.is-open)
+     rule too, not just transition: none — otherwise the element would
+     still render at its small resting scale(0.15) for the brief moment
+     between insertion and initApplicationsToast() adding .is-open,
+     visible as a flash even with the transition itself instant. */
+  .applications-toast { transition: none; transform: scale(1); }
   .applications-toast__text,
   .applications-toast__close { transition: none; opacity: 1; }
   .image-mosaic__mask,

@@ -855,29 +855,14 @@ function initApplicationsToast() {
     `;
     document.body.appendChild(el);
 
-    // The toast style: this shell (which shrink-wraps to __surface, see
-    // .applications-toast's own comment in style.css) starts clipped
-    // down to a small SQUARE flush against the right edge, then grows
-    // into its full natural box via clip-path — real MEASURED values,
-    // not guessed numbers, so this holds up regardless of viewport width
-    // or how long the message text ends up being. An earlier version of
-    // this animated __surface's actual `width` instead, which made
-    // __close (positioned via justify-content:space-between) visibly
-    // jump partway through as the growing container crossed the
-    // content's own natural width — clip-path never touches layout, so
-    // el is always rendered at its true final size and there's nothing
-    // for __close to jump to.
-    const naturalWidth = el.offsetWidth;
-    const naturalHeight = el.offsetHeight;
-    const squareSize = naturalHeight;
-    const squareClip = `inset(0 0 0 calc(100% - ${squareSize}px) round 16px)`;
-    const fullClip = "inset(0 round 16px)";
-    // Matches the CSS reduced-motion override on .applications-toast
-    // (transition dropped entirely) — skip straight to the fully-open
-    // clip instead of animating through the square at all, so there's
-    // no motion for this function to accidentally reintroduce.
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.style.clipPath = reduceMotion ? fullClip : squareClip;
+    // The grow entrance itself (small scale -> scale(1), anchored at the
+    // bottom-right corner) is plain CSS on .applications-toast/.is-open
+    // — see that rule's own comment. Nothing to measure or set inline
+    // here: unlike the clip-path version this replaced, a transform
+    // scale needs no real pixel dimensions to animate between, and
+    // reduced-motion is handled the same way as everything else on this
+    // page, by that CSS's own prefers-reduced-motion override dropping
+    // the transition entirely.
 
     let dismissTimer = null;
     let dismissed = false;
@@ -885,18 +870,13 @@ function initApplicationsToast() {
       if (dismissed) return;
       dismissed = true;
       clearTimeout(dismissTimer);
+      // Shrinks back to the exact same scale it grew from (plain CSS,
+      // see .applications-toast's own comment), in step with
+      // __text/__close fading out — same opacity transition that
+      // removing is-open drives — instead of leaving a full-size,
+      // empty-looking card sitting there while only the text fades.
       el.classList.remove("is-open");
-      // Shrinks back to the exact same square it grew from, in step
-      // with __text/__close fading out (that opacity transition is what
-      // removing is-open above actually drives) — mirrors the entrance
-      // instead of leaving a full-length, empty-looking card sitting
-      // there while only the text fades. Skipped under reduced motion —
-      // el is already at fullClip and was never animated open, so
-      // snapping it down to a square right before removal would just be
-      // a new, unrelated bit of motion this function has no business
-      // introducing there.
-      if (!reduceMotion) el.style.clipPath = squareClip;
-      // Matches .applications-toast's own clip-path transition duration
+      // Matches .applications-toast's own transform transition duration
       // (0.5s) — not read from it live since there's nothing else on
       // this page that needs the two kept in sync automatically the
       // way, say, setZoomed()'s own CSS-driven sizing does.
@@ -913,7 +893,6 @@ function initApplicationsToast() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         el.classList.add("is-open");
-        el.style.clipPath = fullClip;
       });
     });
   }
@@ -2853,6 +2832,29 @@ function initHeroEyebrowExit() {
   // below), not here — before that point the asterisk isn't being
   // toggled at all yet, so there's no real "previous" state to track.
   let asteriskWasVisible = false;
+  // Guards against a real reported bug: the respin plays once correctly,
+  // then plays AGAIN on its own about a second later. Root cause,
+  // confirmed by directly tracing every classList call through a real
+  // Lenis-driven scroll: outFraction (and so `visible`) can cross the
+  // exact HERO_EXIT_THRESHOLD line more than once in quick succession —
+  // Lenis's own easing settles asymptotically rather than landing
+  // exactly on a final value in one step, so a scroll gesture that ends
+  // very close to the threshold can leave it oscillating a few pixels
+  // either side of the line for a brief tail as it settles (confirmed
+  // separately: forcing rapid crossings back and forth reproduces
+  // repeated respins on demand). asteriskWasVisible alone only catches
+  // "did the LAST frame agree with this one" — it has no memory of a
+  // respin that already just fired, so a crossing back over the line
+  // moments later still reads as a brand new hidden->visible transition
+  // and fires again. Tracking the last trigger's own timestamp instead
+  // and requiring the full respin cycle (1.15s delay + 1.1s animation,
+  // see .is-respinning in style.css) to have actually finished first
+  // closes that gap without weakening the real, intentional feature this
+  // system provides: a genuine re-entry seconds later (the actual "2nd/
+  // 3rd/etc." case initHeroEyebrowExit() is built to support) still gets
+  // its own fresh respin, since by then the previous cycle is long done.
+  const RESPIN_COOLDOWN_MS = 2250;
+  let lastRespinTriggerTime = -Infinity;
 
   // Tracks whether the hero was ever scrolled out of view BEFORE the
   // intro sequence's own ~6.65s timeline finishes — a real scenario,
@@ -2905,7 +2907,13 @@ function initHeroEyebrowExit() {
     }
     if (asterisk && scrollLinkedReady) {
       asterisk.classList.toggle("is-visible", visible);
-      if (visible && !asteriskWasVisible && !reduceMotion) {
+      if (
+        visible &&
+        !asteriskWasVisible &&
+        !reduceMotion &&
+        performance.now() - lastRespinTriggerTime > RESPIN_COOLDOWN_MS
+      ) {
+        lastRespinTriggerTime = performance.now();
         asterisk.classList.remove("is-respinning");
         void asterisk.offsetWidth;
         asterisk.classList.add("is-respinning");
@@ -2955,7 +2963,11 @@ function initHeroEyebrowExit() {
           // Genuinely a hidden->visible transition (scrolled away and
           // back before intro finished) — give it the same reveal+respin
           // treatment as every other re-entry, instead of silently
-          // snapping straight to visible.
+          // snapping straight to visible. Same cooldown bookkeeping as
+          // check()'s own trigger (see RESPIN_COOLDOWN_MS's comment) —
+          // this is the other of the two places that can start a respin,
+          // so it needs to update the same clock check() reads.
+          lastRespinTriggerTime = performance.now();
           asterisk.classList.remove("is-respinning");
           asterisk.classList.add("is-visible");
           void asterisk.offsetWidth;
