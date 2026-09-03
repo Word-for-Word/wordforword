@@ -827,8 +827,10 @@ function initEditionLightbox() {
   });
 }
 
-// Bottom-right toast, per explicit request: "Applications are open! Click
-// to apply." — animates in once the intro sequence has genuinely finished
+// Bottom-right toast, per explicit request: "Applications are now open."
+// (the whole sentence itself the click target, since there's no separate
+// "Apply now" call-to-action phrase left to carry it) — animates in once
+// the intro sequence has genuinely finished
 // (the homepage's own elaborate hero choreography, or — on every other
 // page — the near-immediate point initIntroReveal() itself treats as
 // "finished" there, see that function's own early-return for pages with
@@ -845,7 +847,7 @@ function initApplicationsToast() {
     el.setAttribute("role", "status");
     el.innerHTML = `
       <div class="applications-toast__surface">
-        <p class="applications-toast__text">Applications are open! <a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Apply now.</a></p>
+        <p class="applications-toast__text"><a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Applications are now open.</a></p>
         <button type="button" class="applications-toast__close" aria-label="Dismiss">
           <span class="applications-toast__close-glyph"></span>
         </button>

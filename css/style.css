@@ -86,12 +86,22 @@
      Playwright, not just estimated from font metrics. */
   --nav-height-expanded: 312px;
 
-  /* Shared by the hero asterisk (13% of .hero__wordmark-wrap's own
-     clamp(220px,22vw,380px)) and the intro splash's cream asterisk —
-     computed out to a fixed clamp so both are guaranteed the exact
-     same size rather than two independently-derived percentages that
-     could drift apart. */
-  --hero-asterisk-size: clamp(28.6px, 2.86vw, 49.4px);
+  /* Shared by the hero asterisk and the intro splash's cream asterisk —
+     computed out to a fixed clamp so both are guaranteed the exact same
+     size rather than two independently-derived percentages that could
+     drift apart.
+
+     Floor/ceiling narrowed (was 28.6px/49.4px, a straight 13% of
+     .hero__wordmark-wrap's own clamp(220px,22vw,380px)) per explicit
+     follow-up feedback — the asterisk read as noticeably oversized on a
+     very wide/tall monitor and undersized on a narrow one; the SIZE
+     change across viewports is wanted, just not that extreme at either
+     end. Same 2.86vw slope as before (so it still scales at the exact
+     same rate in the middle of the range), just clamped off sooner at
+     both ends: floor now hits at ~1154px viewport width (was 1000px),
+     ceiling at ~1538px (was 1727px), instead of continuing to shrink/
+     grow all the way out to those far edges. */
+  --hero-asterisk-size: clamp(33px, 2.86vw, 44px);
 }
 
 /* Newsreader (swapped in for a previously self-hosted font whose
