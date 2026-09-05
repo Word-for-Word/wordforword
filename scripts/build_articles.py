@@ -14,6 +14,7 @@ Run from the repo root:
 """
 
 import html
+import json
 import re
 import sys
 from datetime import datetime
@@ -165,7 +166,7 @@ def build_partial(name, base, js_version):
     return fill(load_template(name), {"BASE": base, "JS_VERSION": js_version})
 
 
-def build_article(md_path, css_version, js_version):
+def build_article(md_path, css_version, js_version, base_url):
     filename = md_path.name
     text = md_path.read_text(encoding="utf-8")
     fields, body = parse_frontmatter(text, filename)
@@ -185,6 +186,49 @@ def build_article(md_path, css_version, js_version):
             f'        <p class="article-page__illustration-caption">{html.escape(fields["illustration_caption"])}</p>'
         )
 
+    # Falls back to a generic line rather than shipping an empty meta
+    # description/og:description when a contributor leaves "summary"
+    # blank in the CMS — an empty tag is worse than a generic one, since
+    # some crawlers then fall back to guessing a snippet from whatever
+    # body text happens to render first.
+    description = fields.get("summary", "").strip() or (
+        f'{fields["title"]} — published in Word for Word, the University '
+        "of Pennsylvania's undergraduate medical humanities journal."
+    )
+    canonical_url = f"{base_url}/articles/{slug}.html"
+    og_image_url = base_url + "/" + fields["illustration"]
+
+    # Built and serialized here (not via {{...}} placeholders like the
+    # rest of this template's values) specifically so it goes through
+    # JSON's own escaping rules (json.dumps), not fill()'s html.escape —
+    # a raw ' or " inside e.g. an article's summary is exactly the kind
+    # of thing a real submission will contain, and HTML-escaping it would
+    # embed literal "&#x27;"/"&quot;" text INSIDE the JSON string values
+    # here (a <script type="application/ld+json"> block is parsed as
+    # plain JSON, not HTML, so those entities are never decoded back) —
+    # confirmed live: Google's own rich-results output showed those raw
+    # entity sequences verbatim in place of the real punctuation.
+    # datePublished is only included when a real date exists — an
+    # inaccurate one (e.g. today's build date) would be worse for a
+    # reader/crawler than simply omitting it, and REQUIRED_FIELDS doesn't
+    # mandate date.
+    article_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": fields["title"],
+        "author": {"@type": "Person", "name": fields["author"]},
+        "publisher": {"@type": "Organization", "name": "Word for Word"},
+        "image": og_image_url,
+        "description": description,
+        "mainEntityOfPage": canonical_url,
+        **({"datePublished": date.strftime("%Y-%m-%d")} if date else {}),
+        "isPartOf": {"@type": "Periodical", "name": "Word for Word"},
+    }
+    # </script> inside a JSON string value would otherwise prematurely
+    # close the real <script> tag this gets embedded in — json.dumps has
+    # no built-in HTML-safe mode, so this is the standard manual guard.
+    article_json_ld_str = json.dumps(article_json_ld, indent=2, ensure_ascii=False).replace("</", "<\\/")
+
     values = {
         "TITLE": html.escape(fields["title"]),
         "CATEGORY_UPPER": fields["category"].upper(),
@@ -200,6 +244,10 @@ def build_article(md_path, css_version, js_version):
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "/", js_version),
         "FOOTER": build_partial("_footer.html", "/", js_version),
+        "DESCRIPTION": html.escape(description, quote=True),
+        "CANONICAL_URL": html.escape(canonical_url, quote=True),
+        "OG_IMAGE_URL": html.escape(og_image_url, quote=True),
+        "ARTICLE_JSON_LD": article_json_ld_str,
     }
     output_html = fill(load_template("article.html"), values)
 
@@ -221,7 +269,7 @@ def build_article(md_path, css_version, js_version):
     }
 
 
-def build_category_page(category, articles_in_category, css_version, js_version):
+def build_category_page(category, articles_in_category, css_version, js_version, base_url):
     label = category.capitalize()
     if not articles_in_category:
         body = f'      <p class="publications-category__empty">More {label.lower()} coming soon.</p>\n'
@@ -257,6 +305,13 @@ def build_category_page(category, articles_in_category, css_version, js_version)
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "/", js_version),
         "FOOTER": build_partial("_footer.html", "/", js_version),
+        "DESCRIPTION": html.escape(
+            f"Read {label.lower()} published by Word for Word, the University of "
+            "Pennsylvania's undergraduate medical humanities journal.",
+            quote=True,
+        ),
+        "CANONICAL_URL": html.escape(f"{base_url}/{category}/", quote=True),
+        "OG_IMAGE_URL": html.escape(f"{base_url}/assets/images/Slogan.jpg", quote=True),
     }
     output_html = fill(load_template("category.html"), values)
     category_dir = ROOT / category
@@ -264,12 +319,19 @@ def build_category_page(category, articles_in_category, css_version, js_version)
     (category_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
-def build_publications_page(css_version, js_version):
+def build_publications_page(css_version, js_version, base_url):
     values = {
         "BASE": "/",
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "/", js_version),
         "FOOTER": build_partial("_footer.html", "/", js_version),
+        "DESCRIPTION": html.escape(
+            "Browse published volumes and articles from Word for Word, the "
+            "University of Pennsylvania's undergraduate medical humanities journal.",
+            quote=True,
+        ),
+        "CANONICAL_URL": html.escape(f"{base_url}/publications/", quote=True),
+        "OG_IMAGE_URL": html.escape(f"{base_url}/assets/images/Slogan.jpg", quote=True),
     }
     output_html = fill(load_template("publications.html"), values)
     publications_dir = ROOT / "publications"
@@ -433,11 +495,16 @@ def update_homepage_carousel(all_articles):
 
 def main():
     css_version, js_version = read_current_asset_versions()
+    # Read once here (rather than each place that needs it independently
+    # re-reading CNAME, as build_sitemap below still does on its own) so
+    # every per-page canonical/og:url this function builds is guaranteed
+    # to agree with each other.
+    base_url = f"https://{(ROOT / 'CNAME').read_text(encoding='utf-8').strip()}"
 
     md_files = sorted(CONTENT_DIR.glob("*.md"))
     all_articles = []
     for md_path in md_files:
-        article = build_article(md_path, css_version, js_version)
+        article = build_article(md_path, css_version, js_version, base_url)
         all_articles.append(article)
         print(f"Built articles/{article['slug']}.html")
 
@@ -446,10 +513,10 @@ def main():
 
     by_category = {c: [a for a in all_articles if a["category"] == c] for c in CATEGORIES}
     for category in CATEGORIES:
-        build_category_page(category, by_category[category], css_version, js_version)
+        build_category_page(category, by_category[category], css_version, js_version, base_url)
         print(f"Built {category}/index.html")
 
-    build_publications_page(css_version, js_version)
+    build_publications_page(css_version, js_version, base_url)
     print("Built publications/index.html")
 
     build_sitemap(all_articles)
