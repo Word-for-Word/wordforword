@@ -178,6 +178,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // staggeredTargets query for .quote-block__mask needs these tiles to
     // already exist in the DOM.
     initQuoteBlockTiles();
+    // Same reasoning — any filler squares it inserts need to already
+    // exist so initRevealOnScroll()'s own .square query picks them up
+    // and gives them a normal reveal (rather than them silently sitting
+    // permanently invisible, never having been in that query's own
+    // one-time snapshot).
+    initAboutIntroOverflowRows();
     initRevealOnScroll();
     initSection4CarouselGate();
     initMosaicReveal();
@@ -2282,6 +2288,179 @@ function initAboutHeroTitlePosition() {
     const ro = new ResizeObserver(positionAboutHeroTitle);
     ro.observe(wrap);
   }
+}
+
+// About page section 1's merged "What is Word for Word?" tile spans 2
+// columns x 2 rows (see about/index.html), sized entirely off real
+// content (#about-intro's own aspect-ratio:auto/grid-auto-rows:auto in
+// style.css) while every OTHER square sharing rows 1-2 stays pinned to a
+// real 1:1 (its own column width). Column width shrinks continuously as
+// the viewport narrows; the text's own real height (font-size/padding/
+// gap are all fixed, matching the rest of the site's body copy — see
+// the CSS comment on #about-intro .square--cream for why that's
+// deliberate, not an oversight) does not shrink to match. Below a real
+// but width-dependent point, the text no longer fits its 2-row budget,
+// and since #about-intro's rows are content-sized, rows 1-2 stretch
+// past what the true-square tiles sharing them need — stranding those
+// tiles with a growing gap of blank background below them (confirmed
+// live before this existed: an 855px gap at 800px wide).
+// Per explicit request, the fix is NOT to shrink the text (that read as
+// inconsistent with the rest of the page's fixed type scale) but to
+// grow the SECTION instead: when the text is measured to need more than
+// its 2-row budget, this inserts whole extra grid rows right above the
+// section's last (always-decorative) row — 2 new filler squares in the
+// row's own left 2 columns (columns 3-4 are simply left to the merged
+// text tile's own now-larger row-span, no separate markup needed there)
+// — until the budget catches up. Below the site's shared 720px mobile
+// breakpoint the grid drops to 2 columns and #about-intro's own mobile
+// remap (see style.css) already gives the text tile a full-width row
+// entirely alone, sized to content with no sibling to gap against — so
+// this deliberately does nothing there, beyond cleaning up any filler
+// rows a wider layout had added.
+const ABOUT_INTRO_BASE_CREAM_ROWS = 2;
+const ABOUT_INTRO_BASE_LAST_ROW = 3;
+// Per-row recipes for whatever gets inserted, left tile then right tile
+// — a mix of plain solid squares and checker pairs, all colors/pairs
+// already used elsewhere in this exact section (see about/index.html's
+// own #about-intro squares), rather than inventing new ones. All-checker
+// read as too busy once more than one row was needed (reported live);
+// mixing in solids breaks that up. Cycles by row (index 0, 1, 0, 1, ...)
+// for however many extra rows actually end up needed.
+const ABOUT_INTRO_FILLER_ROWS = [
+  {
+    left: { solid: "square--red" },
+    right: { checker: { a: "var(--color-tan)", b: "var(--color-red)" } },
+  },
+  {
+    left: { checker: { a: "var(--color-grey)", b: "var(--color-tan)" } },
+    right: { solid: "square--grey" },
+  },
+];
+function initAboutIntroOverflowRows() {
+  const section = document.querySelector("#about-intro");
+  const cream = section ? section.querySelector(".square--cream") : null;
+  if (!section || !cream) return;
+
+  const recompute = () => {
+    // Full reset first — idempotent regardless of how many times this
+    // has run before, or in which direction the viewport just moved.
+    // Everything below is derived fresh from this baseline every time,
+    // rather than trying to track a running delta.
+    for (const filler of section.querySelectorAll(".square--intro-filler")) {
+      filler.remove();
+    }
+    // The section's 8 real decorative squares, in source order, always
+    // exactly these 8 once every filler above is gone — querying by
+    // "not cream, not filler" rather than caching a reference is what
+    // makes this safe to call repeatedly. The last 4 are always the
+    // section's real last row (see about/index.html): this is what
+    // "right above the last row" is anchored to.
+    const decorative = Array.from(section.querySelectorAll(".square:not(.square--cream):not(.square--intro-filler)"));
+    const lastRow = decorative.slice(-4);
+    cream.style.gridRow = `1 / span ${ABOUT_INTRO_BASE_CREAM_ROWS}`;
+    for (const el of lastRow) {
+      el.style.gridRow = String(ABOUT_INTRO_BASE_LAST_ROW);
+    }
+
+    // Below the mobile breakpoint, #about-intro's own CSS remap already
+    // gives .square--cream a full-width row entirely to itself (see
+    // style.css) — nothing here can gap against a sibling it no longer
+    // shares a row with, so there's nothing left to do once the reset
+    // above has cleared out any fillers from a wider layout.
+    if (window.innerWidth <= 720) return;
+
+    const colWidth = decorative[0].getBoundingClientRect().height;
+    const creamHeight = cream.getBoundingClientRect().height;
+    if (!colWidth) return;
+    const neededRows = Math.ceil(creamHeight / colWidth);
+    const extraRows = neededRows - ABOUT_INTRO_BASE_CREAM_ROWS;
+    if (extraRows <= 0) return;
+    // Grow the tile's own span to match — creamHeight above was measured
+    // at the base 2-row span, which is exactly why it can overflow in
+    // the first place; the filler rows created below only fill in
+    // columns 1-2 of the new rows, so without this, columns 3-4 of
+    // those same rows are left as genuine empty grid cells (no content
+    // sizing them, no content filling them) — the exact gap this whole
+    // function exists to close, just relocated one row down instead of
+    // actually closed.
+    cream.style.gridRow = `1 / span ${neededRows}`;
+
+    // initRevealOnScroll() only ever sees the .square elements that
+    // exist at its own one-time setup query (see the call site in the
+    // DOMContentLoaded handler) — this function runs before it so
+    // fillers created on THIS, the very first call, are included in
+    // that query and get a completely normal scroll-triggered reveal
+    // like any other square. But a filler created by a LATER call (e.g.
+    // document.fonts.ready below, which can easily resolve before the
+    // page has ever been scrolled) isn't in that snapshot, and checkAll()
+    // there only ever iterates its own captured list — such a filler
+    // could never earn .is-visible on its own, staying invisible forever
+    // even once genuinely scrolled into view (confirmed live: reported
+    // as the tiles only ever appearing after an actual resize, since
+    // that's the only other thing that recreates them, at a point when
+    // the page has typically already been scrolled). revealFillersIfInView()
+    // below is a small dedicated check, entirely independent of that
+    // snapshot, that this function keeps running on every scroll/resize
+    // for exactly this reason — every filler still gets a real
+    // scroll-triggered reveal, it just isn't riding on the shared one.
+    for (let i = 0; i < extraRows; i++) {
+      const row = ABOUT_INTRO_BASE_CREAM_ROWS + 1 + i;
+      const recipe = ABOUT_INTRO_FILLER_ROWS[i % ABOUT_INTRO_FILLER_ROWS.length];
+      [
+        { col: 1, spec: recipe.left },
+        { col: 2, spec: recipe.right },
+      ].forEach(({ col, spec }) => {
+        const filler = document.createElement("div");
+        filler.className = spec.solid ? `square ${spec.solid} square--intro-filler` : "square square--checker square--intro-filler";
+        filler.setAttribute("aria-hidden", "true");
+        filler.style.gridColumn = String(col);
+        filler.style.gridRow = String(row);
+        if (spec.checker) {
+          filler.style.setProperty("--checker-a", spec.checker.a);
+          filler.style.setProperty("--checker-b", spec.checker.b);
+        }
+        section.insertBefore(filler, lastRow[0]);
+      });
+    }
+    for (const el of lastRow) {
+      el.style.gridRow = String(ABOUT_INTRO_BASE_LAST_ROW + extraRows);
+    }
+  };
+
+  // Same "in view" threshold checkAll() in initRevealOnScroll() uses —
+  // deliberately independent of it rather than sharing it (see
+  // recompute()'s own comment above), so it works no matter how many
+  // times fillers have been destroyed and recreated since the page
+  // loaded. Cheap enough (a class check/add per currently-existing
+  // filler, no measurement of its own beyond the section's one rect) to
+  // run on every scroll frame.
+  const revealFillersIfInView = () => {
+    const rect = section.getBoundingClientRect();
+    if (rect.top >= window.innerHeight * 0.9) return;
+    for (const filler of section.querySelectorAll(".square--intro-filler:not(.is-visible)")) {
+      filler.classList.add("is-visible");
+    }
+  };
+
+  let ticking = false;
+  const scheduleRecompute = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      recompute();
+      revealFillersIfInView();
+      ticking = false;
+    });
+  };
+
+  recompute();
+  revealFillersIfInView();
+  document.fonts.ready.then(() => {
+    recompute();
+    revealFillersIfInView();
+  });
+  window.addEventListener("resize", scheduleRecompute);
+  window.addEventListener("scroll", revealFillersIfInView, { passive: true });
 }
 
 // Highlights the nav link for the page currently loaded (each link is a

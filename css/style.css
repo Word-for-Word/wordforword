@@ -2128,12 +2128,7 @@ main {
 }
 /* Scoped to THIS tile only — not the shared .square--pad-lg/
    .square--text-gap-30 classes it also carries, which other pages
-   still use at their original 70px/30px values. At those shared
-   values the title + 3 paragraphs need more height than 2 true-square
-   rows provide (690px) — which is what forces rows 1-2 to grow past
-   what the OTHER (true-square) tiles sharing those rows need, leaving
-   those tiles stranded with blank background below them once
-   grid-auto-rows:auto stretches the rows to fit this text.
+   still use at their original 70px/30px values.
    Side padding is deliberately the larger axis (matches the shared
    70px value exactly) with top/bottom compressed instead of shrinking
    both evenly — per explicit request, side padding should always be
@@ -2141,20 +2136,21 @@ main {
    is also the more effective lever anyway: less side padding widens
    the line box and reflows into fewer, longer lines, which COSTS
    height rather than saving it — top/bottom padding is pure height
-   with no such reflow tax. These values are intentionally the
-   largest vertical padding/gap that still keeps the current copy
-   (see about.html) at or under the 690px budget — re-measure and
-   raise them again any time the copy gets shorter, per the ongoing
-   copy-trim effort, but keep side > top/bottom when you do. */
+   with no such reflow tax. Font-size/padding/gap are all fixed,
+   same as every other page's body copy, on purpose — text shrinking
+   independently of the rest of the site's type scale as the viewport
+   narrows was reported as visually inconsistent and reverted. Any
+   overflow past this tile's 2-row budget is instead absorbed by
+   initAboutIntroOverflowRows() in main.js, which grows the SECTION
+   (extra grid rows) rather than shrinking the TEXT — see that
+   function's own comment for the mechanism.
+   Top/bottom sum is still 40px (unchanged from the even 20px/20px this
+   replaced) — this is a pure REPOSITION, not a size change: .square's
+   own justify-content:center centers content within the space left
+   after padding, so shifting weight from top to bottom moves that
+   centered block up by exactly the difference (here, 12px). Per
+   explicit request to nudge the copy up within its box, left as-is. */
 #about-intro .square--cream {
-  /* Top/bottom sum still 40px (unchanged from the even 20px/20px this
-     replaced) — this is a pure REPOSITION, not a size change: .square's
-     own justify-content:center centers content within the space left
-     after padding, so shifting weight from top to bottom moves that
-     centered block up by exactly the difference (here, 12px) without
-     touching the tile's total height requirement or reopening the
-     row-gap risk. Per explicit request to nudge the copy up within its
-     box, copy left as-is. */
   padding: 8px 70px 32px;
   gap: 18px;
 }
