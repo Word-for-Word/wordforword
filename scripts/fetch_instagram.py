@@ -54,24 +54,35 @@ to go through Meta's official Instagram API, which means:
      Name:  INSTAGRAM_ACCESS_TOKEN
      Value: <the long-lived token from step 3>
 
+5. Also add a second secret, a GitHub Personal Access Token (classic,
+   scopes "repo" + "workflow" — the same token already used for pushing
+   to this repo normally works fine, if one already exists):
+     Name:  REPO_PAT
+     Value: <that PAT>
+   This one isn't optional, despite the name suggesting otherwise: the
+   commit this script's own workflow makes has to be pushed authenticated
+   as a real PAT, not the default token actions/checkout sets up —
+   GitHub specifically does NOT trigger other workflows (deploy.yml
+   included) off a push made with that default token, as an anti-
+   recursion safeguard. Confirmed live: the first scheduled run fetched
+   and committed real posts successfully, but deploy.yml never fired
+   and the site kept showing placeholders until this was added.
+
 That's the whole setup. From here, .github/workflows/fetch-instagram.yml
 runs this script on a schedule automatically.
 
-Optional, to stop needing to repeat step 3 every ~60 days: this script
-already asks Instagram to refresh the token on every run (extending it
-another ~60 days each time, well before it'd expire) — but a refreshed
-token is only useful if it actually gets back into the
-INSTAGRAM_ACCESS_TOKEN secret above. To let it do that automatically,
-also add a second secret:
-     Name:  SECRETS_UPDATE_TOKEN
-     Value: a GitHub personal access token (fine-grained, scoped to just
-            this repo, with "Secrets" repository permission set to
-            Read and write) — https://github.com/settings/personal-access-tokens
-Without this second secret, the refresh still happens on Instagram's
-side, but the extended token only lives in that one run's memory —
-you'd need to repeat step 3 by hand once the original one nears
-expiry (a "Error validating access token" failure in the Action's log
-is the tell).
+Bonus, using that same REPO_PAT secret: this script already asks
+Instagram to refresh the access token on every run (extending it another
+~60 days, well before it'd expire) — see maybe_update_github_secret()
+below, which uses REPO_PAT (needs "Secrets" repository permission —
+add it under that PAT's fine-grained permissions, or use a classic PAT,
+which already covers this) to write the refreshed token straight back
+into the INSTAGRAM_ACCESS_TOKEN secret above, so step 3 never needs
+repeating by hand. If REPO_PAT lacks that permission, the refresh still
+happens on Instagram's side, it just only lives in that one run's
+memory — you'd see a "Couldn't update the INSTAGRAM_ACCESS_TOKEN secret"
+line in the Action's log as the tell, and would need to repeat step 3
+by hand once the original token nears its ~60-day expiry.
 """
 
 import json
@@ -147,14 +158,16 @@ def maybe_update_github_secret(new_token):
     """Best-effort: pushes a refreshed token back into the
     INSTAGRAM_ACCESS_TOKEN repo secret via the gh CLI, so the NEXT
     scheduled run picks it up too instead of the extension being
-    forgotten the moment this run ends. Entirely optional (see this
-    file's own setup docstring) — silently does nothing if the
-    SECRETS_UPDATE_TOKEN secret isn't configured or gh isn't
-    available, since the fetch above already succeeded either way."""
+    forgotten the moment this run ends. Bonus functionality riding on
+    REPO_PAT (see this file's own setup docstring, step 5 — that
+    secret is required for a different reason, this is just a nice
+    extra if it also happens to carry "Secrets" permission) — silently
+    does nothing if REPO_PAT isn't configured or gh isn't available,
+    since the fetch above already succeeded either way."""
     repo = os.environ.get("GITHUB_REPOSITORY")
-    pat = os.environ.get("SECRETS_UPDATE_TOKEN")
+    pat = os.environ.get("REPO_PAT")
     if not repo or not pat or not shutil.which("gh"):
-        print("Skipping auto-refresh of the INSTAGRAM_ACCESS_TOKEN secret (SECRETS_UPDATE_TOKEN not set) — see this script's docstring if you want that automated too.")
+        print("Skipping auto-refresh of the INSTAGRAM_ACCESS_TOKEN secret (REPO_PAT not set or lacks Secrets permission) — see this script's docstring if you want that automated too.")
         return
     try:
         subprocess.run(

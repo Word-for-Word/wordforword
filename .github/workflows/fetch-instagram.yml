@@ -8,6 +8,16 @@ name: Fetch latest Instagram posts
 # when a new post goes up -- see scripts/fetch_instagram.py's own
 # docstring for the one-time setup this needs (an INSTAGRAM_ACCESS_TOKEN
 # repo secret).
+#
+# The checkout below is deliberately given a real PAT (the REPO_PAT
+# secret), not left on the default GITHUB_TOKEN -- GitHub specifically
+# does NOT run other workflows (deploy.yml included) off a push made
+# with the default token, as an anti-recursion safeguard. Confirmed
+# live: the very first scheduled run fetched and committed real posts
+# successfully, but deploy.yml never fired and the site kept showing
+# placeholders until this was added. A push authenticated with a PAT
+# is treated like any ordinary human push, so it triggers deploy.yml
+# normally.
 
 on:
   schedule:
@@ -31,6 +41,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # See this file's own top comment -- without this, the commit
+          # below pushes fine but silently never triggers deploy.yml.
+          token: ${{ secrets.REPO_PAT }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -39,10 +53,12 @@ jobs:
       - name: Fetch latest Instagram posts
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
-          # Optional -- see fetch_instagram.py's docstring. Left unset,
-          # the script just skips auto-refreshing this secret and keeps
-          # running fine with whatever token is already stored.
-          SECRETS_UPDATE_TOKEN: ${{ secrets.SECRETS_UPDATE_TOKEN }}
+          # Same PAT as the checkout step above -- optional (see
+          # fetch_instagram.py's own docstring), used there to also
+          # auto-refresh the INSTAGRAM_ACCESS_TOKEN secret itself. Left
+          # unset, the script just skips that and keeps running fine
+          # with whatever token is already stored.
+          REPO_PAT: ${{ secrets.REPO_PAT }}
         run: python3 scripts/fetch_instagram.py
       - name: Commit and push if anything changed
         run: |
