@@ -1,0 +1,57 @@
+name: Fetch latest Instagram posts
+
+# Runs scripts/fetch_instagram.py on a schedule and commits whatever it
+# changes (content/instagram_feed.json + assets/images/instagram/*) --
+# that commit's own push then triggers deploy.yml the normal way, which
+# runs build_articles.py (turning the new JSON into real card HTML on
+# index.html) and republishes. Nobody needs to touch anything by hand
+# when a new post goes up -- see scripts/fetch_instagram.py's own
+# docstring for the one-time setup this needs (an INSTAGRAM_ACCESS_TOKEN
+# repo secret).
+
+on:
+  schedule:
+    # Instagram has no webhook for "new post" on this API -- polling is
+    # the only real option (see fetch_instagram.py's own docstring).
+    # Every 30 minutes is a reasonable "close enough to instant" without
+    # hammering Instagram's API or triggering a full site rebuild more
+    # often than that.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-instagram
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # No requirements.txt / pip install step on purpose -- same reason
+      # as deploy.yml's own build step, see fetch_instagram.py's docstring.
+      - name: Fetch latest Instagram posts
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          # Optional -- see fetch_instagram.py's docstring. Left unset,
+          # the script just skips auto-refreshing this secret and keeps
+          # running fine with whatever token is already stored.
+          SECRETS_UPDATE_TOKEN: ${{ secrets.SECRETS_UPDATE_TOKEN }}
+        run: python3 scripts/fetch_instagram.py
+      - name: Commit and push if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/instagram_feed.json assets/images/instagram/
+          if git diff --cached --quiet; then
+            echo "No new posts -- nothing to commit."
+          else
+            git commit -m "Update latest Instagram posts"
+            git push
+          fi

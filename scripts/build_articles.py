@@ -493,6 +493,59 @@ def update_homepage_carousel(all_articles):
     print(f"Homepage carousel: updated with the {CAROUSEL_SLOTS} most recent featured articles.")
 
 
+INSTAGRAM_DATA_FILE = ROOT / "content" / "instagram_feed.json"
+
+
+def build_instagram_card_html(post):
+    permalink = html.escape(post.get("permalink", "https://www.instagram.com/pennword4word/"), quote=True)
+    image_src = "/" + html.escape(post["image"], quote=True)
+    # First line only — real Instagram captions are often many lines/
+    # hashtags long, and .instagram-card__caption's own CSS already
+    # clamps display to 2 lines with an ellipsis, so shipping the whole
+    # (possibly huge) caption into the page's HTML would just be dead
+    # weight never fully shown anyway.
+    caption = post.get("caption", "").strip()
+    first_line = caption.splitlines()[0] if caption else "View this post on Instagram."
+    caption_html = html.escape(first_line)
+    return (
+        f'        <a class="instagram-card" href="{permalink}" target="_blank" rel="noopener">\n'
+        f'          <div class="instagram-card__cover">\n'
+        f'            <img src="{image_src}" alt="" loading="lazy" />\n'
+        f'          </div>\n'
+        f'          <p class="instagram-card__caption">{caption_html}</p>\n'
+        f'        </a>'
+    )
+
+
+def update_instagram_feed():
+    """Mirrors update_homepage_carousel() above: reads
+    content/instagram_feed.json (kept current by scripts/fetch_instagram.py
+    on a schedule — see that script's own docstring) and injects the
+    actual card HTML into index.html's "On Instagram" section. Same
+    "leave the placeholders alone until there's real data" fallback as
+    the carousel — this file doesn't exist at all until
+    fetch_instagram.py has successfully run at least once."""
+    if not INSTAGRAM_DATA_FILE.exists():
+        print(
+            "Instagram feed: content/instagram_feed.json doesn't exist yet — "
+            "leaving today's placeholder cards in place (see scripts/fetch_instagram.py)."
+        )
+        return
+
+    data = json.loads(INSTAGRAM_DATA_FILE.read_text(encoding="utf-8"))
+    posts = data.get("posts", [])
+    if not posts:
+        print("Instagram feed: content/instagram_feed.json has no posts — leaving today's placeholder cards in place.")
+        return
+
+    cards_html = "\n".join(build_instagram_card_html(p) for p in posts)
+    index_path = ROOT / "index.html"
+    text = index_path.read_text(encoding="utf-8")
+    text = replace_between_sentinels(text, "<!-- INSTAGRAM_FEED:START -->", "<!-- INSTAGRAM_FEED:END -->", cards_html, "index.html")
+    index_path.write_text(text, encoding="utf-8")
+    print(f"Instagram feed: updated with the {len(posts)} latest posts.")
+
+
 def main():
     css_version, js_version = read_current_asset_versions()
     # Read once here (rather than each place that needs it independently
@@ -523,6 +576,7 @@ def main():
     print("Built sitemap.xml")
 
     update_homepage_carousel(all_articles)
+    update_instagram_feed()
 
 
 if __name__ == "__main__":
