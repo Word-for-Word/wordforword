@@ -6502,8 +6502,13 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   inset: 0;
   border-radius: 16px;
   background: var(--color-red);
-  /* 5px — the resting sliver size, shown at all times now (no hover
-     reveal). */
+  /* 5px — the resting sliver size. Always sits here, unanimated — it's
+     __surface (below) that moves, not this: __surface starts flush on
+     top of this (fully covering it, so no red is visible yet) and
+     shifts UP by this same 5px once the entrance's width-grow stage has
+     finished, uncovering this bottom sliver. Nothing here needs its own
+     opacity/timing, since simply no longer being covered is what makes
+     it "appear." */
   transform: translateY(5px);
 }
 /* The actual visible card — see .applications-toast's own comment above
@@ -6525,6 +6530,21 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   border-radius: 16px;
   background: var(--color-cream);
   border: 1.5px solid var(--color-red);
+  /* Entrance stage 3, per explicit follow-up feedback: starts flush
+     with ::before's own resting position (translateY(5px), matching
+     that rule's own offset exactly) so it fully covers the red behind
+     it — no shadow visible yet — through both the square-fade and the
+     width-grow stages. Once width has FINISHED growing (0.8s — see
+     .applications-toast's own transition, 0.2s delay + 0.6s duration —
+     hence this rule's own 0.8s delay below), this shifts up to its
+     natural translateY(0), uncovering ::before's bottom 5px as a red
+     shadow appearing underneath, rather than the shadow being visible
+     from the very first frame the way it used to be. */
+  transform: translateY(5px);
+  transition: transform 0.3s ease-out 0.8s;
+}
+.applications-toast.is-open .applications-toast__surface {
+  transform: translateY(0);
 }
 .applications-toast__text {
   margin: 0;
@@ -6580,19 +6600,19 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   padding: 6px;
   cursor: pointer;
 }
-/* "text appears at the same time" as __surface's own width grow, per
-   explicit request — matching BOTH that transition's duration (0.6s)
-   AND its 0.2s delay (the square-fade stage, see .applications-toast's
-   own comment) so text/close only start fading in once the box has
-   actually started growing, finishing together with it rather than
-   trailing behind. Shared between __text and __close (not the whole
-   __surface) since the square START state still needs to actually show
-   its cream/red card styling immediately, just with nothing legible
-   inside it yet. */
+/* Text/close fade in only once the width-grow has FULLY finished (0.8s
+   — 0.2s square-fade delay + 0.6s grow duration, see
+   .applications-toast's own transition), not alongside it — per
+   explicit follow-up feedback: fading them in DURING the grow (this
+   used to share that same 0.6s/0.2s timing) read as the text appearing
+   before the box was actually wide enough to hold it yet. Shared
+   between __text and __close (not the whole __surface) since the
+   square START state still needs to actually show its cream/red card
+   styling immediately, just with nothing legible inside it yet. */
 .applications-toast__text,
 .applications-toast__close {
   opacity: 0;
-  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.2s;
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.8s;
 }
 .applications-toast.is-open .applications-toast__text,
 .applications-toast.is-open .applications-toast__close {
@@ -6672,6 +6692,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      first place for reduced-motion, going straight to the real natural
      width instead — see that function's own comment. */
   .applications-toast { transition: none; opacity: 1; }
+  .applications-toast__surface { transition: none; transform: translateY(0); }
   .applications-toast__text,
   .applications-toast__close { transition: none; opacity: 1; }
   .image-mosaic__mask,
