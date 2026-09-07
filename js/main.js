@@ -17,9 +17,11 @@
 // contradict what the ongoing check computes moments later.
 const HERO_EXIT_THRESHOLD = 0.6;
 
-// Shared between initApplicationsToast() (the "Apply now" link) and
-// initGetInvolvedLinkSwap() (the nav item itself) so both point at the
-// same form without the URL being hand-copied in two places.
+// Used by initGetInvolvedLinkSwap() (the nav item) to point at the
+// applications form. Not currently linked from initApplicationsToast()'s
+// own toast — that one is plain text right now (see its own comment) —
+// kept as a single named constant regardless, so re-adding a link there
+// later doesn't mean hand-copying the URL back in.
 const APPLICATIONS_FORM_URL = "https://forms.gle/FvvYMk5uPS1Q1AtG7";
 
 // Only ever true when index.html's own inline <head> script (right after
@@ -833,10 +835,12 @@ function initEditionLightbox() {
   });
 }
 
-// Bottom-right toast, per explicit request: "Applications are now open."
-// (the whole sentence itself the click target, since there's no separate
-// "Apply now" call-to-action phrase left to carry it) — animates in once
-// the intro sequence has genuinely finished
+// Bottom-right toast, currently "Applications for the fall semester have
+// closed." — plain text, no link (this used to link to the applications
+// form back when it read "Applications are now open."; update the
+// markup below to re-add an <a> if a future message needs one again,
+// same idiom .applications-toast__link in style.css already supports).
+// Animates in once the intro sequence has genuinely finished
 // (the homepage's own elaborate hero choreography, or — on every other
 // page — the near-immediate point initIntroReveal() itself treats as
 // "finished" there, see that function's own early-return for pages with
@@ -853,7 +857,7 @@ function initApplicationsToast() {
     el.setAttribute("role", "status");
     el.innerHTML = `
       <div class="applications-toast__surface">
-        <p class="applications-toast__text"><a href="${APPLICATIONS_FORM_URL}" target="_blank" rel="noopener" class="applications-toast__link">Applications are now open.</a></p>
+        <p class="applications-toast__text">Applications for the fall semester have closed.</p>
         <button type="button" class="applications-toast__close" aria-label="Dismiss">
           <span class="applications-toast__close-glyph"></span>
         </button>

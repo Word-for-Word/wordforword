@@ -4338,6 +4338,53 @@ span.split-cta__text-line {
 .edition-lightbox.is-fullscreen .edition-lightbox__fullscreen {
   filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.55));
 }
+/* The difference-blend visibility trick itself (see
+   .edition-lightbox__nav/__close/__fullscreen's own base-rule comment
+   for the full reasoning) — scoped to ONLY these 2 states per explicit
+   follow-up feedback, rather than being the resting default everywhere.
+   Covers all 4 painted layers that need their own copy of it (border,
+   nav arrow, × glyph, fullscreen icon — see each one's own comment for
+   why blend-mode doesn't cascade down to a nested painted layer on its
+   own).
+
+   Deliberately NOT prefixed with the ancestor .edition-lightbox class
+   the way the drop-shadow rule just above is (".edition-lightbox.
+   is-zoomed .edition-lightbox__close" vs. this rule's own ".is-zoomed
+   .edition-lightbox__close") — that extra class would push this rule's
+   specificity to 3, tying or beating .edition-lightbox__nav:hover:not(
+   :disabled)'s own 3 / .edition-lightbox__close:hover's own 2 further
+   below depending on which button, which — combined with this rule
+   sitting EARLIER in the file than those hover rules — would let ties
+   go the WRONG way (a later same-specificity rule normally wins, but
+   only for nav; for close/fullscreen this rule would outrank hover
+   outright and never lose to it at all). .is-zoomed alone still only
+   ever matches as a class on .edition-lightbox itself in this codebase,
+   so nothing is lost by leaving the redundant ancestor class off — this
+   keeps every one of these rules at specificity 2, safely below both
+   hover rules, so hovering while zoomed still correctly resets to the
+   solid opaque fill exactly like hovering while NOT zoomed already did. */
+.is-zoomed .edition-lightbox__nav,
+.is-zoomed .edition-lightbox__close,
+.is-zoomed .edition-lightbox__fullscreen,
+.is-fullscreen .edition-lightbox__nav,
+.is-fullscreen .edition-lightbox__close,
+.is-fullscreen .edition-lightbox__fullscreen {
+  mix-blend-mode: difference;
+}
+.is-zoomed .edition-lightbox__nav-arrow,
+.is-fullscreen .edition-lightbox__nav-arrow {
+  mix-blend-mode: difference;
+}
+.is-zoomed .edition-lightbox__close-glyph::before,
+.is-zoomed .edition-lightbox__close-glyph::after,
+.is-fullscreen .edition-lightbox__close-glyph::before,
+.is-fullscreen .edition-lightbox__close-glyph::after {
+  mix-blend-mode: difference;
+}
+.is-zoomed .edition-lightbox__fullscreen-icon,
+.is-fullscreen .edition-lightbox__fullscreen-icon {
+  mix-blend-mode: difference;
+}
 .edition-lightbox__skeleton,
 .edition-lightbox__canvas {
   grid-column: 1;
@@ -4459,19 +4506,24 @@ span.split-cta__text-line {
   margin-top: 0;
   cursor: pointer;
   border-color: var(--color-cream);
-  /* Difference blend, not the plain cream this used to be alone — per
-     explicit request, so the outline stays visible against ANY page
-     color behind it (a light/cream-heavy PDF page especially, once
-     is-zoomed/is-fullscreen puts the actual page directly behind these,
-     not just the dark blurred backdrop — see the drop-shadow halo just
-     below, which this complements rather than replaces: the halo helps
-     against BUSY/textured content, this handles flat-color content the
-     halo alone can't). Reset to normal on :hover below — once hovered,
-     the diamond fills a SOLID opaque cream with a dark icon (see that
-     rule), which is already self-contained contrast that doesn't depend
-     on whatever's behind it; blending a solid near-white fill would
-     invert it toward invisible against a light page, undoing that. */
-  mix-blend-mode: difference;
+  /* Plain solid cream by default — per explicit follow-up feedback, the
+     difference-blend trick below should only kick in once zoomed/
+     fullscreen, not be the resting default. Rest state always sits over
+     the dark blurred backdrop (see .edition-lightbox__frame), which
+     plain cream already contrasts against fine on its own; the blend
+     is specifically for is-zoomed/is-fullscreen, where the actual page
+     — light/cream-heavy PDF pages included — sits directly behind these
+     instead, and a flat color could disappear against it (see the
+     .is-zoomed/.is-fullscreen override further down, and the
+     drop-shadow halo beside it, which complements rather than replaces
+     this: the halo helps against BUSY/textured content, the blend
+     handles flat-color content the halo alone can't). Reset to normal
+     on :hover below too — once hovered, the diamond fills a SOLID
+     opaque cream with a dark icon (see that rule), which is already
+     self-contained contrast that doesn't depend on whatever's behind
+     it; blending a solid near-white fill would invert it toward
+     invisible against a light page, undoing that. */
+  mix-blend-mode: normal;
   transition: border-color 0.2s ease-out, background-color 0.2s ease-out, opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1);
   /* Own fade-in, synced with the frame's above rather than instant —
      otherwise these pop in ahead of the page itself since they aren't
@@ -4547,12 +4599,13 @@ span.split-cta__text-line {
   -webkit-mask-position: center;
   mask-position: center;
   background-color: var(--color-cream);
-  /* Same difference-blend visibility trick as the diamond outline itself
-     (see .edition-lightbox__nav/__close/__fullscreen's own comment) —
-     the icon needs it independently since it's a separate painted layer,
-     not something the parent's blend-mode carries down automatically.
-     Reset to normal on hover below, matching the parent's own reset. */
-  mix-blend-mode: difference;
+  /* Solid by default, same reasoning as the diamond outline itself (see
+     .edition-lightbox__nav/__close/__fullscreen's own comment) — the
+     icon needs its own copy of the is-zoomed/is-fullscreen override
+     independently since it's a separate painted layer, not something
+     the parent's blend-mode carries down automatically. Reset to normal
+     on hover below too, matching the parent's own reset. */
+  mix-blend-mode: normal;
   transition: background-color 0.2s ease-out;
 }
 .edition-lightbox__nav:hover:not(:disabled) .edition-lightbox__nav-arrow {
@@ -4617,9 +4670,9 @@ span.split-cta__text-line {
   width: 16px;
   height: 2px;
   background-color: var(--color-cream);
-  /* Same difference-blend visibility trick as the diamond outline itself
-     (see .edition-lightbox__nav/__close/__fullscreen's own comment). */
-  mix-blend-mode: difference;
+  /* Solid by default, same reasoning as the diamond outline itself (see
+     .edition-lightbox__nav/__close/__fullscreen's own comment). */
+  mix-blend-mode: normal;
   transition: background-color 0.2s ease-out;
 }
 .edition-lightbox__close-glyph::before {
@@ -4663,9 +4716,9 @@ span.split-cta__text-line {
   -webkit-mask-position: center;
   mask-position: center;
   background-color: var(--color-cream);
-  /* Same difference-blend visibility trick as the diamond outline itself
-     (see .edition-lightbox__nav/__close/__fullscreen's own comment). */
-  mix-blend-mode: difference;
+  /* Solid by default, same reasoning as the diamond outline itself (see
+     .edition-lightbox__nav/__close/__fullscreen's own comment). */
+  mix-blend-mode: normal;
   transition: background-color 0.2s ease-out;
 }
 /* 4 corner brackets, vertex AT each corner — the universal "expand to
