@@ -33,6 +33,15 @@ jobs:
       # No requirements.txt / pip install step on purpose — the script is
       # standard-library-only (see its own docstring for why).
       - name: Build article pages
+        env:
+          # Temporary — the Instagram feed is still a WIP, per explicit
+          # request the live site shouldn't show real posts yet even
+          # though the fetch/build pipeline is fully working. A local
+          # `python3 scripts/build_articles.py` (this env var unset)
+          # still shows real posts for previewing. Delete this line
+          # once the feature's ready to go live — see
+          # update_instagram_feed()'s own comment in build_articles.py.
+          HIDE_INSTAGRAM_FEED: "true"
         run: python3 scripts/build_articles.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

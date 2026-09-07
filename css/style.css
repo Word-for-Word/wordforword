@@ -2307,8 +2307,9 @@ main {
    grid. The group sits in normal flow right after the text (not
    absolutely positioned — that was fighting the text's own variable
    height/width across breakpoints instead of just sitting relative to
-   it). Centered under the left-aligned text via align-self, same as
-   .square--content-left .diamond-cta above. margin-top: 36px matches
+   it). align-self:center is redundant now that this tile's text is
+   itself centered (not left-aligned) — harmless to leave, but no
+   longer doing any real work of its own. margin-top: 36px matches
    .diamond-cta--tight's own gap from its text (section 2 square 7). */
 .square__down-arrow-group {
   display: flex;

@@ -15,6 +15,7 @@ Run from the repo root:
 
 import html
 import json
+import os
 import re
 import sys
 from datetime import datetime
@@ -524,7 +525,26 @@ def update_instagram_feed():
     actual card HTML into index.html's "On Instagram" section. Same
     "leave the placeholders alone until there's real data" fallback as
     the carousel — this file doesn't exist at all until
-    fetch_instagram.py has successfully run at least once."""
+    fetch_instagram.py has successfully run at least once.
+
+    HIDE_INSTAGRAM_FEED (set by .github/workflows/deploy.yml, see its own
+    comment) is a temporary, easy-to-flip kill switch for the live site
+    only — per explicit request, the ENTIRE section (not just real posts
+    — a visitor shouldn't see this WIP section exists at all yet) is
+    removed outright on the deployed site, while a local build still
+    shows it in full (this env var is never set there).
+    content/instagram_feed.json itself is untouched either way —
+    scripts/fetch_instagram.py keeps fetching on its own schedule
+    regardless, so there's nothing to redo once this flag comes back
+    out — the very next build without it will show the section again,
+    already populated with whatever's been fetched in the meantime."""
+    if os.environ.get("HIDE_INSTAGRAM_FEED") == "true":
+        index_path = ROOT / "index.html"
+        text = index_path.read_text(encoding="utf-8")
+        text = replace_between_sentinels(text, "<!-- INSTAGRAM_SECTION:START -->", "<!-- INSTAGRAM_SECTION:END -->", "", "index.html")
+        index_path.write_text(text, encoding="utf-8")
+        print("Instagram feed: HIDE_INSTAGRAM_FEED is set — removed the whole section from this build.")
+        return
     if not INSTAGRAM_DATA_FILE.exists():
         print(
             "Instagram feed: content/instagram_feed.json doesn't exist yet — "

@@ -719,10 +719,10 @@
       </div>
 
       <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-      <div class="square square--dark square--content-left">
+      <div class="square square--dark square--pad-lg">
         <p class="square__body square__body--small">Listen closely.<br />Write boldly.<br />Draw thoughtfully.<br /><br />Join the team.</p>
       </div>
-      <div class="square square--red square--content-left">
+      <div class="square square--red square--pad-lg">
         <p class="square__script square__script--sub">Applications are open.<br />Apply today.</p>
         <!-- Was a bare non-interactive div; now a real <a> so it (a)
              actually leads somewhere and (b) matches a[href] in
@@ -858,7 +858,7 @@
     <section>
       <div class="square-grid square-grid--4col square-grid--rows-2 square-grid--flush-bottom">
         <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-        <div class="square square--red square--pad-lg square--text-gap-30 square--align-left">
+        <div class="square square--red square--pad-lg square--text-gap-30">
           <p class="square__body">For news &amp; events, follow us on Instagram:</p>
           <!-- Own block now (was inline in the paragraph above) — italic
                is a deliberate one-off exception to "Newsreader is never
@@ -905,7 +905,7 @@
             <div class="square__inset-asterisk"></div>
           </div>
         </div>
-        <div class="square square--dark square--content-left square--pad-lg">
+        <div class="square square--dark square--pad-lg">
           <p class="square__body">Interested in what we do? Peruse the featured articles below.</p>
           <!-- Points down toward the carousel directly below this grid.
                3 stacked copies of the same static beige arrow (not
@@ -1246,50 +1246,34 @@
          own docstring for the one-time setup). The 3 cards below are
          placeholders — same "colored block + generic example copy"
          convention as publications.html's own .article-teaser
-         placeholders — left in place until that JSON file exists. -->
+         placeholders — left in place until that JSON file exists.
+         The whole section (not just the cards) is wrapped in its own
+         INSTAGRAM_SECTION sentinels — per explicit request, the entire
+         section is removed outright on the deployed site for now (the
+         feature's still a WIP), while a local build still shows it —
+         see HIDE_INSTAGRAM_FEED in update_instagram_feed()'s own
+         comment in build_articles.py. -->
+    <!-- INSTAGRAM_SECTION:START -->
     <section class="instagram-feed">
       <h2 class="section-title instagram-feed__title">On Instagram</h2>
       <div class="instagram-feed__grid">
         <!-- INSTAGRAM_FEED:START -->
-        <a class="instagram-card" href="https://www.instagram.com/p/Dcwyxa6Al2L/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/17955568005219838.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">Want to join Penn’s only undergraduate medical humanities journal, Word for Word? Applications are OPEN up until 09/06, 11:59 pm EST!! Apply to be an interviewer, columnist, editor, or media designer, and explore other opportunities for community service and leadership through our organization. Application link is in our linktree, apply today! 🤍✍️</p>
+        <a class="instagram-card" href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener">
+          <div class="instagram-card__cover" style="background: var(--color-red);" aria-hidden="true"></div>
+          <p class="instagram-card__caption">Once connected, this grid fills in automatically with the account's latest posts.</p>
         </a>
-        <a class="instagram-card" href="https://www.instagram.com/p/DcUHnzeIB_q/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/18097565564042518.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">Preceptorial Tomorrow! 🔊 Artists, aspiring premed students, writers, and anyone curious about the medical humanities: come join us! 🩺🎨✍️</p>
+        <a class="instagram-card" href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener">
+          <div class="instagram-card__cover" style="background: var(--color-grey);" aria-hidden="true"></div>
+          <p class="instagram-card__caption">Example caption — replaced by each post's own real one.</p>
         </a>
-        <a class="instagram-card" href="https://www.instagram.com/p/DXNdGvfDUFV/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/18187676560370951.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">Friday 4/24 @ chairs outside Harnwell 1-5 pm!</p>
-        </a>
-        <a class="instagram-card" href="https://www.instagram.com/p/DUZssw8jSsp/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/17876105706498811.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">You are invited to join us in a showcase of the Fall Journal Edition of the Word for Word Medical Humanities journal! Be the first to peruse our original artwork, interviews, opinion pieces, and more. Free pizza, sweets, and refreshments will be served. Join us at Gutmann Classroom 208 from 5:30-6pm this Saturday, 2/7. Hope to see you there ✨</p>
-        </a>
-        <a class="instagram-card" href="https://www.instagram.com/p/DRx2UkGjRRM/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/18073987445615947.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">THANK YOU for all of your help during our fundraiser!! Because of your efforts, over 920+ meals will be provided across the city of Philadelphia. </p>
-        </a>
-        <a class="instagram-card" href="https://www.instagram.com/p/DRF2dAvEuJM/" target="_blank" rel="noopener">
-          <div class="instagram-card__cover">
-            <img src="/assets/images/instagram/18086613586980028.jpg" alt="" loading="lazy" />
-          </div>
-          <p class="instagram-card__caption">We’re proud to partner with Philabundance to support our community. Food drive donations are being collected in the Arch Lobby! 🥫💚 See slide 3 for the photo.</p>
+        <a class="instagram-card" href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener">
+          <div class="instagram-card__cover" style="background: var(--color-tan);" aria-hidden="true"></div>
+          <p class="instagram-card__caption">No manual updates needed — see scripts/fetch_instagram.py.</p>
         </a>
         <!-- INSTAGRAM_FEED:END -->
       </div>
     </section>
+    <!-- INSTAGRAM_SECTION:END -->
 
   </main>
 
