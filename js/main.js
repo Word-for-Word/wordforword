@@ -861,14 +861,31 @@ function initApplicationsToast() {
     `;
     document.body.appendChild(el);
 
-    // The grow entrance itself (small scale -> scale(1), anchored at the
-    // bottom-right corner) is plain CSS on .applications-toast/.is-open
-    // — see that rule's own comment. Nothing to measure or set inline
-    // here: unlike the clip-path version this replaced, a transform
-    // scale needs no real pixel dimensions to animate between, and
-    // reduced-motion is handled the same way as everything else on this
-    // page, by that CSS's own prefers-reduced-motion override dropping
-    // the transition entirely.
+    // Real pixel values for the width grow — see .applications-toast's
+    // own comment for why this is a real `width` transition rather than
+    // clip-path or transform:scale. Measured immediately after insertion
+    // (before anything below touches this element's style), same idiom
+    // positionHeroAsterisk() uses elsewhere in this file: real rendered
+    // values, not guessed numbers, so this holds up regardless of
+    // viewport width or how long the message text ends up being.
+    const naturalWidth = el.offsetWidth;
+    const squareSize = el.offsetHeight;
+
+    // The ≤480px breakpoint (see that media query in style.css) turns
+    // this into a full-width bar via left/right, not a right-anchored
+    // floating card — there's no "square growing into the corner" to
+    // animate there (the bar already spans the full available width),
+    // so this skips setting an inline `width` entirely on that
+    // breakpoint and just leaves the opacity fade to run on its own.
+    // Checked once up front (not re-checked on resize): this only
+    // matters for THIS toast's one entrance animation, not for anything
+    // that needs to keep tracking the breakpoint afterward.
+    const isMobileBar = window.matchMedia("(max-width: 480px)").matches;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!isMobileBar && !reduceMotion) {
+      el.style.width = `${squareSize}px`;
+    }
 
     let dismissTimer = null;
     let dismissed = false;
@@ -876,17 +893,18 @@ function initApplicationsToast() {
       if (dismissed) return;
       dismissed = true;
       clearTimeout(dismissTimer);
-      // Shrinks back to the exact same scale it grew from (plain CSS,
-      // see .applications-toast's own comment), in step with
-      // __text/__close fading out — same opacity transition that
-      // removing is-open drives — instead of leaving a full-size,
-      // empty-looking card sitting there while only the text fades.
+      // Shrinks back to the exact same square it grew from, in step
+      // with __text/__close fading out — mirrors the entrance instead
+      // of leaving a full-width, empty-looking card sitting there while
+      // only the text fades.
+      if (!isMobileBar && !reduceMotion) el.style.width = `${squareSize}px`;
       el.classList.remove("is-open");
-      // Matches .applications-toast's own transform transition duration
-      // (0.5s) — not read from it live since there's nothing else on
-      // this page that needs the two kept in sync automatically the
-      // way, say, setZoomed()'s own CSS-driven sizing does.
-      setTimeout(() => el.remove(), 500);
+      // Matches the total entrance duration below (0.2s fade-in delay +
+      // 0.6s width grow = 0.8s) — not read from CSS live since there's
+      // nothing else on this page that needs the two kept in sync
+      // automatically the way, say, setZoomed()'s own CSS-driven sizing
+      // does.
+      setTimeout(() => el.remove(), 800);
     }
     el.querySelector(".applications-toast__close").addEventListener("click", dismiss);
     dismissTimer = setTimeout(dismiss, TOAST_AUTO_DISMISS_MS);
@@ -895,10 +913,21 @@ function initApplicationsToast() {
     // initPageFlashReady()) for the identical problem: adding is-open in
     // the SAME task that just inserted the element can get coalesced
     // into one style pass with no committed "before" state to transition
-    // from, silently skipping the fade/slide-in (now grow-in) entirely.
+    // from, silently skipping the fade/grow-in entirely.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         el.classList.add("is-open");
+        if (!isMobileBar && !reduceMotion) {
+          el.style.width = `${naturalWidth}px`;
+          // Clears the inline width once the grow has genuinely
+          // finished, so this doesn't stay pinned to a stale measured
+          // value if the viewport is resized later while the toast is
+          // still showing — style.css's own max-width/left/right rules
+          // take back over for anything after this point.
+          setTimeout(() => {
+            if (!dismissed) el.style.width = "";
+          }, 800);
+        }
       });
     });
   }

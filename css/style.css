@@ -6442,48 +6442,51 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   bottom: 24px;
   z-index: 5000;
   max-width: min(480px, calc(100vw - 48px));
-  /* The entrance: scales this shell up from near-nothing to full size,
-     anchored at the same bottom-right corner it's already positioned at
-     (transform-origin below) — reads as the whole card, __surface's
-     cream fill AND its red border AND ::before's red peek behind it,
-     genuinely growing outward from that corner, since transform scales
-     everything painted for this element (pseudo-elements included) as
-     one unit.
+  /* The entrance, 2 stages — per explicit follow-up feedback, replacing
+     BOTH earlier attempts:
+       1. A quick opacity fade-in AT THE SQUARE SIZE (width == this
+          element's own natural height — see initApplicationsToast() in
+          main.js, which measures and sets both real pixel values as
+          inline styles). No size change happens during this stage.
+       2. Once that fade lands, a slower bezier `width` grow from that
+          square out to the card's real natural width. right:24px above
+          keeps the RIGHT edge pinned throughout, so growing width
+          extends the box purely leftward — never up/down, never
+          right — which is what makes this read as "length-wise" rather
+          than the uniform-on-both-axes growth a transform:scale()
+          (tried in between clip-path and this) necessarily produces:
+          scale can't grow one axis without the other.
 
-     This used to be a clip-path reveal instead (a fixed-size square
-     window sliding open over an already-full-size card) — technically
-     avoided the `width`-transition flex jank below, but per explicit
-     follow-up feedback read as "not actually growing, more like it's
-     being revealed": clip-path never resizes what's painted, just masks
-     more of it into view, so a border painted at its full final
-     thickness from frame one looks abruptly cut off along whichever
-     edge the clip hasn't reached yet, rather than extending the way a
-     genuinely growing border would. Scale doesn't have that problem —
-     the border shrinks down proportionally with the rest of the card at
-     small scale and grows back in step with everything else, which is
-     what "growing" actually looks like.
-
-     Deliberately NOT a `width` transition on __surface (an earlier
-     version of this did that instead): animating actual layout width
-     meant __surface's flex content (justify-content:space-between, see
-     that rule) had genuinely different free space to distribute at
-     every frame, so __close visibly hitched/jumped the moment the
-     growing box crossed the content's own natural width — confirmed
-     live, reported as the close button ending up "too far right,"
-     since that jump landed it past where the padding-respecting
-     space-between position was ever meant to put it. transform, like
-     clip-path before it, never touches layout at all: __surface renders
-     at its true final size for the entire animation, so space-between
-     places __close in its real resting spot from frame one — only the
-     PAINTED result is scaled down, nothing about the layout itself
-     changes, so there's nothing left to jump. */
-  transform-origin: bottom right;
-  transform: scale(0.15);
-  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+     Real `width`, not clip-path (the very first version of this) or
+     transform:scale (the version after that):
+       - clip-path masks an already-full-size, already-fully-bordered
+         card — the border on whichever edge the mask hasn't reached yet
+         is simply not painted at all, so it pops in abruptly instead of
+         extending, reading as "being revealed" rather than "growing."
+       - transform:scale distorts uniformly on both axes (see above) —
+         fine for the earlier "just make it grow, don't care which
+         axis" request, wrong for this one, which specifically wants
+         ONLY the horizontal axis to move.
+     A real `width` transition has neither problem: border-width is a
+     fixed CSS property independent of the element's own width, so it
+     never stretches or gets masked — it just naturally spans however
+     wide the box currently is, every frame, which is what "growing"
+     actually looks like. The ORIGINAL rejection of `width` (see
+     .applications-toast__close's own comment for how that's fixed now)
+     was really a bug in how __close was positioned, not a problem with
+     animating width itself. */
+  opacity: 0;
+  transition: opacity 0.2s ease-out, width 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.2s;
 }
 .applications-toast.is-open {
-  transform: scale(1);
+  opacity: 1;
 }
+/* The mobile full-width-bar variant (see the ≤480px query further down,
+   .applications-toast { left/right }) doesn't get the square-grow at
+   all — main.js skips setting an inline `width` there entirely, so this
+   opacity transition is the only thing that ever runs; a bar already
+   spanning the full available width has nothing meaningful left to
+   "grow into" horizontally the way the floating desktop card does. */
 /* Same "solid colored rectangle peeking out from behind" trick as
    .publication-card::before, not a blurred box-shadow — a flat,
    un-blurred var(--color-red) card sitting directly behind
@@ -6511,32 +6514,17 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 20px;
   /* Vertical padding brought down from 26px per explicit request ("too
      tall") — horizontal stays at 30px, unrelated to height. The square
      entrance's starting size (main.js reads this element's own real
      offsetHeight) shrinks right along with it automatically, no JS
-     change needed there. */
+     change needed there. Right padding specifically also has to leave
+     room for __close, which is positioned absolutely now (see that
+     rule's own comment) rather than flowing here as a 2nd flex item. */
   padding: 16px 30px;
   border-radius: 16px;
   background: var(--color-cream);
   border: 1.5px solid var(--color-red);
-  /* space-between, unconditionally (not just at the ≤480px full-width-bar
-     breakpoint): above that breakpoint __surface shrink-wraps to its own
-     content (see .applications-toast's own comment on why), so free
-     space is ~0 and this is a no-op there — text and __close just sit
-     adjacent, same as flex-start would give. At ≤480px this is what
-     actually pins __close to the row's real right end, flush against
-     the padding (30px, same inset the text itself sits at) with no
-     extra margin trick needed — see .applications-toast's own comment
-     for why an earlier margin-right:-30px override existed and why it's
-     gone now: this only works cleanly because __surface's WIDTH never
-     animates (the grow is a clip-path on the ancestor instead, see
-     that rule) — space-between over a constant width has the same free
-     space on every frame, so __close never has to jump partway through
-     the entrance the way it did when the container itself was growing
-     out from under it. */
-  justify-content: space-between;
 }
 .applications-toast__text {
   margin: 0;
@@ -6544,11 +6532,13 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   font-size: clamp(16px, 2.4vw, 19px);
   color: var(--color-dark);
   line-height: 1.4;
-  /* __surface itself always renders at full size now (see
-     .applications-toast's own comment on why the grow is a clip-path,
-     not a real width change) — this isn't load-bearing for the
-     animation anymore, just a plain safeguard against this one-line
-     message ever wrapping awkwardly at an odd viewport width. */
+  /* Reserves room for __close, which — now that it's positioned
+     absolutely rather than as a 2nd flex item (see that rule's own
+     comment) — no longer pushes this text over on its own. 46px ≈ its
+     16px glyph + 12px total padding (6px each side, for a bigger tap
+     target than the visible glyph) + a 20px gap matching what the old
+     flex `gap` used to provide. */
+  padding-right: 46px;
   white-space: nowrap;
 }
 .applications-toast__link {
@@ -6567,25 +6557,42 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 /* Same crossed-2-bars technique as .edition-lightbox__close-glyph
    (see that rule's own comment for the full reasoning) — smaller here
    to match this toast's own more modest scale. */
+/* Absolutely positioned (relative to __surface, which has position:
+   relative — see that rule) instead of a 2nd flex item alongside
+   __text — this is the actual fix for the original width-transition
+   bug (see .applications-toast's own long comment): a flex sibling's
+   position is recomputed from the container's CURRENT width on every
+   single frame, so animating that width made it visibly recompute/jump
+   right along with it. An absolutely positioned element's position
+   comes only from top/right/bottom/left below, completely independent
+   of __surface's width — nothing for it to recompute, so nothing left
+   to jump, at any point during the grow. right:30px matches __surface's
+   own padding, landing it in the exact same visual spot the old flex
+   layout's "flush against the padding" rested at. */
 .applications-toast__close {
-  flex-shrink: 0;
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
   appearance: none;
   background: none;
   border: none;
   padding: 6px;
-  margin: -6px;
   cursor: pointer;
 }
 /* "text appears at the same time" as __surface's own width grow, per
-   explicit request — same duration/curve as that width transition
-   above so both finish together, not one trailing the other. Shared
-   between __text and __close (not the whole __surface) since the
-   square START state still needs to actually show its cream/red card
-   styling immediately, just with nothing legible inside it yet. */
+   explicit request — matching BOTH that transition's duration (0.6s)
+   AND its 0.2s delay (the square-fade stage, see .applications-toast's
+   own comment) so text/close only start fading in once the box has
+   actually started growing, finishing together with it rather than
+   trailing behind. Shared between __text and __close (not the whole
+   __surface) since the square START state still needs to actually show
+   its cream/red card styling immediately, just with nothing legible
+   inside it yet. */
 .applications-toast__text,
 .applications-toast__close {
   opacity: 0;
-  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.2s;
 }
 .applications-toast.is-open .applications-toast__text,
 .applications-toast.is-open .applications-toast__close {
@@ -6653,14 +6660,18 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-reveal--drop,
   .mosaic-reveal,
   .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
-  /* The grow entrance lives on .applications-toast's own transform (see
-     that rule's own comment) plus __text/__close's opacity, both
-     neutralized here. transform: scale(1) on the base (non-.is-open)
-     rule too, not just transition: none — otherwise the element would
-     still render at its small resting scale(0.15) for the brief moment
-     between insertion and initApplicationsToast() adding .is-open,
-     visible as a flash even with the transition itself instant. */
-  .applications-toast { transition: none; transform: scale(1); }
+  /* The grow entrance lives on .applications-toast's own opacity/width
+     (see that rule's own comment) plus __text/__close's opacity, both
+     neutralized here. opacity: 1 on the base (non-.is-open) rule too,
+     not just transition: none — otherwise the element would still
+     render at its resting opacity: 0 for the brief moment between
+     insertion and initApplicationsToast() adding .is-open, visible as a
+     flash even with the transition itself instant. No matching `width`
+     override needed here: initApplicationsToast() checks this same
+     media query and never sets the small square width inline in the
+     first place for reduced-motion, going straight to the real natural
+     width instead — see that function's own comment. */
+  .applications-toast { transition: none; opacity: 1; }
   .applications-toast__text,
   .applications-toast__close { transition: none; opacity: 1; }
   .image-mosaic__mask,
