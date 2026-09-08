@@ -2400,11 +2400,40 @@ function initAboutIntroOverflowRows() {
     // style.css) — nothing here can gap against a sibling it no longer
     // shares a row with, so there's nothing left to do once the reset
     // above has cleared out any fillers from a wider layout.
-    if (window.innerWidth <= 720) return;
+    if (window.innerWidth <= 720) {
+      // Clears a px value the desktop branch below may have set on a
+      // previous, wider call — inline styles beat an external rule of
+      // any specificity, so a stale one here would silently defeat
+      // .square-grid--4col's own mobile grid-auto-rows:auto reset
+      // (style.css), which isn't !important since it's never had
+      // anything inline to out-rank before now.
+      section.style.gridAutoRows = "";
+      return;
+    }
 
     const colWidth = decorative[0].getBoundingClientRect().height;
     const creamHeight = cream.getBoundingClientRect().height;
     if (!colWidth) return;
+    // Locks every row (not just newly-inserted ones) to this ONE
+    // measured value instead of leaving grid-auto-rows on the CSS's own
+    // plain "auto" (each row then sizing independently off its own
+    // decorative squares' own aspect-ratio:1/1) — reported live:
+    // real-Safari-only, a hairline gap between rows, since that leaves
+    // N separate aspect-ratio-in-an-auto-grid computations (one per
+    // row) free to round a fraction of a pixel apart from each other,
+    // same root cause as the site-footer bug fixed alongside this one
+    // (see that rule's own comment in style.css) — the fix there was a
+    // single container-level aspect-ratio instead of N independent
+    // ones, which isn't available to reuse here (the cream tile's real
+    // content genuinely needs auto height, which is the whole reason
+    // this section doesn't use that approach — see #about-intro's own
+    // aspect-ratio:auto in style.css), so this achieves the same "one
+    // shared computation, not N independent ones" outcome a different
+    // way: one real measurement, then every row explicitly pinned to
+    // that exact value. Harmless alongside each square's own
+    // aspect-ratio:1/1 (style.css) — they already agree numerically,
+    // this just removes any chance of them being asked to agree twice.
+    section.style.gridAutoRows = `${colWidth}px`;
     const neededRows = Math.ceil(creamHeight / colWidth);
     const extraRows = neededRows - ABOUT_INTRO_BASE_CREAM_ROWS;
     if (extraRows <= 0) return;

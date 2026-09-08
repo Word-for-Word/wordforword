@@ -5153,8 +5153,22 @@ body.edition-lightbox-open {
     animation-play-state: paused;
   }
 }
+/* height was a flat 76px regardless of viewport — per explicit request,
+   these should shrink somewhat as the viewport narrows rather than
+   staying completely fixed, but only slightly (not a proportional
+   full-range clamp like the site's own text sizing elsewhere). Each
+   clamp's own vw coefficient is threshold-matched to reach its ORIGINAL
+   px value at exactly 1400px (100 * original / 1400 — same "reference
+   width" idiom used sitewide, e.g. .square__intro-body's own clamp) and
+   stay pinned there above it; the floor is 70% of that original value,
+   reached by ~1030px and held flat the rest of the way down through
+   mobile, rather than shrinking indefinitely into something illegibly
+   small. setPartnersMarqueeMetrics() in main.js re-measures the
+   track's real rendered width on resize regardless of how big these
+   render at any given moment, so the scroll animation stays correct
+   without needing to know these sizes itself. */
 .partners__logo {
-  height: 76px;
+  height: clamp(54px, 5.43vw, 76px);
   width: auto;
 }
 /* Kelly Writers House's own logo is a near-square mark, not a wide
@@ -5162,7 +5176,7 @@ body.edition-lightbox-open {
    reads visibly smaller/lighter next to them, so it gets its own
    larger height. */
 .partners__logo--kelly {
-  height: 100px;
+  height: clamp(70px, 7.14vw, 100px);
 }
 /* Same brown asterisk artwork AND size as every other marquee's "*"
    separator (assets/images/Brown asterisk.png, MARQUEE_ASTERISK_SIZE =
@@ -5172,7 +5186,7 @@ body.edition-lightbox-open {
    text marquees' inline layout), so none of the canvas-measured
    cap-height alignment those need applies here. */
 .partners__asterisk {
-  height: 14px;
+  height: clamp(10px, 1vw, 14px);
   width: auto;
 }
 
@@ -5254,24 +5268,38 @@ body.edition-lightbox-open {
      color, way too light/washed-out against dark brown to read as a
      deliberate "beige" text color. */
   color: var(--color-tan);
-  /* NOT square-grid--rows-2's aspect-ratio trick, since that's a
-     container-level ratio and this footer's own squareness instead
-     comes from each checker's own aspect-ratio below. */
+  /* Was deliberately NOT using .square-grid--rows-2's own container-
+     level aspect-ratio trick, relying on each checker's own
+     aspect-ratio instead (see the removed rule this replaced) — that
+     meant row 1's height and row 2's height were two INDEPENDENT
+     aspect-ratio computations (one per row's own checker) rather than
+     one shared value evenly divided. Reported live: real-Safari-only,
+     a hairline cream gap splitting every row right at the row 1/row 2
+     boundary — every OTHER section on the page uses the shared
+     single-computation container-ratio approach and has no such gap,
+     confirmed live as the actual distinguishing factor. Switched to
+     that same proven approach instead of guessing at a Safari-specific
+     patch: one aspect-ratio computation (below), evenly divided by
+     grid-template-rows, so there's nothing left for two independent
+     per-row roundings to disagree about. Matches .square-grid--rows-2's
+     own 4-col/2-row ratio exactly (this is also a 4-column, 2-row
+     grid) — reset back to auto at the mobile breakpoint below, same as
+     that class's own mobile override, since single-column stacked
+     content there has no fixed ratio to keep. */
+  aspect-ratio: 4 / 2;
   grid-template-rows: repeat(2, 1fr);
 }
-/* Plain aspect-ratio:1/1 divs have no intrinsic height otherwise — this
-   is what makes the row come out truly square (matching column width),
-   the same way every other checker tile on the page does via its
-   section's own container aspect-ratio. */
+/* Mitigation for a reported real-Chrome-only bug: elements this far
+   down a long page can get a delayed "cold start" repaint the first
+   time they're scrolled into view, making the opacity transition's
+   very first rendered frame already partway faded in instead of
+   starting clean. This hints the browser to keep the element
+   composite-ready ahead of time rather than repainting from scratch
+   at reveal. Doesn't need .site-footer's own aspect-ratio to size
+   itself anymore (see that rule's own comment) — grid-auto-rows'
+   default stretch already fills the row height the container now
+   provides, same as every other checker tile on the page. */
 .site-footer .square--checker {
-  aspect-ratio: 1 / 1;
-  /* Mitigation for a reported real-Chrome-only bug: elements this far
-     down a long page can get a delayed "cold start" repaint the first
-     time they're scrolled into view, making the opacity transition's
-     very first rendered frame already partway faded in instead of
-     starting clean. This hints the browser to keep the element
-     composite-ready ahead of time rather than repainting from scratch
-     at reveal. */
   will-change: opacity;
 }
 .site-footer__center {
@@ -5522,8 +5550,22 @@ body.edition-lightbox-open {
   /* Same reasoning as .square-grid--4col above — 4 narrow columns with
      side checkers squeezed thin doesn't hold up on mobile, so stack to
      a single column instead. */
-  .site-footer { grid-template-columns: 1fr; grid-template-rows: auto; }
-  .site-footer__center { grid-column: 1; grid-row: auto; padding: 48px 24px; }
+  .site-footer { aspect-ratio: auto; grid-template-columns: 1fr; grid-template-rows: auto; }
+  /* grid-column/grid-row need !important — .site-footer__center carries
+     an inline style="grid-column: 2 / span 2; grid-row: 1 / span 2;"
+     (authored for the desktop 4-column grid), and an inline style
+     always wins over an external rule of any specificity unless that
+     rule is ALSO !important — same bug/fix as #overview and
+     #about-intro's own mobile remaps elsewhere in this file. Currently
+     invisible in practice (nothing else occupies the phantom implicit
+     column this leaves behind, and the center content still renders
+     full-width regardless), but confirmed live via computed styles:
+     without this, .site-footer's own grid-template-columns:1fr above
+     is forced to invent 2 implicit columns to satisfy the stale
+     placement instead of the single real one, rather than a genuine
+     visual bug. padding needs no !important — nothing else sets it
+     inline. */
+  .site-footer__center { grid-column: 1 !important; grid-row: auto !important; padding: 48px 24px; }
   /* All 4 decorative tile squares (checkers + the 2 plain dark ones),
      not just the checkers — only .site-footer__center's own content
      should show on mobile. */
