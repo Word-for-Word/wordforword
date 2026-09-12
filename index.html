@@ -34,6 +34,32 @@
        back out of the intro timing — see the comment on
        initIntroReveal() for why that matters. -->
   <script>window.__pageLoadStart = Date.now();</script>
+  <!-- Dev-only: the dev panel's "Skip hero intro" button (initDevPanel()
+       in main.js) sets this ONE-SHOT sessionStorage flag right before
+       navigating here. An earlier version of this tried spoofing
+       prefers-reduced-motion (window.matchMedia patched to report true)
+       to reuse the site's existing reduced-motion code paths — reported
+       live as not actually skipping anything: the elaborate splash/hero
+       title timing in initIntroReveal() etc. has NO reduced-motion-aware
+       fast path at all, it's purely CSS hiding the motion while the
+       exact same real-time delays still elapse underneath. A 2nd attempt
+       spoofed window.__pageLoadStart far into the past instead, to feed
+       initIntroReveal()'s own "time already spent" --intro-delay
+       correction a huge elapsed value — also confirmed live to make
+       ZERO difference to the actual timing, meaning something else
+       entirely (not that correction) is what's actually gating it.
+       Given 2 attempts at reusing/tricking the existing timing system
+       both failed to actually skip anything, initForceSkipHeroIntro()
+       in main.js instead force-sets the END state directly (every
+       --intro-delay zeroed, .is-visible added everywhere, body.intro-
+       finished set) rather than trying to make the real timers resolve
+       faster — deterministic, and doesn't depend on understanding every
+       async path (font loading, asset preloading, MIN_VISUAL_MS floors)
+       that feeds into the current system. Runs from the DOMContentLoaded
+       bootstrap (needs real elements to exist, so it can't run this
+       early like the skip-intro-splash flag below) — see its own
+       comment in main.js for why a brief (<100ms) flash of the
+       un-revealed state first is an acceptable trade here. -->
   <!-- Must run here, synchronously, before the rest of <head>/<body>
        parses — the intro splash's own screen-01 animation starts from
        parse time with no JS gating, so anything added later (even on
@@ -107,7 +133,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=273" />
+  <link rel="stylesheet" href="/css/style.css?v=287" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -326,16 +352,16 @@
        than the generated publications.html — that page is only for the
        article-publishing system's 4 categories, not whole-issue
        volumes, which are a separate, already-existing concept. -->
-  <header class="site-header intro-reveal intro-reveal--drop" style="--intro-delay: 4870ms;">
+  <header class="site-header intro-reveal intro-reveal--drop intro-reveal--drop-staggered" style="--intro-delay: 4870ms;">
     <div class="nav__dropdown-hover-zone" aria-hidden="true"></div>
     <div class="site-header__clip">
-      <a href="/" class="nav__logo">
+      <a href="/" class="nav__logo nav-entrance-item" style="--entry-delay: 0ms">
         <img src="/assets/images/Logo.png" alt="Word for Word logo" />
       </a>
       <nav class="nav">
         <ul class="nav__links">
-          <li><a href="/">Overview</a></li>
-          <li class="nav__item--publications">
+          <li class="nav-entrance-item" style="--entry-delay: 90ms"><a href="/">Overview</a></li>
+          <li class="nav__item--publications nav-entrance-item" style="--entry-delay: 180ms">
             <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
             <div class="nav__dropdown">
               <a href="/#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
@@ -345,8 +371,8 @@
               <a href="/outreach/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Outreach</span></a>
             </div>
           </li>
-          <li><a href="/about/">About Us</a></li>
-          <li><a href="/get-involved/">Get Involved</a></li>
+          <li class="nav-entrance-item" style="--entry-delay: 270ms"><a href="/about/">About Us</a></li>
+          <li class="nav-entrance-item" style="--entry-delay: 360ms"><a href="/get-involved/">Get Involved</a></li>
           <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
         </ul>
       </nav>
@@ -400,8 +426,8 @@
          still text placeholders pending their own image treatment. -->
     <div class="hero__wordmark-wrap">
       <div class="hero__wordmark-placeholder" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--1"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3620ms;">Word</span></span>
-        <span class="hero__wordmark-word hero__wordmark-word--2"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4100ms;">Wor<span class="hero__wordmark-d-anchor">d</span></span></span>
+        <span class="hero__wordmark-word hero__wordmark-word--1"><span class="hero__title-exit hero__title-exit--lettered intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3620ms;"><span class="hero__title-letter" style="--letter-delay: 0ms; --letter-travel: 64px;">W</span><span class="hero__title-letter" style="--letter-delay: 140ms">o</span><span class="hero__title-letter" style="--letter-delay: 280ms">r</span><span class="hero__title-letter" style="--letter-delay: 420ms">d</span></span></span>
+        <span class="hero__wordmark-word hero__wordmark-word--2"><span class="hero__title-exit hero__title-exit--lettered intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4100ms;"><span class="hero__title-letter" style="--letter-delay: 0ms">W</span><span class="hero__title-letter" style="--letter-delay: 140ms">o</span><span class="hero__title-letter" style="--letter-delay: 280ms">r</span><span class="hero__wordmark-d-anchor"><span class="hero__title-letter" style="--letter-delay: 420ms">d</span></span></span></span>
       </div>
       <!-- Title group (word 1/for/word 2) shifted +400ms later
            (3220/3350/3700 -> 3620/3750/4100) per explicit follow-up
@@ -1368,6 +1394,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=163" defer></script>
+  <script src="/js/main.js?v=173" defer></script>
 </body>
 </html>

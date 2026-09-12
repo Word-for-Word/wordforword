@@ -851,6 +851,56 @@ html.show-page-flash.page-flash-ready .site-header {
 }
 
 /* ===================================================================
+   Publication-family transition — the 4-stripe cover used ONLY for
+   navigating BETWEEN publications/, essays/, interviews/, narratives/,
+   and outreach/ (initPublicationFamilyTransitions() in main.js).
+   Arriving at any of those 5 FROM outside the family still gets the
+   plain .page-flash "02" screen above, unchanged — this is a separate,
+   fancier cover reserved for lateral moves within the family, made
+   possible by main.js swapping <main> in place instead of a real
+   navigation (see that function's own comment for why).
+
+   4 full-width bands stacked top to bottom, each 1/4 of the viewport
+   height, using the 4 accent colors this site already has (there's no
+   literal blue in the palette — --color-grey, "muted blue-grey" per
+   its own definition above, stands in for it, matching .page-flash--02
+   already using it for this exact same family of pages elsewhere).
+   Each one grows from 0 to full WIDTH (transform:scaleX, not `width` —
+   this is a plain full-bleed color fill with nothing inside it to
+   reflow, so there's no reason to pay layout's cost over a compositor-
+   only transform), anchored to the left edge, top band first: main.js
+   adds/removes .is-grown on each band in sequence, top to bottom, both
+   on the way in (covering the old page) and the way out (revealing the
+   new one) — same order both directions, per explicit request. */
+.pub-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+.pub-transition__stripe {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 25%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.pub-transition__stripe.is-grown {
+  transform: scaleX(1);
+}
+.pub-transition__stripe--1 { top: 0%;   background: var(--color-red); }
+.pub-transition__stripe--2 { top: 25%;  background: var(--color-grey); }
+.pub-transition__stripe--3 { top: 50%;  background: var(--color-dark); }
+.pub-transition__stripe--4 { top: 75%;  background: var(--color-tan); }
+@media (prefers-reduced-motion: reduce) {
+  /* Never actually created under reduced motion — see
+     navigateWithinPublicationFamily()'s own check in main.js — this is
+     just a safety net in case that element somehow exists anyway. */
+  .pub-transition__stripe { transition: none; }
+}
+
+/* ===================================================================
    Header / Nav
 =================================================================== */
 .site-header {
@@ -1160,6 +1210,30 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   background: var(--color-dark);
   transition: background-color 0.15s ease;
   pointer-events: none;
+}
+/* Homepage only — .intro-reveal--drop-staggered only ever exists on
+   .site-header there (see that rule's own comment). Per explicit
+   request: the underline should appear LAST in the nav's own staggered
+   entrance, growing lengthwise from 0 to its real width instead of
+   just being there from frame one. Starts at a flat `width: 0`, not
+   `var(--indicator-width, 0px)` — initNavHighlight() keeps that custom
+   property current from the very first placeIndicator() call (well
+   before .is-revealed exists), and referencing it here too would let
+   the width jump to its real value the instant that property is first
+   set, defeating the "starts at 0" state outright. Deliberately no
+   --intro-delay-based transition-delay here — see
+   initNavHighlight()'s own comment on why the entrance is timed
+   entirely from JS (reacting to the last staggered nav item's own
+   transitionend) instead: this same transition also needs to fire
+   normally on an ordinary window resize, and a delay baked in from page
+   load would apply to THAT just as much, reproducing a "resize, then it
+   jumps seconds later" bug for something that should update instantly. */
+.site-header.intro-reveal--drop-staggered .nav__indicator {
+  width: 0;
+  transition: background-color 0.15s ease, width 0.5s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.site-header.intro-reveal--drop-staggered .nav__indicator.is-revealed {
+  width: var(--indicator-width, 0px);
 }
 /* Same red-on-hover convention as .nav__links a itself (color 0.15s
    ease, right above) — the underline only ever sits under the ACTIVE
@@ -5807,8 +5881,114 @@ body.edition-lightbox-open {
      class. Equal specificity (single class) to .intro-reveal--slide-slow,
      but this rule sits later in the cascade, so it wins for `transform`
      alone; transition timing/duration still come from the shared rule.
-     80px read as still not enough travel, bumped to 140px. */
+     80px read as still not enough travel, bumped to 140px. Still applies
+     to the "for" image (.hero__wordmark-for) — only the 2 TEXT "Word"s
+     opt out of this via .hero__title-exit--lettered right below, since
+     an image has no letters to hand the motion off to. */
   transform: translateY(140px);
+}
+/* Per-letter cascade inside each "Word" (index.html's hero only — the
+   compact wordmark reused on about/get-involved is untouched, and the
+   "for" image between the two words has no letters, so it keeps the
+   plain word-level 140px slide above unchanged).
+
+   This REPLACES the word-level slide for these 2 words — an earlier
+   version kept BOTH (the outer .hero__title-exit doing its own 140px
+   slide, each letter ALSO doing a smaller independent slide nested
+   inside it), reported live as reading "awkward": each letter's own
+   motion was riding on top of a SEPARATELY, SIMULTANEOUSLY moving
+   parent, compounding into a messy, hard-to-read blur rather than a
+   clean one-by-one reveal. .hero__title-exit--lettered neutralizes the
+   parent's own opacity/transform entirely (always opacity:1,
+   transform:none — see that rule below) so the letters are the ONLY
+   thing visibly moving; the parent becomes a plain, invisible-in-effect
+   wrapper that exists purely to carry --intro-delay and trigger
+   .is-visible at the right moment (still needed: the squash-stretch
+   scale entrance on the OUTER .hero__wordmark-word wrapper, a SEPARATE
+   element, still keys off THIS .is-visible via :has() below).
+
+   Reveal is a plain CSS rule keyed off that same .is-visible (added by
+   initIntroReveal() exactly when it already was) rather than any new
+   JS — .hero__title-exit.is-visible .hero__title-letter below. Custom
+   properties inherit downward, so --intro-delay (which initIntroReveal()
+   corrects for time-already-elapsed directly on .hero__title-exit, see
+   that function's own comment) reaches these letters automatically:
+   each one waits for the SAME corrected delay as the word itself, plus
+   its own small --letter-delay stagger set per letter in the HTML.
+   140ms * 3 + 550ms = 970ms total for a 4-letter word — re-tune the
+   per-letter --letter-delay values (and this rule's own duration) in
+   index.html/here if a future word has a different letter count.
+   36px travel matches this site's own general .intro-reveal--slide-slow
+   default (see that rule's own comment) — bumped up from an earlier,
+   more subtle 20px now that each letter's own motion is the ONLY
+   visible entrance rather than a small accent on top of a bigger one.
+
+   Word 2's trailing "d" is wrapped in .hero__wordmark-d-anchor for
+   asterisk positioning (see positionHeroAsterisk() in main.js) —
+   nesting this letter's own span INSIDE that anchor rather than the
+   other way around keeps the anchor measuring exactly the "d" glyph's
+   box either way, since positionHeroAsterisk() reads offsetWidth/
+   offsetTop (pre-transform layout), which this letter's own transform
+   never touches regardless of nesting order — see that function's own
+   comment on why transforms anywhere in the chain are already invisible
+   to it.
+
+   Deliberately plain `display: inline` (the default) — an earlier
+   version set `inline-block` (seemingly needed to transform each
+   letter independently, though modern browsers apply `transform` to
+   plain inline elements fine too). inline-block changed these letters'
+   own vertical-align/line-box contribution enough to shift word2's
+   rendered offsetTop, which positionHeroAsterisk() reads directly —
+   confirmed live via Playwright: the asterisk landing ~190px/120px off
+   from its correct position, with .hero__wordmark-d-anchor's own
+   offsetWidth/Height completely unchanged (83x247px either way) — i.e.
+   the "d" glyph itself measured identically, only the surrounding
+   line's geometry moved. Removing inline-block fixed it exactly, with
+   no visible difference to the letter animation itself. */
+.hero__title-exit--lettered {
+  opacity: 1;
+  transform: none;
+}
+.hero__title-letter {
+  /* position:relative + `top`, NOT `transform` — confirmed live
+     (getBoundingClientRect() polled through the whole transition) that
+     a plain non-replaced inline element's `transform` computes and
+     interpolates correctly per getComputedStyle, but never actually
+     moves a single rendered pixel: this really is the CSS Transforms
+     spec's stated exclusion ("does not apply to non-replaced inline
+     boxes"), not a browser quirk that's been quietly ignored the way
+     it's easy to assume. `top` on a relatively-positioned element has
+     no such exclusion — it's a plain, always-supported inline-safe
+     offset — and like `transform`, a relative offset is purely a
+     paint-time shift that never touches the STATIC layout position
+     positionHeroAsterisk() reads via offsetTop/offsetWidth (see that
+     function's own comment on why transforms in this chain are already
+     invisible to it; the same reasoning holds for a relative offset).
+     This also means `display: inline-block` — the OTHER thing tried
+     here (see that attempt's own comment, still below) — was never
+     actually necessary for the letters to be individually
+     transformable in the first place; it was solving a problem `top`
+     was never going to have. */
+  position: relative;
+  opacity: 0;
+  /* 36px default, overridable per letter via an inline --letter-travel
+     (see word--1's own first letter in index.html) — per explicit
+     follow-up, that one specifically read as barely moving. Not a bug:
+     with --letter-delay:0 it starts its own travel the SAME instant the
+     word's --intro-delay elapses, with no other letter's motion already
+     underway yet to visually anchor "this element is sliding" against —
+     the eye has nothing to compare it to for that first beat, so the
+     same 36px objectively covered reads as less than it is. A bigger
+     starting offset for JUST that one letter is a purely visual
+     compensation for that first-mover disadvantage, not a sign the
+     other letters' 36px is wrong. */
+  top: var(--letter-travel, 36px);
+  transition: opacity 0.55s ease-in, top 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: calc(var(--intro-delay, 0ms) + var(--letter-delay, 0ms));
+}
+.hero__title-exit.is-visible .hero__title-letter {
+  opacity: 1;
+  top: 0;
 }
 /* Squash-and-stretch entrance, per explicit request. Scale is split onto
    the OUTER wrapper (.hero__wordmark-word / .hero__wordmark-for-wrap)
@@ -5990,6 +6170,67 @@ body.intro-finished .hero__title-exit.is-visible {
   opacity: 1;
   transform: none;
 }
+/* Extends the "letters carry the entrance, the word itself is a static
+   passthrough" treatment (see .hero__title-exit--lettered's own comment
+   near .hero__title-letter) to THIS scroll-linked re-entry system too —
+   an earlier version only touched the page-load reveal, leaving this
+   separate, dedicated set of rules still driving the old word-level
+   slide whenever scrolling away and back retriggered it. Reported live
+   as "the old animation style" playing on re-entry even though the
+   page-load intro correctly used the new one.
+   Equal specificity to the 2 rules directly above (same class list:
+   body.intro-finished + .hero__title-exit + :not(.is-visible)/.is-visible),
+   so placement AFTER them is what makes THESE win the cascade for
+   word--1/word--2 specifically — the "for" image (not --lettered) is
+   untouched, still sliding as a whole exactly as before. */
+body.intro-finished .hero__title-exit--lettered:not(.is-visible) {
+  opacity: 1;
+  transform: none;
+}
+body.intro-finished .hero__title-exit--lettered.is-visible {
+  opacity: 1;
+  transform: none;
+}
+/* The word-level stagger above (word 1 at 0.05s, word 2 at 0.35s —
+   see those 2 rules' own comment) is now purely conceptual for the
+   (neutralized, always opacity:1/transform:none) exit span itself, but
+   the letters inside still need to actually KNOW those 2 numbers: this
+   is a completely separate re-entry timeline from the page-load one
+   (which the letters get via inherited --intro-delay, corrected for
+   elapsed load time — see .hero__title-letter's own comment), so it
+   needs its own explicit delay here rather than reusing that formula.
+   Specificity is deliberately high enough (6 classes/pseudo-classes +
+   1 element) to beat .hero__title-exit.is-visible .hero__title-letter's
+   own (2 classes) regardless of source order. */
+body.intro-finished .hero__wordmark-word--1 .hero__title-exit.is-visible .hero__title-letter {
+  transition-delay: calc(0.05s + var(--letter-delay, 0ms));
+}
+body.intro-finished .hero__wordmark-word--2 .hero__title-exit.is-visible .hero__title-letter {
+  transition-delay: calc(0.35s + var(--letter-delay, 0ms));
+}
+/* Same "exiting must always be instant" safety property as the word-level
+   rules above (see that rule's own comment on why: a fast scroll
+   reversal must never catch a letter mid-fade and re-enter from a stale
+   partial value) — var(--letter-travel, 36px) matches whatever each
+   individual letter's own page-load starting offset already is (word
+   1's first letter uses a bigger 64px — see .hero__title-letter's own
+   comment), so the exit/re-entry starting point is identical to the
+   page-load one instead of introducing a 2nd, untuned distance. */
+body.intro-finished .hero__title-exit--lettered:not(.is-visible) .hero__title-letter {
+  /* transition-delay: 0s here too, not just duration — a 0s DURATION
+     alone still waits out whatever delay is currently set (each
+     letter's own calc(), still holding a stale value from the page-load
+     formula/--letter-delay at this point) before snapping, so letters
+     were hiding one by one, staggered by up to 420ms, instead of all at
+     once — confirmed live by checking immediately after scrolling away:
+     only the 0-delay letter had actually hidden yet. That's the exact
+     "caught mid-delay by a fast scroll reversal" race this instant-exit
+     rule exists to prevent in the first place. */
+  transition-duration: 0s;
+  transition-delay: 0s;
+  opacity: 0;
+  top: var(--letter-travel, 36px);
+}
 /* The hero asterisk (beside the second "Word"'s "d") joins the same
    scroll-linked exit as the title/eyebrows. REDESIGNED per explicit
    request: re-entry should just REPLAY the exact page-load intro pop
@@ -6074,6 +6315,47 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 .intro-reveal--drop.is-visible {
   transform: none;
 }
+/* Per explicit request ("like the hero letters"): the logo and each nav
+   item drop in one by one instead of the whole header dropping in as
+   one unit. .intro-reveal--drop-staggered neutralizes .site-header's
+   OWN opacity/transform to a constant, always-visible passthrough —
+   same "static passthrough, children carry the motion" approach as
+   .hero__title-exit--lettered (see that rule's own comment) — while
+   .site-header keeps its .intro-reveal/.intro-reveal--drop CLASSES
+   (and the --intro-delay initIntroReveal() corrects for elapsed load
+   time on them) purely so .is-visible still gets added to it at the
+   right moment; .nav-entrance-item below reads that same --intro-delay
+   straight off its ancestor, same as .hero__title-letter does off
+   .hero__title-exit. */
+.site-header.intro-reveal--drop-staggered {
+  opacity: 1;
+  transform: none;
+}
+.nav-entrance-item {
+  opacity: 0;
+  transform: translateY(-16px);
+  transition: opacity 0.45s ease-in, transform 0.45s cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: calc(var(--intro-delay, 0ms) + var(--entry-delay, 0ms));
+}
+.site-header.is-visible .nav-entrance-item {
+  opacity: 1;
+  transform: none;
+}
+/* .nav__logo already carries a PERMANENT transform: translateY(-50%)
+   for vertical centering (see that rule) — transform is never additive
+   on one element, so this composes the entrance offset INTO that same
+   translateY via calc() instead of overriding it outright, exactly like
+   --squash-base does for the hero title elsewhere in this file. -32px,
+   not the shared -16px — same reason hero letter 1 got a bigger
+   --letter-travel (see that rule's own comment): this is the FIRST
+   staggered item, with nothing else already moving to visually anchor
+   its motion against, so the same distance reads as less. */
+.nav-entrance-item.nav__logo {
+  transform: translateY(calc(-50% + -32px));
+}
+.site-header.is-visible .nav-entrance-item.nav__logo {
+  transform: translateY(-50%);
+}
 
 /* ===================================================================
    Custom cursor asterisk — see initCustomCursor() in main.js. Currently
@@ -6118,6 +6400,18 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      the asterisk's own reddish-brown character while darkening
      consistently against every background. */
   mix-blend-mode: multiply;
+  /* .is-away toggled by initCustomCursor() on document.documentElement's
+     own mouseleave/mouseenter — per explicit request, so this doesn't
+     sit idling at its last real position while the pointer's actually
+     off in another window/off-screen entirely. A plain opacity
+     transition is enough; the position/spin themselves are already
+     driven by raf() every frame regardless, so they just resume
+     exactly where a real cursor would be the instant it's visible
+     again — nothing to re-sync. */
+  transition: opacity 0.3s ease;
+}
+.custom-cursor-wrap.is-away {
+  opacity: 0;
 }
 .custom-cursor-asterisk {
   display: block;
@@ -6775,7 +7069,20 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-reveal--slide-slow,
   .intro-reveal--drop,
   .mosaic-reveal,
-  .mosaic-reveal--slide { transition: none; opacity: 1; transform: none; }
+  .mosaic-reveal--slide,
+  /* Otherwise letters would still cascade in on their own, slower
+     timeline for a moment even with .hero__title-exit itself (the
+     .intro-reveal--slide-slow above) jumping straight to visible. Same
+     reasoning for .nav-entrance-item below, re: .site-header itself
+     (the .intro-reveal--drop already covered above). */
+  .hero__title-letter,
+  .nav-entrance-item { transition: none; opacity: 1; transform: none; }
+  /* .nav__logo's own permanent translateY(-50%) centering (see that
+     rule) would otherwise be wiped out by the blanket transform:none
+     just above — this narrower, later, higher-specificity override
+     restores it while still keeping the entrance itself instant
+     (opacity:1, no transition, inherited from the rule above). */
+  .nav-entrance-item.nav__logo { transform: translateY(-50%); }
   /* The grow entrance lives on .applications-toast's own opacity/width
      (see that rule's own comment) plus __text/__close's opacity, both
      neutralized here. opacity: 1 on the base (non-.is-open) rule too,
@@ -6808,4 +7115,47 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .hero__wordmark-asterisk { animation: none; }
   .custom-cursor-wrap { display: none; }
   .square__down-arrow { animation: none; opacity: 1; }
+}
+
+/* ===================================================================
+   Dev panel — testing-only tools (initDevPanel() in main.js), never
+   present on the real deployed site (see that function's own
+   isPublicSite check, same host-based gate initGetInvolvedLinkSwap()
+   uses elsewhere in this file, just inverted). Deliberately plain/
+   utilitarian rather than styled like real site UI, so it's never
+   mistaken for one of the site's own components.
+=================================================================== */
+.dev-panel {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(20, 20, 20, 0.85);
+  border-radius: 8px;
+  font-family: monospace;
+}
+.dev-panel__label {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.dev-panel__button {
+  appearance: none;
+  border: none;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.dev-panel__button:hover {
+  background: #ddd;
 }

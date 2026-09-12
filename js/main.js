@@ -204,6 +204,14 @@ document.addEventListener("DOMContentLoaded", () => {
     initNavPageFlash();
     initPublicationsDropdown();
     initEditionLightbox();
+    initPublicationFamilyTransitions();
+    initDevPanel();
+    // Last on purpose — see this function's own comment on why it needs
+    // to run after initHeroEyebrowExit() above has already registered
+    // its OWN "introfinished" listener (that's the one that actually
+    // reveals the hero asterisk; dispatching before it exists means it
+    // never hears about it at all).
+    initForceSkipHeroIntro();
   });
 });
 
@@ -362,9 +370,6 @@ function initHeaderReady() {
 // the actual click means that cost is only ever paid by someone who
 // wants it.
 function initEditionLightbox() {
-  const cards = document.querySelectorAll("[data-pdf]");
-  if (!cards.length) return;
-
   const PDFJS_VERSION = "3.11.174";
   const PDFJS_SCRIPT_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`;
   const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
@@ -824,14 +829,29 @@ function initEditionLightbox() {
     if (lastFocusedEl) lastFocusedEl.focus();
   }
 
-  cards.forEach((card) => {
-    card.addEventListener("click", () => openLightbox(card));
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        openLightbox(card);
-      }
-    });
+  // Delegated on document (not bound per-card): this used to be a plain
+  // cards.forEach(...) loop, back when "every [data-pdf] card that will
+  // ever exist on this page" was a fair assumption for a real, one-shot
+  // page load. It no longer is — initPublicationFamilyTransitions()
+  // swaps <main> in place for publications/essays/interviews/narratives/
+  // outreach navigation without a real reload, so the publications hub's
+  // own edition cards can appear (or reappear, as fresh DOM nodes with
+  // no listeners of their own) well after this function's one-time call
+  // at DOMContentLoaded. Delegation means new cards work automatically,
+  // with no matching re-init call needed after a swap. buildOverlay()
+  // above already only ever runs once (guarded by `if (!overlay)` in
+  // openLightbox()), so this is the only part of this function that
+  // actually needed to survive a card being replaced.
+  document.addEventListener("click", (e) => {
+    const card = e.target.closest("[data-pdf]");
+    if (card) openLightbox(card);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const card = e.target.closest("[data-pdf]");
+    if (!card) return;
+    e.preventDefault();
+    openLightbox(card);
   });
 }
 
@@ -850,8 +870,18 @@ function initEditionLightbox() {
 // comes first.
 function initApplicationsToast() {
   const TOAST_AUTO_DISMISS_MS = 30000;
+  // sessionStorage, not localStorage: "once per session" per explicit
+  // request — reappears on a fresh visit (new tab/browser launch) but
+  // not on every click to another page within the same visit, since
+  // this is a plain multi-page site where every navigation re-runs this
+  // function from scratch on load. sessionStorage persists across those
+  // page loads (unlike an in-memory flag, which can't survive one) but
+  // clears once the tab/browser closes, unlike localStorage.
+  const SESSION_KEY = "applicationsToastShown";
+  if (sessionStorage.getItem(SESSION_KEY)) return;
 
   function show() {
+    sessionStorage.setItem(SESSION_KEY, "true");
     const el = document.createElement("div");
     el.className = "applications-toast";
     el.setAttribute("role", "status");
@@ -961,6 +991,143 @@ function initGetInvolvedLinkSwap() {
     a.target = "_blank";
     a.rel = "noopener";
   });
+}
+
+// Testing-only tools, per explicit request — a small floating panel
+// with a button that replays the homepage's own elaborate intro splash
+// without needing to sit through it after every single reload while
+// iterating on it. Gated on the SAME host check as
+// initGetInvolvedLinkSwap() above, just inverted: that one runs ONLY on
+// the real public domain, this one runs on every OTHER host (localhost,
+// the trycloudflare tunnel, a future staging domain) — never on the
+// live site real visitors see.
+function initDevPanel() {
+  const isPublicSite = /(^|\.)pennwordforword\.org$/.test(location.hostname);
+  if (isPublicSite) return;
+
+  const el = document.createElement("div");
+  el.className = "dev-panel";
+  el.innerHTML = `
+    <p class="dev-panel__label">Dev tools</p>
+    <button type="button" class="dev-panel__button">Skip hero intro</button>
+  `;
+  document.body.appendChild(el);
+
+  el.querySelector(".dev-panel__button").addEventListener("click", () => {
+    // Read by initForceSkipHeroIntro() below on the next load — see that
+    // function's own comment for why this force-sets the end state
+    // directly rather than trying to make the real intro timers resolve
+    // faster. Set FIRST, synchronously, before the navigation actually
+    // starts, so it's already sitting in sessionStorage by the time that
+    // function runs on the next page load.
+    sessionStorage.setItem("wfw-dev-skip-intro", "1");
+    location.href = "/";
+  });
+}
+
+// See index.html's own long comment (right where __pageLoadStart is set)
+// for the 2 earlier approaches that were tried and failed here — this
+// force-sets the fully-revealed END state directly instead of trying to
+// make the real intro timers resolve any faster:
+//   - Every .intro-reveal element's own --intro-delay zeroed AND
+//     .is-visible added, so whatever transition it still has left
+//     (opacity/transform, now with no delay) plays out almost instantly
+//     instead of skipping straight to the resting frame with no
+//     transition at all — a deliberate choice: an instant snap read as
+//     jarring/broken on a first look, a quick (<1s) settle reads as
+//     "sped up," which is what this is actually for.
+//   - html.skip-intro-splash added directly (same class the real
+//     "Overview" nav link flow already uses) to hide the elaborate
+//     multi-screen splash overlay outright, since NOTHING about that
+//     splash's own screens is useful to see over and over while testing
+//     something else on the page.
+//   - html.intro-scroll-locked removed (added unconditionally by
+//     index.html's own inline <head> script whenever skip-intro-splash
+//     ISN'T set there — which it never is for a plain load like this
+//     one, since that flag lives in a DIFFERENT sessionStorage key) so
+//     the page can actually scroll immediately.
+//   - body.intro-finished added directly, same end state every OTHER
+//     path (the real timer sequence, or scrolling past the hero) already
+//     converges on eventually.
+// Deliberately the LAST call in the bootstrap's own deferred rAF block
+// (see that block's own comment on why this needs to run after
+// initHeroEyebrowExit() specifically) — not any earlier, and not from
+// the synchronous part of DOMContentLoaded above it either. 2 reasons:
+//   - Unlike the skip-intro-splash flag check in index.html (which only
+//     ever toggles a class on <html>, needing no real elements), this
+//     needs the actual .intro-reveal elements to already exist in the
+//     DOM to iterate them.
+//   - body.intro-finished alone isn't the real signal the rest of the
+//     page listens for — the REAL timer-driven sequence in
+//     initIntroReveal() also dispatches a matching "introfinished"
+//     CustomEvent once it sets that class, which initHeroEyebrowExit()
+//     depends on hearing (not just the class existing) to do its own
+//     first sync of the hero asterisk's visibility. Dispatching that
+//     event before initHeroEyebrowExit() has even registered its own
+//     listener for it — confirmed live by running this FIRST in the
+//     bootstrap instead, before fixing it — means the asterisk never
+//     hears about it and stays invisible indefinitely. Running this
+//     LAST guarantees every listener across the bootstrap (that one
+//     included) is already registered by the time this fires.
+// The brief (well under 100ms on any real load) flash of the
+// un-revealed state before this runs is an acceptable trade for a
+// dev-only testing convenience.
+function initForceSkipHeroIntro() {
+  if (sessionStorage.getItem("wfw-dev-skip-intro") !== "1") return;
+  sessionStorage.removeItem("wfw-dev-skip-intro");
+
+  document.documentElement.classList.add("skip-intro-splash");
+  document.documentElement.classList.remove("intro-scroll-locked");
+
+  // Every --intro-delay SHIFTED by the same constant amount, not flattened
+  // to a single "0ms" for all of them — a flat zero was tried first here,
+  // reported live as "squished together": word1 -> "for" -> word2 ->
+  // eyebrows -> asterisk is a deliberately STAGGERED cascade (3620 -> 3750
+  // -> 4100 -> 4630/4870 -> 5030ms in the HTML), and collapsing every one
+  // of those to the same delay makes them all start moving at once,
+  // destroying the actual choreography this button exists to let someone
+  // watch. Subtracting the GROUP's own minimum delay from every element
+  // (including the asterisk wrap, added into the same pool below) keeps
+  // every gap between them exactly as authored — only the long dead-air
+  // BEFORE the earliest one (originally ~3.6s of nothing happening) is
+  // what actually collapses, to near-instant.
+  const delayEls = Array.from(document.querySelectorAll(".intro-reveal"));
+  // Carries its own --intro-delay but isn't itself an .intro-reveal
+  // element (see index.html's own comment on why: its hero-asterisk-
+  // intro animation is unconditional from first paint, unlike the
+  // squash-stretch/slide transitions above, which only ever activate
+  // once their .intro-reveal sibling/child already has .is-visible) —
+  // still needs to shift by the exact same amount as everything else to
+  // keep ITS OWN place in the sequence relative to the rest.
+  const asteriskWrap = document.querySelector(".hero__wordmark-asterisk-wrap");
+  if (asteriskWrap) delayEls.push(asteriskWrap);
+
+  const delays = delayEls.map((el) => parseFloat(el.style.getPropertyValue("--intro-delay")) || 0);
+  const minDelay = Math.min(...delays);
+  delayEls.forEach((el, i) => el.style.setProperty("--intro-delay", `${delays[i] - minDelay}ms`));
+  document.querySelectorAll(".intro-reveal").forEach((el) => el.classList.add("is-visible"));
+
+  // body.intro-finished alone isn't the real signal the rest of the
+  // page listens for — initIntroReveal() itself also dispatches a
+  // matching "introfinished" CustomEvent once it sets that class (see
+  // that call's own comment on why: initHeroEyebrowExit() and others
+  // depend on the event firing, not just the class existing, to do
+  // their own first sync of things like the hero asterisk's visibility).
+  // Skipping the event and only adding the class was tried first here —
+  // confirmed live as the asterisk staying invisible indefinitely, since
+  // nothing ever told its own listener to check. asteriskVisible mirrors
+  // initIntroReveal()'s own computation exactly (same formula, see that
+  // call site) — at page load, with nothing scrolled yet, this always
+  // resolves true, but computing it for real rather than hardcoding true
+  // keeps this correct if this ever runs any later than that.
+  const hero = document.querySelector(".hero");
+  let asteriskVisible = true;
+  if (hero) {
+    const rect = hero.getBoundingClientRect();
+    asteriskVisible = Math.max(0, -rect.top) / rect.height < HERO_EXIT_THRESHOLD;
+  }
+  document.body.classList.add("intro-finished");
+  document.dispatchEvent(new CustomEvent("introfinished", { detail: { asteriskVisible } }));
 }
 
 function initPublicationsDropdown() {
@@ -1166,6 +1333,244 @@ function initNavPageFlash() {
       sessionStorage.setItem("wfw-page-flash", screen);
     });
   });
+}
+
+// Same directory-URL normalization initNavHighlight() does inline for
+// the same reason (every real page here lives at a directory URL backed
+// by that folder's own index.html, e.g. "/essays/", except article
+// pages) — kept as its own small copy rather than shared, so this
+// doesn't risk touching that function's own already-tuned logic.
+function normalizePubFamilyPath(pathname) {
+  let p = pathname;
+  if (p.endsWith("/index.html")) p = p.slice(0, -"index.html".length);
+  else if (p !== "/" && !p.endsWith("/") && !/\.[a-zA-Z0-9]+$/.test(p)) p += "/";
+  return p;
+}
+
+const PUBLICATION_FAMILY_PATHS = ["/publications/", "/interviews/", "/essays/", "/narratives/", "/outreach/"];
+let pubFamilyTransitionInFlight = false;
+
+// The 4-stripe transition, per explicit request: navigating BETWEEN
+// publications/, interviews/, essays/, narratives/, and outreach/
+// should feel like one continuously-loaded page, not 5 separate
+// documents — but every one of those 5 needs to stay a fully real,
+// independently loadable page (SEO, direct links, sharing, no-JS all
+// still need to work exactly as before). So nothing about the actual
+// pages changes; this is a pure progressive-enhancement layer that
+// intercepts a click BETWEEN two of them, fetches the destination in
+// the background, and swaps just the shared <main class="publications-
+// main"> content in place — no real navigation/reload ever happens,
+// which is what actually removes the "disconnective flash" a real
+// cross-document navigation causes even though all 5 pages already
+// share one identical shell. Arriving at any of these 5 pages from
+// OUTSIDE the family (Overview, About, Get Involved) is untouched by
+// any of this — that's still a real navigation with the regular flat
+// "02" .page-flash screen, exactly as before; only lateral moves within
+// the family are intercepted here.
+//
+// `scope` narrows which links get a click listener attached — omitted
+// (the real, once-per-page-load call, from the DOMContentLoaded
+// bootstrap) it's the whole document, but applyPublicationFamilySwap()
+// below calls this a 2nd time after every swap, passing JUST the fresh
+// <main> that call inserted. That distinction matters: the persistent
+// header/nav links live OUTSIDE <main> and never get destroyed, so a
+// document-wide re-scan on every swap would pile a redundant new click
+// listener onto those same nav links each time (still harmless in
+// practice, since navigateWithinPublicationFamily()'s own in-flight
+// guard makes every extra firing a no-op, but pure waste that grows
+// with every in-family page visited in one session). The <main> content
+// itself is a genuinely fresh set of nodes every time, so no such
+// re-scan concern applies there.
+function initPublicationFamilyTransitions(scope) {
+  const currentPath = normalizePubFamilyPath(location.pathname);
+  if (!PUBLICATION_FAMILY_PATHS.includes(currentPath)) return;
+  if (!document.querySelector("main.publications-main")) return;
+
+  (scope || document).querySelectorAll("a[href]").forEach((link) => {
+    let url, destPath, destHref;
+    try {
+      url = new URL(link.href);
+      destPath = normalizePubFamilyPath(url.pathname);
+      destHref = link.href;
+    } catch {
+      return;
+    }
+    // The nav dropdown's "Volumes" link (href="/#publications") points
+    // at the HOMEPAGE's own publications preview, not at one of the 5
+    // family pages — normally correct (it's a genuinely different
+    // destination when you're NOT already in this family), but per
+    // explicit follow-up, from WITHIN the family it should feel like
+    // just another sub-page instead of bouncing out to a real homepage
+    // load. /publications/ has that exact same #publications section
+    // (the real, full editions grid the homepage's is only a preview
+    // of), so from in here specifically, treat this one link as if it
+    // pointed there instead — everything below (interception, fetch,
+    // stripes) then treats it exactly like any other family link.
+    if (destPath === "/" && url.hash === "#publications") {
+      destPath = "/publications/";
+      destHref = "/publications/#publications";
+    }
+    // Same page (e.g. an in-page "#" anchor) or not a family
+    // destination at all — leave it as a completely normal link.
+    if (destPath === currentPath || !PUBLICATION_FAMILY_PATHS.includes(destPath)) return;
+
+    link.addEventListener("click", (e) => {
+      // Modified/non-primary clicks (middle-click, cmd/ctrl-click to
+      // open in a new tab, shift-click) must still behave like a
+      // completely normal link — only a plain left-click gets
+      // intercepted.
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      navigateWithinPublicationFamily(destHref);
+    });
+  });
+
+  // Only registered on the real, once-per-page-load call (scope is
+  // undefined then) — this doesn't need re-registering after every
+  // swap the way the link listeners above do; one popstate listener for
+  // the page's whole lifetime is all this ever needs.
+  if (scope) return;
+
+  // Client-side pushState navigation (below) doesn't create a new
+  // history entry the browser will ever reload on its own — back/
+  // forward between 2 family pages needs its own handling. A real
+  // reload is the simplest correct option: whichever URL was just
+  // popped loads its own real, complete page (with no .page-flash,
+  // since that flag is only ever set by initNavPageFlash()'s own click
+  // handlers above, never by a history nav) rather than re-deriving the
+  // swap/animation logic bidirectionally for a back-button edge case.
+  window.addEventListener("popstate", () => {
+    if (PUBLICATION_FAMILY_PATHS.includes(normalizePubFamilyPath(location.pathname))) location.reload();
+  });
+}
+
+function navigateWithinPublicationFamily(href) {
+  // One transition at a time — a 2nd click landing mid-transition (the
+  // whole sequence runs ~1.7s) would otherwise stack a 2nd overlay on
+  // top of the first and leave main.js's own bookkeeping (which fetch
+  // "wins", when to remove which overlay) undefined.
+  if (pubFamilyTransitionInFlight) return;
+  pubFamilyTransitionInFlight = true;
+
+  const fetchPromise = fetch(href)
+    .then((res) => (res.ok ? res.text() : Promise.reject(new Error(String(res.status)))))
+    // null signals "something went wrong" to the callers below, who
+    // fall back to a completely plain real navigation — the same thing
+    // that would've happened had this whole feature never intercepted
+    // the click in the first place.
+    .catch(() => null);
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) {
+    fetchPromise.then((html) => {
+      pubFamilyTransitionInFlight = false;
+      if (html == null) { location.href = href; return; }
+      applyPublicationFamilySwap(html, href);
+    });
+    return;
+  }
+
+  const STRIPE_DURATION_MS = 450;
+  const STRIPE_STAGGER_MS = 130;
+  const LINGER_MS = 450;
+  const COVER_DONE_MS = 3 * STRIPE_STAGGER_MS + STRIPE_DURATION_MS;
+
+  const overlay = document.createElement("div");
+  overlay.className = "pub-transition";
+  overlay.innerHTML = `
+    <div class="pub-transition__stripe pub-transition__stripe--1"></div>
+    <div class="pub-transition__stripe pub-transition__stripe--2"></div>
+    <div class="pub-transition__stripe pub-transition__stripe--3"></div>
+    <div class="pub-transition__stripe pub-transition__stripe--4"></div>
+  `;
+  document.body.appendChild(overlay);
+  const stripes = overlay.querySelectorAll(".pub-transition__stripe");
+
+  // Same double-rAF idiom used elsewhere in this file (openLightbox(),
+  // initPageFlashReady()) for the identical problem: toggling the very
+  // first class in the SAME task that just inserted this element can
+  // get coalesced into one style pass with no committed "before" state
+  // to transition from, silently skipping straight to fully-grown.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      stripes.forEach((stripe, i) => setTimeout(() => stripe.classList.add("is-grown"), i * STRIPE_STAGGER_MS));
+    });
+  });
+
+  setTimeout(() => {
+    fetchPromise.then((html) => {
+      if (html == null) {
+        pubFamilyTransitionInFlight = false;
+        overlay.remove();
+        location.href = href;
+        return;
+      }
+      applyPublicationFamilySwap(html, href);
+      setTimeout(() => {
+        // Same top-to-bottom order as the entrance above, per explicit
+        // request — stripe 1 (top) is the first to leave, revealing the
+        // new page from the top of the screen downward.
+        stripes.forEach((stripe, i) => setTimeout(() => stripe.classList.remove("is-grown"), i * STRIPE_STAGGER_MS));
+        setTimeout(() => {
+          overlay.remove();
+          pubFamilyTransitionInFlight = false;
+        }, COVER_DONE_MS);
+      }, LINGER_MS);
+    });
+  }, COVER_DONE_MS);
+}
+
+// Swaps in the fetched page's <main> while the screen is fully covered,
+// then re-wires exactly what that new content needs — deliberately NOT
+// a full re-run of the DOMContentLoaded bootstrap at the top of this
+// file. Most of those ~20 init calls either can't touch anything inside
+// these 5 pages' own <main> (the homepage intro splash, the custom
+// cursor, the hero asterisk, ...) or actively aren't safe to invoke a
+// 2nd time in one session: initApplicationsToast() would register a 2nd
+// "introfinished" listener (2 toasts stacking the next time it fires);
+// initEditionLightbox() no longer needs re-running at all now that its
+// card clicks are delegated (see that function's own comment) — calling
+// it again would still build a 2nd overlay + duplicate PDF.js wiring,
+// since buildOverlay() is only guarded within ONE call's own closure.
+// initNavHighlight() and initRevealOnScroll() are the 2 exceptions:
+// both take a fresh DOM snapshot every call with no lingering state a
+// 2nd call could conflict with, and both are exactly what this swapped-
+// in content needs (the correct nav underline for the new URL, and the
+// scroll-reveal treatment for whatever .square/.publication-card/etc.
+// elements just replaced the old ones).
+function applyPublicationFamilySwap(html, href) {
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const newMain = parsed.querySelector("main.publications-main");
+  const currentMain = document.querySelector("main.publications-main");
+  // Shape mismatch (a future page in this family stops using this same
+  // shell, or the fetch somehow returned something unexpected) — bail
+  // to a real navigation rather than show a broken/partial swap.
+  if (!newMain || !currentMain) {
+    location.href = href;
+    return;
+  }
+  currentMain.replaceWith(newMain);
+  document.title = parsed.title;
+  history.pushState({ pubFamilyTransition: true }, "", href);
+
+  // Plain top-of-page for a normal family link — except the redirected
+  // "Volumes" link (see initPublicationFamilyTransitions()'s own
+  // comment), which points at a specific #publications section INSIDE
+  // the page it just landed on rather than the page's own top.
+  const hash = new URL(href, location.href).hash;
+  const hashTarget = hash && newMain.querySelector(hash);
+  if (hashTarget) hashTarget.scrollIntoView();
+  else window.scrollTo(0, 0);
+
+  document.querySelectorAll(".nav__links a.is-active, .nav__dropdown a.is-active").forEach((a) => a.classList.remove("is-active"));
+  initNavHighlight();
+  initRevealOnScroll();
+
+  // The links inside the FRESH <main> just swapped in are plain,
+  // unintercepted anchors — scoped to newMain specifically (see this
+  // function's own comment) so this doesn't ALSO re-scan the untouched,
+  // already-wired header/nav links outside of it.
+  initPublicationFamilyTransitions(newMain);
 }
 
 // vertical-align: middle centers an inline-block box against the
@@ -2532,6 +2937,7 @@ function initNavHighlight() {
   const topLevelLinks = Array.from(document.querySelectorAll(".nav__links > li > a"));
   const dropdownLinks = Array.from(document.querySelectorAll(".nav__dropdown a"));
   const indicator = document.querySelector(".nav__indicator");
+  const header = document.querySelector(".site-header");
   if (!topLevelLinks.length || !indicator) return;
 
   // Every real page here lives at a directory URL (e.g. "/about/",
@@ -2586,6 +2992,13 @@ function initNavHighlight() {
   // placing the indicator at the wrong spot only when Publications was
   // the active link. getBoundingClientRect() is immune to this: it's
   // real rendered geometry, independent of the offsetParent chain.
+  // Homepage only — see .site-header's own intro-reveal--drop-staggered
+  // comment for why this specific class only ever exists there. The
+  // underline should appear LAST in that page's own staggered nav
+  // entrance, growing lengthwise from 0 rather than the plain "already
+  // there from frame one" every other page keeps.
+  const isStaggeredNav = !!(header && header.classList.contains("intro-reveal--drop-staggered"));
+
   const placeIndicator = () => {
     const containerRect = indicator.parentElement.getBoundingClientRect();
     const linkRect = activeTopLink.getBoundingClientRect();
@@ -2595,10 +3008,52 @@ function initNavHighlight() {
     const asterisk = activeTopLink.querySelector(".nav__link-asterisk");
     const width = asterisk ? asterisk.getBoundingClientRect().left - linkRect.left : linkRect.width;
     indicator.style.left = `${linkRect.left - containerRect.left}px`;
-    indicator.style.width = `${width}px`;
+    // Always kept current via the custom property, even on pages that
+    // never read it (harmless) — the homepage's own CSS
+    // (.site-header.intro-reveal--drop-staggered .nav__indicator) binds
+    // `width` to THIS, only once .is-revealed is added (see below).
+    indicator.style.setProperty("--indicator-width", `${width}px`);
+    // Every OTHER page keeps setting the real width directly, same as
+    // always — no staggered entrance to grow into there. On the
+    // homepage this MUST be skipped: an inline style always overrides a
+    // stylesheet rule regardless of specificity, so setting it here
+    // would defeat that CSS's own width:0 starting state outright.
+    if (!isStaggeredNav) indicator.style.width = `${width}px`;
   };
 
   placeIndicator();
+
+  if (isStaggeredNav) {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Reveals the underline once the LAST staggered nav item (see
+    // .nav-entrance-item in index.html) has genuinely finished its own
+    // entrance — reacting to that real event instead of guessing a
+    // matching delay in CSS (e.g. via --intro-delay) on purpose: this
+    // property also needs to update normally on a real window resize
+    // (see the "resize" listener below), and baking a multi-second
+    // "wait for the intro" delay into the SAME transition would make
+    // THAT recalculation wait through the exact same delay every time
+    // too, reproducing a "resize, then it jumps several seconds later"
+    // bug for something that should update instantly.
+    const staggeredItems = document.querySelectorAll(".nav__links > li.nav-entrance-item");
+    const lastItem = staggeredItems[staggeredItems.length - 1];
+    if (reduceMotion || !lastItem) {
+      indicator.classList.add("is-revealed");
+    } else {
+      lastItem.addEventListener(
+        "transitionend",
+        (e) => {
+          if (e.target !== lastItem) return;
+          // Small beat after the last item settles, matching the ~90-
+          // 140ms breathing room already used between THAT item's own
+          // stagger and its neighbors, rather than chaining instantly.
+          setTimeout(() => indicator.classList.add("is-revealed"), 100);
+        },
+        { once: true }
+      );
+    }
+  }
+
   // Re-measure once the real web font (Newsreader, a local file, not
   // preloaded) is actually in — if it's still showing its fallback at
   // the point this function first runs, the link measures at the
@@ -3143,13 +3598,27 @@ function initHeroEyebrowExit() {
     // reveal (driven purely by each element's own --intro-delay) plays
     // out undisturbed, and the scroll-linked system only starts touching
     // these classes once the CSS protection for it actually exists.
-    if (scrollLinkedReady) {
-      for (const el of alwaysEls) el.classList.toggle("is-visible", visible);
+    // Per explicit follow-up ("the retrigger animation... is just too
+    // much"), this whole scroll-linked system is disabled below — but as
+    // a one-WAY add instead of deleting/no-op-ing the listeners outright.
+    // A plain toggle (the old behavior) both showed things on scroll-in
+    // AND hid them again on scroll-out, which is what made the whole
+    // exit-then-reveal-then-respin cycle repeat every single time the
+    // hero scrolled in and out of view. Only ever ADDING is-visible means
+    // that once shown, nothing here ever hides or re-plays anything for
+    // it again — while still correctly handling the one real edge case
+    // that needs a live check at all: a visitor who scrolls past the
+    // hero WHILE the page-load intro is still finishing (scrollLinkedReady
+    // only flips true at intro-finished — see that gate's own comment)
+    // needs the FIRST scroll-into-view to still genuinely add is-visible,
+    // or these elements would be stuck invisible forever, never having
+    // been shown at all.
+    if (scrollLinkedReady && visible) {
+      for (const el of alwaysEls) el.classList.add("is-visible");
     }
-    if (asterisk && scrollLinkedReady) {
-      asterisk.classList.toggle("is-visible", visible);
+    if (asterisk && scrollLinkedReady && visible) {
+      asterisk.classList.add("is-visible");
       if (
-        visible &&
         !asteriskWasVisible &&
         !reduceMotion &&
         performance.now() - lastRespinTriggerTime > RESPIN_COOLDOWN_MS
@@ -3158,18 +3627,6 @@ function initHeroEyebrowExit() {
         asterisk.classList.remove("is-respinning");
         void asterisk.offsetWidth;
         asterisk.classList.add("is-respinning");
-      } else if (!visible) {
-        // .is-respinning's own rule (body.intro-finished
-        // .hero__wordmark-asterisk-wrap.is-respinning) is equal-but-later
-        // specificity than the :not(.is-visible) hide rule below it in
-        // style.css, so leaving it on through a hidden phase makes it WIN
-        // the cascade — its animation's forwards-filled opacity:1 then
-        // permanently overrides the hide rule's opacity:0. Confirmed
-        // live: after the very first respin ever plays, scrolling away
-        // again left the asterisk stuck fully visible, forever, since
-        // nothing ever removed this class on exit. It's a one-shot
-        // flourish anyway — nothing needs it to survive past this point.
-        asterisk.classList.remove("is-respinning");
       }
       asteriskWasVisible = visible;
     }
@@ -3672,6 +4129,22 @@ function initCustomCursor() {
   glyph.className = "custom-cursor-asterisk";
   wrap.appendChild(glyph);
   document.body.appendChild(wrap);
+
+  // Fades out while the pointer is genuinely away from the browser
+  // viewport (moved off-screen, or the user switched to another
+  // window/app) rather than idling at its last real position — per
+  // explicit request, that read as awkward, a stray asterisk just
+  // sitting there with nothing controlling it. mouseleave/mouseenter on
+  // <html> (not `window`, which has no such events; not `document`,
+  // whose own mouseleave/enter don't fire reliably the same way across
+  // browsers) is the standard cross-browser way to detect the pointer
+  // actually crossing the viewport's own edge. No re-sync needed for
+  // when it fades back in: raf() below already re-reads the real
+  // mouseX/mouseY every frame regardless of this class, so the glyph is
+  // already sitting at the correct live position the instant it's
+  // visible again.
+  document.documentElement.addEventListener("mouseleave", () => wrap.classList.add("is-away"));
+  document.documentElement.addEventListener("mouseenter", () => wrap.classList.remove("is-away"));
 
   // Offset toward the tail end of a standard pointer (which points up-
   // left, tip at the exact mouse position) — down-right of the cursor,
