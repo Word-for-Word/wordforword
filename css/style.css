@@ -6536,9 +6536,11 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   font-size: var(--text-small);
 }
 .article-page__works-cited-heading {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 400;
   font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin-bottom: 12px;
 }
 .article-page__works-cited-list {
