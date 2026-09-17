@@ -78,7 +78,18 @@ def parse_frontmatter(text, filename):
         if ":" not in line:
             raise ContentError(f"{filename}: frontmatter line {lineno} isn't 'key: value' — {line!r}")
         key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip()
+        value = value.strip()
+        # A value containing ": " (e.g. a title with a subtitle, "X: Y")
+        # isn't valid UNQUOTED YAML — Decap CMS (a real YAML parser) will
+        # wrap it in "..." when it writes the file, same as any contributor
+        # typing it straight into the CMS form would need to. This parser
+        # only ever splits on the FIRST colon (line.partition above), so it
+        # never needed that quoting itself, but it still has to accept and
+        # strip it now that real submissions will arrive quoted — otherwise
+        # the literal quote marks would render straight into the page.
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        fields[key.strip()] = value
 
     for field in REQUIRED_FIELDS:
         if not fields.get(field):

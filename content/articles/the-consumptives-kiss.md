@@ -1,5 +1,5 @@
 ---
-title: The Consumptive’s Kiss: Tuberculosis and the Elegance of Death
+title: "The Consumptive’s Kiss: Tuberculosis and the Elegance of Death"
 category: narratives
 date: 2026-09-17
 author: Finn Ryan
@@ -7,7 +7,7 @@ editor: Max Brody & Jiamin Chen
 designer: Sally Huang
 summary: A postcard found in a drug store basement leads into a history of sanatoriums, romanticized suffering, and the strange nineteenth-century glamor built around a disease that was, for most who had it, anything but glamorous.
 illustration: assets/images/articles/the-consumptives-kiss.jpg
-illustration_alt: Illustration: The Consumptive's Kiss
+illustration_alt: "Illustration: The Consumptive's Kiss"
 illustration_caption: Illustration by Melody Zhang
 show_in_carousel: true
 carousel_image: assets/images/articles/the-consumptives-kiss.jpg
