@@ -1509,8 +1509,14 @@ function navigateWithinPublicationFamily(href) {
       setTimeout(() => {
         // Same top-to-bottom order as the entrance above, per explicit
         // request — stripe 1 (top) is the first to leave, revealing the
-        // new page from the top of the screen downward.
-        stripes.forEach((stripe, i) => setTimeout(() => stripe.classList.remove("is-grown"), i * STRIPE_STAGGER_MS));
+        // new page from the top of the screen downward. is-leaving flips
+        // each stripe's own transform-origin to the right edge (see that
+        // class in style.css) so the shrink away plays left-to-right,
+        // same direction as the entrance grow, instead of mirroring it.
+        stripes.forEach((stripe, i) => setTimeout(() => {
+          stripe.classList.add("is-leaving");
+          stripe.classList.remove("is-grown");
+        }, i * STRIPE_STAGGER_MS));
         setTimeout(() => {
           overlay.remove();
           pubFamilyTransitionInFlight = false;
@@ -1565,6 +1571,16 @@ function applyPublicationFamilySwap(html, href) {
   document.querySelectorAll(".nav__links a.is-active, .nav__dropdown a.is-active").forEach((a) => a.classList.remove("is-active"));
   initNavHighlight();
   initRevealOnScroll();
+
+  // A family link is almost always clicked FROM inside the open dropdown
+  // itself — with the cursor then sitting still over where that link
+  // used to be, initPublicationsDropdown()'s own mousemove-driven close
+  // never fires (nothing moved), so left alone the dropdown would still
+  // be sitting open over the new page once the stripes clear, obstructing
+  // it. Closing it here, right as the swap happens (still hidden behind
+  // the covering stripes), means it's already gone by the time the
+  // reveal finishes — the user can always re-open it as normal.
+  document.querySelector(".site-header")?.classList.remove("nav__dropdown-is-open");
 
   // The links inside the FRESH <main> just swapped in are plain,
   // unintercepted anchors — scoped to newMain specifically (see this

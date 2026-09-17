@@ -889,6 +889,18 @@ html.show-page-flash.page-flash-ready .site-header {
 .pub-transition__stripe.is-grown {
   transform: scaleX(1);
 }
+/* Exiting (revealing the new page) needs to shrink away in the SAME
+   left-to-right direction the entrance grows in, not mirror it — per
+   explicit follow-up, growing from the left (above) but then shrinking
+   back toward that same left-anchored origin made the reveal read as
+   right-to-left instead. navigateWithinPublicationFamily() in main.js
+   adds this alongside removing .is-grown, flipping just the anchor edge
+   for that one transform: at that moment scaleX is still 1 (full width),
+   so the origin swap itself causes no visible jump — only the direction
+   the shrink that follows plays out in. */
+.pub-transition__stripe.is-leaving {
+  transform-origin: right center;
+}
 .pub-transition__stripe--1 { top: 0%;   background: var(--color-red); }
 .pub-transition__stripe--2 { top: 25%;  background: var(--color-grey); }
 .pub-transition__stripe--3 { top: 50%;  background: var(--color-dark); }
