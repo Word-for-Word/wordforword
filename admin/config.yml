@@ -70,7 +70,9 @@ collections:
         # blockquotes, headers, bullet lists) — anything else typed in
         # raw-markdown mode would render as plain text rather than
         # breaking the build, but staying in this toolbar avoids that
-        # surprise entirely.
+        # surprise entirely. One exception with no toolbar button: wrap
+        # text in ^...^ for superscript (e.g. a citation marker like
+        # "...store.^1^") — has to be typed directly in raw-markdown mode.
         buttons: ["bold", "italic", "link", "quote", "bulleted-list"]
         editor_components: []
       - label: "Works Cited"

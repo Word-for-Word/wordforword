@@ -141,6 +141,11 @@ def render_inline(text):
     text = re.sub(r"\[(.+?)\]\((.+?)\)", lambda m: f'<a href="{html.escape(m.group(2), quote=True)}">{m.group(1)}</a>', text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
+    # ^1^ -> footnote-style superscript, e.g. a citation marker right
+    # after the punctuation it follows. No toolbar button for this (Decap
+    # has none built in) — a contributor types it directly, same as they
+    # already would for **bold**/*italic* in raw-markdown mode.
+    text = re.sub(r"\^(.+?)\^", r"<sup>\1</sup>", text)
     return text
 
 
