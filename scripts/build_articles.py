@@ -54,14 +54,20 @@ def read_current_asset_versions():
 def parse_frontmatter(text, filename):
     """Splits a content file into its frontmatter dict and markdown body.
 
-    Frontmatter format is intentionally flat (no nested YAML, no lists) —
-    just `---`, then one `key: value` per line, then closing `---`:
+    Frontmatter format is intentionally flat (no nested YAML) — just
+    `---`, then one `key: value` per line, then closing `---`:
 
         ---
         title: My Article
         category: essays
         ---
         Body text goes here.
+
+    The one structure this understands beyond a flat scalar is a YAML
+    block sequence — what Decap's "list" widget (e.g. Works Cited) always
+    writes: a `key:` line with nothing after the colon, followed by one
+    "  - item" line per entry. That becomes a Python list; everything
+    else stays a plain string.
     """
     if not text.startswith("---"):
         raise ContentError(f"{filename}: must start with a --- frontmatter block")
@@ -70,26 +76,41 @@ def parse_frontmatter(text, filename):
         raise ContentError(f"{filename}: frontmatter block isn't closed with a second ---")
     _, frontmatter_block, body = parts
 
+    def unquote(value):
+        # A value containing ": " (e.g. a title with a subtitle, "X: Y")
+        # isn't valid UNQUOTED YAML — Decap CMS (a real YAML parser) will
+        # wrap it in "..." when it writes the file, same as any contributor
+        # typing it straight into the CMS form would need to. This parser
+        # never needed that quoting itself (values are read as plain
+        # text), but it still has to accept and strip it now that real
+        # submissions arrive quoted — otherwise the literal quote marks
+        # would render straight into the page.
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            return value[1:-1]
+        return value
+
+    lines = frontmatter_block.splitlines()
     fields = {}
-    for lineno, line in enumerate(frontmatter_block.splitlines(), start=1):
-        line = line.strip()
+    i = 0
+    while i < len(lines):
+        lineno = i + 1
+        line = lines[i].strip()
+        i += 1
         if not line:
             continue
         if ":" not in line:
             raise ContentError(f"{filename}: frontmatter line {lineno} isn't 'key: value' — {line!r}")
         key, _, value = line.partition(":")
+        key = key.strip()
         value = value.strip()
-        # A value containing ": " (e.g. a title with a subtitle, "X: Y")
-        # isn't valid UNQUOTED YAML — Decap CMS (a real YAML parser) will
-        # wrap it in "..." when it writes the file, same as any contributor
-        # typing it straight into the CMS form would need to. This parser
-        # only ever splits on the FIRST colon (line.partition above), so it
-        # never needed that quoting itself, but it still has to accept and
-        # strip it now that real submissions will arrive quoted — otherwise
-        # the literal quote marks would render straight into the page.
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        fields[key.strip()] = value
+        if not value:
+            items = []
+            while i < len(lines) and lines[i].strip().startswith("- "):
+                items.append(unquote(lines[i].strip()[2:].strip()))
+                i += 1
+            fields[key] = items if items else ""
+            continue
+        fields[key] = unquote(value)
 
     for field in REQUIRED_FIELDS:
         if not fields.get(field):
@@ -198,6 +219,24 @@ def build_article(md_path, css_version, js_version, base_url):
             f'        <p class="article-page__illustration-caption">{html.escape(fields["illustration_caption"])}</p>'
         )
 
+    # A separate field (a YAML list — see parse_frontmatter's own
+    # docstring) rather than typed into Body, specifically so it always
+    # renders at .article-page__works-cited's own smaller type instead of
+    # depending on a contributor remembering to format it a particular
+    # way inside the main markdown body.
+    works_cited = fields.get("works_cited") or []
+    works_cited_block = ""
+    if works_cited:
+        items_html = "\n".join(f"          <li>{render_inline(c)}</li>" for c in works_cited)
+        works_cited_block = (
+            '      <div class="article-page__works-cited">\n'
+            '        <h2 class="article-page__works-cited-heading">Works Cited</h2>\n'
+            '        <ol class="article-page__works-cited-list">\n'
+            f"{items_html}\n"
+            "        </ol>\n"
+            "      </div>"
+        )
+
     # Falls back to a generic line rather than shipping an empty meta
     # description/og:description when a contributor leaves "summary"
     # blank in the CMS — an empty tag is worse than a generic one, since
@@ -252,6 +291,7 @@ def build_article(md_path, css_version, js_version, base_url):
         "ILLUSTRATION_ALT": html.escape(fields.get("illustration_alt", fields["title"])),
         "ILLUSTRATION_CAPTION_BLOCK": illustration_caption_block,
         "BODY_HTML": render_body_html(body),
+        "WORKS_CITED_BLOCK": works_cited_block,
         "BASE": "/",
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "/", js_version),

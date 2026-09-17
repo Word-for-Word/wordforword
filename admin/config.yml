@@ -73,3 +73,8 @@ collections:
         # surprise entirely.
         buttons: ["bold", "italic", "link", "quote", "bulleted-list"]
         editor_components: []
+      - label: "Works Cited"
+        name: "works_cited"
+        widget: "list"
+        required: false
+        hint: "Optional — one citation per entry, plain text (no markdown). Renders in smaller type below the article body, separate from it."

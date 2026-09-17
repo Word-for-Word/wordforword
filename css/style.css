@@ -6523,6 +6523,31 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 .article-page__body blockquote p {
   margin-top: 0;
 }
+/* Deliberately its own block, not part of .article-page__body — a
+   dedicated "Works Cited" CMS field (see admin/config.yml) so citation
+   text always renders at this smaller size instead of depending on a
+   contributor formatting it a particular way inside the main body. Same
+   --text-small convention as .article-page__credits below (nav,
+   captions, meta, footer, card sub-text — see that variable's own
+   comment in :root). */
+.article-page__works-cited {
+  max-width: 720px;
+  margin: 40px auto 0;
+  font-size: var(--text-small);
+}
+.article-page__works-cited-heading {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.article-page__works-cited-list {
+  padding-left: 1.2em;
+  list-style: decimal;
+}
+.article-page__works-cited-list li + li {
+  margin-top: 8px;
+}
 .article-page__credits {
   max-width: 720px;
   margin: 64px auto 0;
@@ -6542,6 +6567,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 @media (max-width: 720px) {
   .article-page { padding: 120px 24px 0; }
   .article-page__body,
+  .article-page__works-cited,
   .article-page__credits { max-width: none; }
 }
 

@@ -12,6 +12,10 @@ illustration_caption: Illustration by Melody Zhang
 show_in_carousel: true
 carousel_image: assets/images/articles/the-consumptives-kiss.jpg
 volume: Volume 2
+works_cited:
+  - Patterson, Emma C. “Wayne Sanatorium, Tuberculosis, Stores in Wayne.” Radnor Historical Society – Your Town and My Town, 3 Dec. 1954.
+  - Sontag, Susan. Illness as Metaphor. 1978. PDF file (Monoskop).
+  - “Tuberculosis (TB).” NHS Inform, Scottish Government.
 ---
 His pedals scraping the earth beneath him, the errand boy approaches a colony of cottages: an isolated world of waxen inhabitants lying in the sunlight.
 
@@ -28,9 +32,3 @@ Sontag noted that the loneliness of tuberculosis patients and the commonplace of
 For some patients, this advice landed them within the cottages of the Wayne Sanatorium. The absence of people in the postcard underscores the lack of emphasis on the humanity involved in providing care. When not invisible, the tuberculosis patients’ pain was trivialized. Afflicted minorities and low-income classes were even more helpless without the luxury of sanatoriums. In time, the disease’s glamor morphed into a correlation with the poor as the sanatoriums themselves morphed into prison-like institutions.
 
 I may never know who lived in those cottages, but I know the cultural legacy of their suffering – from ethereal and elite beauty to isolated and impoverished despair. As I examined the postcard, I found myself engaging in several layers of narrative medicine. Not only was I privy to a historical interview between a local reporter and a doctor, but I pondered the social and artistic portrayals of tuberculosis during the postcard’s era. I was reminded of how modern popular culture sometimes romanticizes mental illness often without regard for the true struggles of victims. Even today, society’s obsession with illness can be its greatest disease.
-
-### Works Cited
-
-- Patterson, Emma C. “Wayne Sanatorium, Tuberculosis, Stores in Wayne.” Radnor Historical Society – Your Town and My Town, 3 Dec. 1954.
-- Sontag, Susan. Illness as Metaphor. 1978. PDF file (Monoskop).
-- “Tuberculosis (TB).” NHS Inform, Scottish Government.
