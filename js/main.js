@@ -1410,9 +1410,9 @@ function initPublicationFamilyTransitions(scope) {
       destPath = "/publications/";
       destHref = "/publications/#publications";
     }
-    // Same page (e.g. an in-page "#" anchor) or not a family
-    // destination at all — leave it as a completely normal link.
-    if (destPath === currentPath || !PUBLICATION_FAMILY_PATHS.includes(destPath)) return;
+    // Not a family destination at all — leave it as a completely
+    // normal link.
+    if (!PUBLICATION_FAMILY_PATHS.includes(destPath)) return;
 
     link.addEventListener("click", (e) => {
       // Modified/non-primary clicks (middle-click, cmd/ctrl-click to
@@ -1420,6 +1420,23 @@ function initPublicationFamilyTransitions(scope) {
       // completely normal link — only a plain left-click gets
       // intercepted.
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      // Same page (e.g. an in-page "#" anchor) — checked HERE, live, at
+      // click time, rather than by simply never attaching a listener
+      // when destPath === currentPath above. Header/nav links persist
+      // across every AJAX swap and are never re-scanned (see this
+      // function's own comment below), so deciding "same page, skip"
+      // once, at setup time, freezes that decision to whichever page was
+      // current at the very first real page LOAD — going stale the
+      // moment history.pushState (in applyPublicationFamilySwap) moves
+      // the real URL elsewhere without a matching reload. Confirmed
+      // live: landing on /interviews/ first, then swapping to /essays/
+      // via the dropdown, left the "Interviews" nav link with no
+      // listener at all (it matched currentPath back at that first,
+      // now-stale check) — clicking it from /essays/ fell through to a
+      // real navigation instead of ever reaching
+      // navigateWithinPublicationFamily(), which is why its splash
+      // showed the plain page-flash instead of the stripe cover.
+      if (destPath === normalizePubFamilyPath(location.pathname)) return;
       e.preventDefault();
       navigateWithinPublicationFamily(destHref);
     });
