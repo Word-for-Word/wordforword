@@ -1348,6 +1348,14 @@ function normalizePubFamilyPath(pathname) {
 }
 
 const PUBLICATION_FAMILY_PATHS = ["/publications/", "/interviews/", "/essays/", "/narratives/", "/outreach/"];
+// Pages in the family with a real .hero section of their own (currently
+// just /publications/, sitting OUTSIDE <main> — see
+// applyPublicationFamilySwap()'s own comment on why that can't safely be
+// faked through this transition). Checked once here, at listener-setup
+// time, not per-click — unlike the "already on this page" check below,
+// this is a static fact about a link's own fixed destination, never
+// stale no matter how many swaps happen in between.
+const PUBLICATION_FAMILY_HERO_PATHS = ["/publications/"];
 let pubFamilyTransitionInFlight = false;
 
 // The 4-stripe transition, per explicit request: navigating BETWEEN
@@ -1410,9 +1418,13 @@ function initPublicationFamilyTransitions(scope) {
       destPath = "/publications/";
       destHref = "/publications/#publications";
     }
-    // Not a family destination at all — leave it as a completely
-    // normal link.
-    if (!PUBLICATION_FAMILY_PATHS.includes(destPath)) return;
+    // Not a family destination at all, or one whose own .hero can't be
+    // safely faked through this transition (see
+    // PUBLICATION_FAMILY_HERO_PATHS above and applyPublicationFamilySwap
+    // ()'s own comment) — leave it as a completely normal link, so it
+    // falls back to a real navigation decided right here, before ever
+    // starting the stripe cover, rather than aborting mid-transition.
+    if (!PUBLICATION_FAMILY_PATHS.includes(destPath) || PUBLICATION_FAMILY_HERO_PATHS.includes(destPath)) return;
 
     link.addEventListener("click", (e) => {
       // Modified/non-primary clicks (middle-click, cmd/ctrl-click to
@@ -1575,28 +1587,22 @@ function applyPublicationFamilySwap(html, href) {
 
   // .hero (currently only /publications/ own "Our Publications" title)
   // sits OUTSIDE <main> as a plain sibling, so it's never touched by the
-  // replaceWith() below — left alone, arriving here from a hero-less
-  // category page showed no hero at all (nothing before <main> to put
-  // one there), and leaving /publications/ for a category page left its
-  // stale hero sitting above the swapped-in content, neither of which a
-  // visitor could scroll past to reach real content above it. Its
-  // entrance (asterisk positioning, per-letter stagger, scroll-linked
-  // exit — see that section's own comments in the template) is exactly
-  // the kind of one-time, real-page-load-timed state this function's own
-  // comment above lists as unsafe to fake a 2nd time; faithfully
-  // reproducing it here is out of scope, so arriving somewhere that
-  // needs one it doesn't have falls back to a real navigation instead
-  // (same "bail to a real navigation rather than show a broken/partial
-  // swap" policy as the newMain/currentMain check above). Losing one
-  // that the CURRENT page already has and the destination doesn't is
-  // just a plain removal, no animation involved — safe to always do.
-  const newHero = parsed.querySelector(".hero");
+  // replaceWith() below. initPublicationFamilyTransitions() already
+  // refuses to intercept a click TOWARD a page that needs a hero the
+  // current page doesn't have (see PUBLICATION_FAMILY_HERO_PATHS there)
+  // — its real entrance (asterisk positioning, per-letter stagger,
+  // scroll-linked exit) is exactly the kind of one-time, real-page-load-
+  // timed state this function's own comment above lists as unsafe to
+  // fake, so that direction was always meant to fall back to a real
+  // navigation, decided BEFORE ever starting the stripe cover (a bail
+  // mid-transition, tried first, read as a jarring cut from stripes
+  // straight to the plain page-flash splash). What CAN still happen here
+  // is leaving /publications/ for a page that has no hero of its own —
+  // its stale hero would otherwise keep sitting above the swapped-in
+  // content with nothing removing it. A plain removal needs no
+  // animation, so it's always safe to do as part of this swap.
   const currentHero = document.querySelector(".hero");
-  if (newHero && !currentHero) {
-    location.href = href;
-    return;
-  }
-  if (currentHero && !newHero) currentHero.remove();
+  if (currentHero && !parsed.querySelector(".hero")) currentHero.remove();
 
   currentMain.replaceWith(newMain);
   document.title = parsed.title;
@@ -1605,11 +1611,31 @@ function applyPublicationFamilySwap(html, href) {
   // Plain top-of-page for a normal family link — except the redirected
   // "Volumes" link (see initPublicationFamilyTransitions()'s own
   // comment), which points at a specific #publications section INSIDE
-  // the page it just landed on rather than the page's own top.
+  // the page it just landed on rather than the page's own top. Goes
+  // through Lenis (window.__wfwLenis, set by initLuxuryScroll()), not
+  // the native window.scrollTo/Element.scrollIntoView — Lenis keeps its
+  // own internal target scroll position and re-asserts it every
+  // animation frame, so a native reset here was getting silently undone
+  // on the very next frame: reported live as landing scrolled to
+  // roughly wherever the OLD page had been scrolled to, with no way to
+  // scroll back up past that point (Lenis kept pulling back toward its
+  // own stale target), while scrolling further down still worked
+  // (nothing stops it re-targeting forward). { immediate: true } is
+  // Lenis's own instant-jump option — no animated scroll needed for a
+  // page swap that already reads as an instant cut via the stripe cover.
+  // Falls back to the native APIs when Lenis never loaded (see that
+  // function's own comment on its CDN script possibly failing).
   const hash = new URL(href, location.href).hash;
   const hashTarget = hash && newMain.querySelector(hash);
-  if (hashTarget) hashTarget.scrollIntoView();
-  else window.scrollTo(0, 0);
+  const lenis = window.__wfwLenis;
+  if (hashTarget) {
+    if (lenis) lenis.scrollTo(hashTarget, { immediate: true });
+    else hashTarget.scrollIntoView();
+  } else if (lenis) {
+    lenis.scrollTo(0, { immediate: true });
+  } else {
+    window.scrollTo(0, 0);
+  }
 
   document.querySelectorAll(".nav__links a.is-active, .nav__dropdown a.is-active").forEach((a) => a.classList.remove("is-active"));
   initNavHighlight();
@@ -3149,6 +3175,13 @@ function initLuxuryScroll() {
     lerp: 0.18, // higher = snappier/closer to native, lower = smoother/heavier
     smoothWheel: true,
   });
+  // Exposed so applyPublicationFamilySwap() (the publication-family AJAX
+  // transition, entirely unrelated to this function otherwise) can reset
+  // scroll position THROUGH Lenis after swapping in a new page's <main>
+  // — a plain native window.scrollTo() there doesn't touch Lenis's own
+  // internal target, which then silently overrides it on the next
+  // animation frame. See that function's own comment for the full story.
+  window.__wfwLenis = lenis;
 
   function raf(time) {
     lenis.raf(time);
