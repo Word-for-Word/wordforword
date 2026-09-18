@@ -115,64 +115,29 @@
   </div>
 {{HEADER}}
 
-  <!-- ============ HERO ============ -->
-  <!-- Same wrap/placeholder/for/asterisk system as index.html's own
-       3-part "Word for Word" lockup (see that section's own comments),
-       using the reusable --compact modifiers (see their own comment in
-       style.css) for a shorter, smaller-scale hero — recomposed here as
-       a 2-part "Our Publications" title: the script image ("Our",
-       filling "for"'s old role) sits above the single serif word
-       ("Publications", filling both "Word"s' combined role) instead of
-       overlapping between two flanking words. --publications (on the
-       word itself) layers JUST the stroke treatment on top of
-       --compact's sizing — that part is specific to this page, not
-       part of the reusable style. Reuses .hero__wordmark-word--2
-       (permanent nudge + scroll-exit re-entry stagger, synced to the
-       asterisk's respin) and .hero__wordmark-d-anchor (asterisk
-       position anchor, see positionHeroAsterisk() in main.js) verbatim
-       on the final "s" — both are shared, page-agnostic selectors, so
-       reusing them here makes the asterisk positioning and scroll-exit
-       timing work exactly as they do on the homepage with no new JS. -->
-  <!-- Title pieces stay in VISUAL top-to-bottom order, not DOM order —
-       the "Our" script image (.hero__wordmark-for-wrap) actually sits
-       ABOVE the "Publications" serif word (.hero__wordmark-placeholder)
-       on screen despite coming AFTER it in the markup (confirmed via
-       getBoundingClientRect()/screenshot: "Our" renders higher, nested
-       into "Publications"'s ascenders, same as the homepage's "for"
-       sits between its 2 "Word"s) — so "Our" gets the earlier delay.
-       Eyebrow pair (left "Volumes" + right "Articles") share ONE delay
-       (4120ms) instead of bookending the sequence — per explicit
-       follow-up, the homepage's OWN hero is "the true pattern" for
-       this: both its eyebrow lines share the exact same --intro-delay
-       so they reveal together, AFTER the title, not straddling it. -->
-  <section class="hero hero--compact">
-    <p class="hero__eyebrow">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Volumes</span>
-    </p>
-    <div class="hero__wordmark-wrap hero__wordmark-wrap--compact">
-      <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact" aria-hidden="true">
-        <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--outlined" style="--intro-delay: 3820ms;"><span class="hero__title-exit hero__title-exit--lettered intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3820ms;"><span class="hero__title-letter" style="--letter-delay: 0ms; --letter-travel: 64px;">P</span><span class="hero__title-letter" style="--letter-delay: 50ms">u</span><span class="hero__title-letter" style="--letter-delay: 100ms">b</span><span class="hero__title-letter" style="--letter-delay: 150ms">l</span><span class="hero__title-letter" style="--letter-delay: 200ms">i</span><span class="hero__title-letter" style="--letter-delay: 250ms">c</span><span class="hero__title-letter" style="--letter-delay: 300ms">a</span><span class="hero__title-letter" style="--letter-delay: 350ms">t</span><span class="hero__title-letter" style="--letter-delay: 400ms">i</span><span class="hero__title-letter" style="--letter-delay: 450ms">o</span><span class="hero__title-letter" style="--letter-delay: 500ms">n</span><span class="hero__wordmark-d-anchor"><span class="hero__title-letter" style="--letter-delay: 550ms">s</span></span></span></span>
-      </div>
-      <div class="hero__wordmark-for-wrap hero__wordmark-for-wrap--compact" style="--intro-delay: 3520ms;" aria-hidden="true">
-        <img class="hero__wordmark-for hero__wordmark-for--compact hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3520ms;" src="{{BASE}}assets/images/Publications Title.png" alt="" />
-      </div>
-      <div class="hero__wordmark-asterisk-wrap hero__wordmark-asterisk-wrap--compact" style="--intro-delay: 4750ms;" aria-hidden="true">
-        <img class="hero__wordmark-asterisk" src="{{BASE}}assets/images/Asterisk - Default.png" alt="" />
-      </div>
-    </div>
-    <p class="hero__eyebrow hero__eyebrow--right">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Articles</span>
-    </p>
-  </section>
-
   <main class="publications-main">
     <!-- ============ VOLUMES ============ -->
+    <!-- Structured like every other family page now — a small
+         .section-eyebrow, not the elaborate animated title this used to
+         carry (see git history for the old .hero hero--compact markup):
+         per explicit request, this page should look/behave like
+         interviews/essays/narratives/outreach, not stand out as the one
+         page with its own hero. publications-page-eyebrow (style.css)
+         is what gives this the same top clearance under the fixed
+         header .publications-category gives those other 4 pages —
+         .publications itself carries no margin/padding of its own for
+         that, see that rule's comment. -->
+    <div class="section-eyebrow publications-page-eyebrow">
+      <span>Publications</span>
+      <span class="section-eyebrow__rule" aria-hidden="true"></span>
+    </div>
+
     <!-- Same grid as index.html's own #publications section, pulled
          verbatim — minus the "View more" CTA (that exists on the
          homepage specifically to lead HERE, so it'd be circular on this
-         page itself) and minus the marquee (replaced by .section-eyebrow,
-         same as every other section on this page — see that class's own
-         comment in style.css). -->
+         page itself) and minus the marquee (replaced by the eyebrow
+         above, same as every other section on this page — see
+         .section-eyebrow's own comment in style.css). -->
     <section id="publications" class="publications">
       <div class="publications__grid">
         <!-- publication-card--clickable + data-pdf: opens the edition

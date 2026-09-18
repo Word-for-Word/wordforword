@@ -1420,23 +1420,48 @@ function initPublicationFamilyTransitions(scope) {
       // completely normal link — only a plain left-click gets
       // intercepted.
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      // Same page (e.g. an in-page "#" anchor) — checked HERE, live, at
-      // click time, rather than by simply never attaching a listener
-      // when destPath === currentPath above. Header/nav links persist
-      // across every AJAX swap and are never re-scanned (see this
-      // function's own comment below), so deciding "same page, skip"
-      // once, at setup time, freezes that decision to whichever page was
-      // current at the very first real page LOAD — going stale the
-      // moment history.pushState (in applyPublicationFamilySwap) moves
-      // the real URL elsewhere without a matching reload. Confirmed
-      // live: landing on /interviews/ first, then swapping to /essays/
-      // via the dropdown, left the "Interviews" nav link with no
-      // listener at all (it matched currentPath back at that first,
-      // now-stale check) — clicking it from /essays/ fell through to a
-      // real navigation instead of ever reaching
-      // navigateWithinPublicationFamily(), which is why its splash
-      // showed the plain page-flash instead of the stripe cover.
-      if (destPath === normalizePubFamilyPath(location.pathname)) return;
+      // Same page (e.g. an in-page "#" anchor, or — far more commonly —
+      // the "Volumes" redirect above resolving to the page you're
+      // already ON) — checked HERE, live, at click time, rather than by
+      // simply never attaching a listener when destPath === currentPath
+      // above. Header/nav links persist across every AJAX swap and are
+      // never re-scanned (see this function's own comment below), so
+      // deciding "same page, skip" once, at setup time, freezes that
+      // decision to whichever page was current at the very first real
+      // page LOAD — going stale the moment history.pushState (in
+      // applyPublicationFamilySwap) moves the real URL elsewhere without
+      // a matching reload. Confirmed live: landing on /interviews/
+      // first, then swapping to /essays/ via the dropdown, left the
+      // "Interviews" nav link with no listener at all (it matched
+      // currentPath back at that first, now-stale check) — clicking it
+      // from /essays/ fell through to a real navigation instead of ever
+      // reaching navigateWithinPublicationFamily(), which is why its
+      // splash showed the plain page-flash instead of the stripe cover.
+      if (destPath === normalizePubFamilyPath(location.pathname)) {
+        // Falling all the way through here does a REAL navigation on
+        // the link's own, un-redirected href — for "Volumes" specifically
+        // that's "/#publications" (the HOMEPAGE's own preview section),
+        // since the redirect above only ever touched local destPath/
+        // destHref variables, never the link's actual href attribute.
+        // Confirmed live: clicking "Volumes" while already on
+        // /publications/ bounced out to Overview instead of just
+        // scrolling to the #publications section already right there on
+        // the current page. Scrolling locally (through Lenis, matching
+        // every other in-page anchor's smoothing — see
+        // initLuxuryScroll()'s own handling, which doesn't cover this
+        // link since its real href isn't a bare "#..." fragment) is what
+        // clicking it here should actually do.
+        if (url.hash) {
+          const localTarget = document.querySelector(url.hash);
+          if (localTarget) {
+            e.preventDefault();
+            const lenis = window.__wfwLenis;
+            if (lenis) lenis.scrollTo(localTarget, { duration: 1, easing: (t) => 1 - (1 - t) ** 3 });
+            else localTarget.scrollIntoView({ behavior: "smooth" });
+          }
+        }
+        return;
+      }
       e.preventDefault();
       navigateWithinPublicationFamily(destHref);
     });
@@ -1562,47 +1587,6 @@ function navigateWithinPublicationFamily(href) {
 // scroll-reveal treatment for whatever .square/.publication-card/etc.
 // elements just replaced the old ones).
 
-// Brings a .hero that just arrived via applyPublicationFamilySwap()
-// straight to its settled, fully-revealed state — the elaborate real
-// entrance this section gets on an actual page load (per-element
-// .intro-reveal fades with multi-second delays, a scroll-linked
-// eyebrow/title exit driven by initHeroEyebrowExit(), the asterisk
-// respin) is built entirely around DOMContentLoaded-time state
-// (body.intro-finished timing, the "introfinished" event's own payload,
-// one-shot scroll/resize listeners captured against whichever .hero
-// existed at that first load) that this function's own comment above
-// already lists as unsafe to invoke a 2nd time. Replaying it faithfully
-// for a hero inserted well after all of that already ran isn't a good
-// fit for a mid-session AJAX arrival anyway — a slow multi-second fade
-// makes sense once, on a fresh load, not every time someone clicks
-// between family pages. So: every .intro-reveal descendant is snapped to
-// its "is-visible" end state INSTANTLY (transition suspended for the
-// swap, then restored, so nothing animates), and positionHeroAsterisk()/
-// positionHeroWordmarkFor() — both cheap, idempotent, and already
-// written to re-query the DOM live rather than trust cached references
-// (see their own comments) — are called directly to correctly place the
-// asterisk/"Our" image, without going through initHeroAsteriskPosition()
-// (which would also attach a 2nd ResizeObserver + resize listener on
-// top of the page's original ones). The one thing intentionally left
-// alone is the scroll-linked eyebrow/title exit: with no re-run of
-// initHeroEyebrowExit() for this hero, scrolling past it won't slide it
-// away the way the original page's hero does — a static hero is a much
-// smaller gap than a missing, stale, or scroll-locked one.
-function revealSwappedHero(hero) {
-  hero.querySelectorAll(".intro-reveal").forEach((el) => {
-    el.style.transition = "none";
-    el.classList.add("is-visible");
-    el.offsetHeight; // flush the transition:none above before removing it
-    el.style.transition = "";
-  });
-  positionHeroAsterisk();
-  positionHeroWordmarkFor();
-  document.fonts.ready.then(() => {
-    positionHeroAsterisk();
-    positionHeroWordmarkFor();
-  });
-}
-
 function applyPublicationFamilySwap(html, href) {
   const parsed = new DOMParser().parseFromString(html, "text/html");
   const newMain = parsed.querySelector("main.publications-main");
@@ -1615,34 +1599,9 @@ function applyPublicationFamilySwap(html, href) {
     return;
   }
 
-  // .hero (currently only /publications/ own "Our Publications" title)
-  // sits OUTSIDE <main> as a plain sibling, so replaceWith() below never
-  // touches it on its own — handled explicitly here as its own swap,
-  // AFTER newMain is actually in the live document (newMain.before()
-  // just below needs a real parent to insert next to; before that
-  // replaceWith() call, newMain is still a detached node straight out of
-  // the parsed Document, with nothing to be "before"). 3 cases: gaining
-  // one (adopted from the fetched document, since it comes from a
-  // separate DOMParser Document and can't just be moved over as-is — see
-  // revealSwappedHero()'s own comment for why its elaborate real-page-
-  // load entrance is skipped rather than replayed), losing one (arriving
-  // somewhere with no hero of its own — plain removal, no animation
-  // involved), or neither (nothing to do).
-  const currentHero = document.querySelector(".hero");
-  const newHeroSource = parsed.querySelector(".hero");
-
   currentMain.replaceWith(newMain);
   document.title = parsed.title;
   history.pushState({ pubFamilyTransition: true }, "", href);
-
-  if (newHeroSource) {
-    const newHero = document.adoptNode(newHeroSource);
-    if (currentHero) currentHero.replaceWith(newHero);
-    else newMain.before(newHero);
-    revealSwappedHero(newHero);
-  } else if (currentHero) {
-    currentHero.remove();
-  }
 
   // Plain top-of-page for a normal family link — except the redirected
   // "Volumes" link (see initPublicationFamilyTransitions()'s own
@@ -1658,10 +1617,10 @@ function applyPublicationFamilySwap(html, href) {
   // own stale target), while scrolling further down still worked
   // (nothing stops it re-targeting forward). resize() runs first — Lenis
   // caches the document's scrollable height for its own math, and the
-  // swap above can change that height substantially (a hero gained/lost,
-  // a shorter/taller category body); without telling it to re-measure,
-  // scrollTo(0, ...) right after can still clamp against the STALE,
-  // pre-swap height. { immediate: true } is Lenis's own instant-jump
+  // swap above can change that height substantially (a shorter/taller
+  // category body); without telling it to re-measure, scrollTo(0, ...)
+  // right after can still clamp against the STALE, pre-swap height.
+  // { immediate: true } is Lenis's own instant-jump
   // option — no animated scroll needed for a page swap that already
   // reads as an instant cut via the stripe cover. Falls back to the
   // native APIs when Lenis never loaded (see that function's own comment
