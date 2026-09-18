@@ -4129,22 +4129,6 @@ span.split-cta__text-line {
   /* No margin — main's own gap handles spacing to its neighbors. */
   text-align: center;
 }
-/* .publications-main itself carries no top clearance for the fixed
-   .site-header (see that rule's own comment) — previously provided by
-   this page's own .hero (removed; this page is now structured like
-   every other family page, a small eyebrow rather than an elaborate
-   animated title). Same 150px/40px convention .publications-category
-   uses for the other 4 family pages, just not reusing that class
-   directly — its own padding (100px) would double up with
-   .publications__grid's already-tuned 40px horizontal margin (see that
-   rule's own comment) rather than replace it. */
-.publications-page-eyebrow {
-  padding: 0 40px;
-  margin-top: 150px;
-}
-@media (max-width: 720px) {
-  .publications-page-eyebrow { margin-top: 120px; }
-}
 .publications__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

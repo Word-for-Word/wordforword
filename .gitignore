@@ -9,6 +9,7 @@
 # local preview (python3 -m http.server 5500).
 /articles/
 /publications/
+/volumes/
 /interviews/
 /essays/
 /narratives/

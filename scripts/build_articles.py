@@ -396,6 +396,30 @@ def build_publications_page(css_version, js_version, base_url):
     (publications_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
+# A real, separate page from /publications/ (not the same content under
+# 2 URLs) — the "Volumes" nav dropdown link points here directly, its
+# own family page like interviews/essays/narratives/outreach rather than
+# a redirect trick pointing back at /publications/#publications.
+def build_volumes_page(css_version, js_version, base_url):
+    values = {
+        "BASE": "/",
+        "CSS_VERSION": css_version,
+        "HEADER": build_partial("_header.html", "/", js_version),
+        "FOOTER": build_partial("_footer.html", "/", js_version),
+        "DESCRIPTION": html.escape(
+            "Browse every published volume of Word for Word, the University "
+            "of Pennsylvania's undergraduate medical humanities journal.",
+            quote=True,
+        ),
+        "CANONICAL_URL": html.escape(f"{base_url}/volumes/", quote=True),
+        "OG_IMAGE_URL": html.escape(f"{base_url}/assets/images/Slogan.jpg", quote=True),
+    }
+    output_html = fill(load_template("volumes.html"), values)
+    volumes_dir = ROOT / "volumes"
+    volumes_dir.mkdir(exist_ok=True)
+    (volumes_dir / "index.html").write_text(output_html, encoding="utf-8")
+
+
 # Every hand-authored nav page — kept as a plain list here rather than
 # derived from index.html's own nav markup (there's no reliable way to
 # parse "which hrefs are real pages" back out of that HTML without
@@ -425,6 +449,7 @@ def build_sitemap(all_articles):
     for category in CATEGORIES:
         urls.append((f"{base_url}/{category}/", None))
     urls.append((f"{base_url}/publications/", None))
+    urls.append((f"{base_url}/volumes/", None))
     for article in sorted(all_articles, key=lambda a: a["date"] or datetime.min, reverse=True):
         lastmod = article["date"].strftime("%Y-%m-%d") if article["date"] else None
         urls.append((f"{base_url}/articles/{article['slug']}.html", lastmod))
@@ -647,6 +672,9 @@ def main():
 
     build_publications_page(css_version, js_version, base_url)
     print("Built publications/index.html")
+
+    build_volumes_page(css_version, js_version, base_url)
+    print("Built volumes/index.html")
 
     build_sitemap(all_articles)
     print("Built sitemap.xml")
