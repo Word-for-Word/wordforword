@@ -6781,11 +6781,23 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 }
 .publications-category {
   padding: 0 100px;
-  /* Previously came from the marquee strip's own padding sitting above
-     each category (now replaced by .section-eyebrow, which carries no
-     top spacing of its own) — restoring it here instead so categories
-     still have breathing room between them. */
-  margin-top: 48px;
+  /* .publications-main itself carries NO top clearance for the fixed
+     .site-header (see that rule's own comment) — it assumes whatever
+     sits first inside <main> provides its own, true on /publications/
+     (a full .hero, min-height: 100vh, naturally clears it) but NOT true
+     here: category.html has no hero, so .publications-category is the
+     very first thing in <main>, and the 48px this used to carry (a
+     "gap between categories" — see that value's own history below) sat
+     well under .site-header's 70px, leaving the eyebrow/category title
+     genuinely covered by the fixed bar with no way to scroll it into
+     view. 150px matches .article-page's own established "clears the bar
+     with real breathing room" convention (see that rule's comment) —
+     this section plays the same "page title" role .article-page__eyebrow
+     does there. Reset back down under 720px, see that media query below
+     — .publications-main's OWN mobile override already adds 120px there,
+     so keeping this at 150px too would stack to 270px of empty space
+     above the title on a phone. */
+  margin-top: 150px;
 }
 .article-teaser-grid {
   display: grid;
@@ -6835,7 +6847,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 }
 @media (max-width: 720px) {
   .publications-main { padding-top: 120px; }
-  .publications-category { padding: 0 24px; }
+  .publications-category { padding: 0 24px; margin-top: 48px; }
   .article-teaser-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
