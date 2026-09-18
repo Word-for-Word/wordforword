@@ -1572,6 +1572,32 @@ function applyPublicationFamilySwap(html, href) {
     location.href = href;
     return;
   }
+
+  // .hero (currently only /publications/ own "Our Publications" title)
+  // sits OUTSIDE <main> as a plain sibling, so it's never touched by the
+  // replaceWith() below — left alone, arriving here from a hero-less
+  // category page showed no hero at all (nothing before <main> to put
+  // one there), and leaving /publications/ for a category page left its
+  // stale hero sitting above the swapped-in content, neither of which a
+  // visitor could scroll past to reach real content above it. Its
+  // entrance (asterisk positioning, per-letter stagger, scroll-linked
+  // exit — see that section's own comments in the template) is exactly
+  // the kind of one-time, real-page-load-timed state this function's own
+  // comment above lists as unsafe to fake a 2nd time; faithfully
+  // reproducing it here is out of scope, so arriving somewhere that
+  // needs one it doesn't have falls back to a real navigation instead
+  // (same "bail to a real navigation rather than show a broken/partial
+  // swap" policy as the newMain/currentMain check above). Losing one
+  // that the CURRENT page already has and the destination doesn't is
+  // just a plain removal, no animation involved — safe to always do.
+  const newHero = parsed.querySelector(".hero");
+  const currentHero = document.querySelector(".hero");
+  if (newHero && !currentHero) {
+    location.href = href;
+    return;
+  }
+  if (currentHero && !newHero) currentHero.remove();
+
   currentMain.replaceWith(newMain);
   document.title = parsed.title;
   history.pushState({ pubFamilyTransition: true }, "", href);
