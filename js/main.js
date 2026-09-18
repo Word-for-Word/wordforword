@@ -1128,6 +1128,27 @@ function initForceSkipHeroIntro() {
   }
   document.body.classList.add("intro-finished");
   document.dispatchEvent(new CustomEvent("introfinished", { detail: { asteriskVisible } }));
+
+  // body.header-ready (initHeaderReady(), above) is a SEPARATE flag from
+  // intro-finished — it gates the Publications dropdown's own hover-open
+  // (see initPublicationsDropdown()'s own comment) and normally gets set
+  // by a real transitionend/animationend firing on .site-header itself.
+  // .site-header carries .intro-reveal (confirmed in index.html's own
+  // markup) alongside .intro-reveal--drop, so the delay-shifting loop
+  // above ALSO rewrites its --intro-delay mid-countdown, in the same
+  // synchronous step as the .is-visible that's supposed to kick off its
+  // transition — reported live as the header's own transitionend then
+  // never firing at all, leaving header-ready permanently unset and the
+  // Publications dropdown un-openable for the rest of the session (its
+  // own setTimeout fallback in initHeaderReady() doesn't save this
+  // either: it reads --intro-delay BEFORE this function ever runs, so
+  // it's still counting down against the header's ORIGINAL, un-skipped
+  // delay). Same fix as intro-finished above: force the flag directly
+  // rather than trust a transition timer this function just interfered
+  // with. Harmless if the real transitionend/animationend fires later
+  // anyway — initHeaderReady()'s own markReady() just re-adds the same
+  // class and cleans up its listeners as normal.
+  document.body.classList.add("header-ready");
 }
 
 function initPublicationsDropdown() {
