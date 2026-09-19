@@ -31,7 +31,7 @@ TEMPLATES_DIR = ROOT / "templates"
 # #publications section) and deliberately out of scope here.
 CATEGORIES = ["interviews", "essays", "narratives", "outreach"]
 
-REQUIRED_FIELDS = ["title", "category", "author", "editor", "designer", "illustration"]
+REQUIRED_FIELDS = ["title", "category", "author", "designer", "illustration"]
 
 
 class ContentError(Exception):
@@ -290,7 +290,6 @@ def build_article(md_path, css_version, js_version, base_url):
         "CATEGORY_UPPER": fields["category"].upper(),
         "CATEGORY_URL": f"/{fields['category']}/",
         "AUTHOR": html.escape(fields["author"]),
-        "EDITOR": html.escape(fields["editor"]),
         "DESIGNER": html.escape(fields["designer"]),
         "DATE_SUFFIX": date_suffix,
         "ILLUSTRATION_SRC": "/" + fields["illustration"],

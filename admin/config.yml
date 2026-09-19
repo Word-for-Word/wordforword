@@ -37,7 +37,6 @@ collections:
           - { label: "Outreach", value: "outreach" }
       - { label: "Date", name: "date", widget: "date", format: "YYYY-MM-DD" }
       - { label: "Author", name: "author", widget: "string" }
-      - { label: "Editor", name: "editor", widget: "string" }
       - { label: "Designer", name: "designer", widget: "string" }
       - label: "Summary"
         name: "summary"
