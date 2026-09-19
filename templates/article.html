@@ -99,6 +99,19 @@
 
   <main>
     <article class="article-page">
+      <!-- A plain, real <a> — once article pages join the AJAX family
+           transition (see isPublicationFamilyPath() in main.js), this
+           needs zero extra JS wiring: the existing link-scanning
+           interception picks it up automatically, same as any other
+           family link. Arrow reuses .arrow-glyph's own established
+           flip technique (scaleX(-1), see .featured-carousel__nav--prev
+           in this file's own CSS) rather than a new asset. -->
+      <a href="{{CATEGORY_URL}}" class="article-page__back">
+        <span class="arrow-glyph arrow-glyph--back">
+          <img src="{{BASE}}assets/images/Arrow, brown.png" alt="" />
+        </span>
+        Back to {{CATEGORY_UPPER}}
+      </a>
       <p class="article-page__eyebrow">{{CATEGORY_UPPER}}</p>
       <h1 class="article-page__title">{{TITLE}}</h1>
       <p class="article-page__byline">By {{AUTHOR}}{{DATE_SUFFIX}}</p>

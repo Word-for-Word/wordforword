@@ -1369,6 +1369,18 @@ function normalizePubFamilyPath(pathname) {
 }
 
 const PUBLICATION_FAMILY_PATHS = ["/publications/", "/volumes/", "/interviews/", "/essays/", "/narratives/", "/outreach/"];
+// PUBLICATION_FAMILY_PATHS alone only covers the 6 fixed pages — an
+// individual article (/articles/<slug>.html) is just as much a lateral
+// move within this same family (a teaser card linking into it from its
+// category page, or its own "back" link returning), but there's no
+// fixed list of every slug to enumerate. Every PUBLICATION_FAMILY_PATHS
+// .includes(...) membership check in this system goes through this
+// helper instead, so both kinds of destination are recognized the same
+// way everywhere (the per-link setup filter below, the click-time
+// "already here" check, and the popstate handler further down).
+function isPublicationFamilyPath(path) {
+  return PUBLICATION_FAMILY_PATHS.includes(path) || /^\/articles\/[^/]+\.html$/.test(path);
+}
 let pubFamilyTransitionInFlight = false;
 
 // The 4-stripe transition, per explicit request: navigating BETWEEN
@@ -1404,8 +1416,8 @@ let pubFamilyTransitionInFlight = false;
 // re-scan concern applies there.
 function initPublicationFamilyTransitions(scope) {
   const currentPath = normalizePubFamilyPath(location.pathname);
-  if (!PUBLICATION_FAMILY_PATHS.includes(currentPath)) return;
-  if (!document.querySelector("main.publications-main")) return;
+  if (!isPublicationFamilyPath(currentPath)) return;
+  if (!document.querySelector("main")) return;
 
   (scope || document).querySelectorAll("a[href]").forEach((link) => {
     let url, destPath, destHref;
@@ -1433,7 +1445,7 @@ function initPublicationFamilyTransitions(scope) {
     }
     // Not a family destination at all — leave it as a completely
     // normal link.
-    if (!PUBLICATION_FAMILY_PATHS.includes(destPath)) return;
+    if (!isPublicationFamilyPath(destPath)) return;
 
     link.addEventListener("click", (e) => {
       // Modified/non-primary clicks (middle-click, cmd/ctrl-click to
@@ -1503,7 +1515,7 @@ function initPublicationFamilyTransitions(scope) {
   // handlers above, never by a history nav) rather than re-deriving the
   // swap/animation logic bidirectionally for a back-button edge case.
   window.addEventListener("popstate", () => {
-    if (PUBLICATION_FAMILY_PATHS.includes(normalizePubFamilyPath(location.pathname))) location.reload();
+    if (isPublicationFamilyPath(normalizePubFamilyPath(location.pathname))) location.reload();
   });
 }
 
@@ -1652,8 +1664,13 @@ function revealSwappedHero(hero) {
 
 function applyPublicationFamilySwap(html, href) {
   const parsed = new DOMParser().parseFromString(html, "text/html");
-  const newMain = parsed.querySelector("main.publications-main");
-  const currentMain = document.querySelector("main.publications-main");
+  // Plain "main" (not "main.publications-main") — article pages' own
+  // <main> carries no class at all (they're part of this family now too,
+  // see isPublicationFamilyPath()'s own comment), and every page this
+  // system ever runs on has exactly one <main>, so a class filter here
+  // was never actually load-bearing, just incidentally always true.
+  const newMain = parsed.querySelector("main");
+  const currentMain = document.querySelector("main");
   // Shape mismatch (a future page in this family stops using this same
   // shell, or the fetch somehow returned something unexpected) — bail
   // to a real navigation rather than show a broken/partial swap.

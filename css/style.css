@@ -6449,6 +6449,39 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      above the title, rather than the title sitting flush under the bar. */
   padding: 150px 100px 0;
 }
+/* A plain, real <a> to the article's own category page — needs zero JS
+   wiring itself, see the HTML comment above it in article.html. Sits
+   above the eyebrow, not part of that element's own role. --text-small
+   + a dark-to-red hover, same "solid palette color, no opacity fade"
+   convention .nav__links a already uses, rather than starting red like
+   .article-page__eyebrow — this is a nav control, not a section label. */
+.article-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-size: var(--text-small);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  transition: color 0.15s ease;
+}
+.article-page__back:hover {
+  color: var(--color-red);
+}
+.article-page__back .arrow-glyph {
+  width: 16px;
+  height: 10px;
+}
+/* Arrow art points right by default (see .arrow-glyph's own comment) —
+   flipped for "back", same technique .featured-carousel__nav--prev/
+   .edition-lightbox__nav--prev use, minus their own rotate(-45deg)
+   (that counter-rotates their diamond-shaped .diamond-cta container,
+   which this plain inline icon was never rotated into in the first
+   place). */
+.arrow-glyph--back {
+  transform: scaleX(-1);
+}
 .article-page__eyebrow {
   /* Same size/weight/tracking as .hero__eyebrow — this is the same "short
      label above a headline" role, just not part of that element's own

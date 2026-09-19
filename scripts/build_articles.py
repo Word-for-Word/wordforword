@@ -288,6 +288,7 @@ def build_article(md_path, css_version, js_version, base_url):
     values = {
         "TITLE": html.escape(fields["title"]),
         "CATEGORY_UPPER": fields["category"].upper(),
+        "CATEGORY_URL": f"/{fields['category']}/",
         "AUTHOR": html.escape(fields["author"]),
         "EDITOR": html.escape(fields["editor"]),
         "DESIGNER": html.escape(fields["designer"]),
