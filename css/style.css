@@ -2823,6 +2823,13 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
   fill: var(--color-tan);
   font-size: var(--text-body);
 }
+/* Section 5's "View more" diamond sits on the plain cream page
+   background (same dark-on-cream problem .diamond-cta--dark-on-cream
+   already solves for the diamond itself) — the tan fill above reads
+   invisible there, so this swaps it for --color-dark instead. */
+.square__arc--dark text, .square__arc--dark textPath {
+  fill: var(--color-dark);
+}
 /* CANONICAL "text + arrow" diamond CTA style — square 11's "Learn more"
    and section 4 square 3's "Check us out!" are its 2 instances today,
    but this exact size/stroke/line-height/font combo (130px, 1.25px
@@ -4951,8 +4958,18 @@ body.edition-lightbox-open {
    inline-block content). 100px top gap — more than a bare gap would
    give, per explicit request, since this is a secondary CTA that
    shouldn't read as just another grid row. */
+/* Wraps the arc text + diamond together (same pairing as
+   .square__deco-content elsewhere) so the 100px separation from the
+   grid above applies to the whole block, while the diamond keeps only
+   its own normal small gap under the arc. */
+.publications__view-more-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 100px;
+}
 .publications__view-more {
-  margin: 100px auto 0;
+  margin: 16px auto 0;
 }
 
 /* ===================================================================

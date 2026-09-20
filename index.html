@@ -133,7 +133,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=292" />
+  <link rel="stylesheet" href="/css/style.css?v=293" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -1153,7 +1153,7 @@
             <img class="publication-card__cover-image" src="/assets/images/Cover_ Upcoming Volume.webp" alt="" />
             <p class="publication-card__cover-caption">Coming soon!</p>
           </div>
-          <p class="publication-card__meta">Fall 2025 — Vol. 3</p>
+          <p class="publication-card__meta">Spring 2026 — Vol. 3</p>
         </article>
       </div>
 
@@ -1163,14 +1163,27 @@
            the plain page background, not a colored tile (same problem
            .split-cta__diamond already solves for its own tiny icon-only
            diamond, just at the big size with real text here). -->
-      <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream publications__view-more">
-        <span>View<br />more<br />
-          <span class="arrow-glyph">
-            <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
-            <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+      <div class="publications__view-more-wrap">
+        <!-- Same curved-arc treatment as section 1 square 11's "Still
+             curious?" (SVG textPath along a true circular arc), just
+             dark-on-cream here (--square__arc--dark) to match this
+             diamond's own dark-on-cream coloring instead of square 11's
+             tan-on-dark-tile default. -->
+        <svg class="square__arc square__arc--dark" viewBox="0 0 200 50" aria-hidden="true">
+          <path id="publications-view-more-arc-path" d="M 10,50 A 143,143 0 0,1 190,50" fill="none" />
+          <text text-anchor="middle">
+            <textPath href="#publications-view-more-arc-path" startOffset="50%">Loads to read!</textPath>
+          </text>
+        </svg>
+        <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream publications__view-more">
+          <span>View<br />more<br />
+            <span class="arrow-glyph">
+              <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
+              <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+            </span>
           </span>
-        </span>
-      </a>
+        </a>
+      </div>
     </section>
 
     <!-- ============ QUOTE / SLOGAN ============ -->
