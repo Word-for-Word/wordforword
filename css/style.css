@@ -6180,21 +6180,14 @@ body.edition-lightbox-open {
    bare 60px gap every other section pair gets. */
 .instagram-feed {
   display: grid;
-  /* 1fr first, fixed-width text column second — per explicit request to
-     swap sides (posts now LEFT, text now RIGHT; was the reverse). DOM
-     order was swapped to match (see the HTML comment above this
-     section), not just this column order, so tab/reading order stays
-     sane. */
-  grid-template-columns: 1fr minmax(240px, 320px);
+  /* Fixed-width text column first, 1fr posts column second — back to
+     text-on-the-left/posts-on-the-right (an earlier attempt swapped
+     these, then reverted per explicit follow-up). DOM order was
+     swapped back to match (see the HTML comment above this section). */
+  grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  /* Flat 40px on BOTH sides now — the text no longer needs to match
-     section 3's own 120px (per explicit follow-up: "the text can be
-     pushed further to the side instead of forcefully aligning with
-     section 3's text placement"), so this just goes back to the same
-     plain inset every other un-tied-to-anything edge on this page
-     uses. Posts keep the exact same 40px edge distance they always
-     had — they were already the side using this value; swapping sides
-     doesn't change it, per explicit request. */
+  /* Flat 40px on both sides — no longer tied to matching section 3's
+     own text padding (that alignment requirement was dropped). */
   padding: 0 40px;
   /* margin-top 160px, margin-bottom 300px — bumped from a flat 60px
      both, per a sequence of explicit follow-ups: the gap to section 3
@@ -6241,20 +6234,21 @@ body.edition-lightbox-open {
   font-size: var(--text-body);
   max-width: 32ch;
 }
-/* Reuses .split-cta__diamond (section 3's own small icon-only diamond)
-   directly in the HTML, not .diamond-cta--tight — per explicit report
-   that this read as "weirdly bigger" than section 3's: --tight is 36px,
-   .split-cta__diamond is 28px, and this is the one other icon-only
-   diamond on the page sitting directly on the plain cream background
-   like section 3's does, so it should match that exactly rather than
-   the different (colored-tile-oriented) --tight/--dark-on-cream combo
-   this used before. .split-cta__diamond's own translateY(-6px) is
-   undone here — that nudge corrects for sitting INLINE against a text
-   baseline (.split-cta__link), which doesn't apply to this STACKED-
-   below-text placement. */
-.instagram-feed__link {
-  margin-top: 24px;
-  transform: rotate(45deg);
+/* The separate icon-only diamond button (previously below this text,
+   reusing .split-cta__diamond) was removed per explicit request — the
+   @pennwordforword handle itself is the link now (see the HTML), so
+   this just needs its own plain hover treatment instead of inheriting
+   the browser's default link blue. color:inherit keeps it looking like
+   plain text at rest; the color swap on hover/focus is the only
+   affordance, same --color-red convention other inline text links on
+   this page use (e.g. .article-teaser__title on hover). */
+.instagram-feed__handle {
+  color: inherit;
+  transition: color 0.2s ease;
+}
+.instagram-feed__handle:hover,
+.instagram-feed__handle:focus-visible {
+  color: var(--color-red);
 }
 /* Holds whichever post's caption is currently hovered (see
    initInstagramHoverCaption() in main.js) — empty and invisible at
@@ -6294,20 +6288,18 @@ body.edition-lightbox-open {
    (stretching to fill the outer grid's own 1fr track) read as "too
    big," an earlier 420px cap read as posts "floating in the middle"
    instead of sticking to the edge, and 620px still read as "a little
-   too small." 760px is the current landing point. justify-self:start
-   (was :end, back when posts were the SECOND/right track — see the
-   outer .instagram-feed's own grid-template-columns, now swapped) pins
-   this capped-width block against the section's own LEFT edge, leaving
-   any leftover gap between it and the text instead of between it and
-   the edge — posts keep the same actual edge distance either way,
-   only which edge changed. */
+   too small." 760px is the current landing point. justify-self:end
+   pins this capped-width block against the section's own RIGHT edge
+   (posts are the SECOND/right track again — see the outer
+   .instagram-feed's own grid-template-columns), leaving any leftover
+   gap between it and the text instead of between it and the edge. */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
   max-width: 760px;
-  justify-self: start;
+  justify-self: end;
 }
 .instagram-feed__col {
   display: flex;
