@@ -6174,7 +6174,16 @@ body.edition-lightbox-open {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  padding: 0 40px;
+  /* Left padding matches .square's own clamp() exactly (see that rule),
+     not a flat value — per explicit request that this section's own
+     text align with section 2's, whose text starts at body's page-
+     margin PLUS whichever padding .square currently has at the live
+     viewport width. A flat 40px here only happened to roughly match
+     .square's own clamp() at its wide-viewport ceiling; below ~1300px
+     .square's padding shrinks while a flat value here wouldn't, so the
+     2 would drift apart again below that width. Right side keeps the
+     flat 40px — nothing on the right needs to line up with anything. */
+  padding: 0 40px 0 clamp(16px, 2.76vw, 40px);
   /* Same extra 60px on both edges, per explicit follow-up — the section
      right after this one (Newsletter/Featured Carousel) gets the same
      matching pause leaving this section as section 3 gets entering it. */
@@ -6194,8 +6203,20 @@ body.edition-lightbox-open {
   font-size: var(--text-body);
   max-width: 32ch;
 }
+/* Reuses .split-cta__diamond (section 3's own small icon-only diamond)
+   directly in the HTML, not .diamond-cta--tight — per explicit report
+   that this read as "weirdly bigger" than section 3's: --tight is 36px,
+   .split-cta__diamond is 28px, and this is the one other icon-only
+   diamond on the page sitting directly on the plain cream background
+   like section 3's does, so it should match that exactly rather than
+   the different (colored-tile-oriented) --tight/--dark-on-cream combo
+   this used before. .split-cta__diamond's own translateY(-6px) is
+   undone here — that nudge corrects for sitting INLINE against a text
+   baseline (.split-cta__link), which doesn't apply to this STACKED-
+   below-text placement. */
 .instagram-feed__link {
   margin-top: 24px;
+  transform: rotate(45deg);
 }
 /* Holds whichever post's caption is currently hovered (see
    initInstagramHoverCaption() in main.js) — empty and invisible at
@@ -6214,22 +6235,38 @@ body.edition-lightbox-open {
    RIGHT one gets a top offset (below) for the staggered/masonry look
    the reference mockup shows; a shared grid with only row/column gaps
    can't offset just one column like that without also disturbing the
-   other's own row alignment. */
+   other's own row alignment.
+   max-width + justify-self:start — per explicit request to shrink the
+   posts — caps how wide this grid (and so each column/post) gets,
+   instead of stretching to fill the OUTER grid's own 1fr track (which
+   can be most of the remaining page width on a wide screen). Sits
+   flush against the sticky text column (justify-self:start keeps it
+   pinned to the LEFT of its own, now-wider-than-it-needs 1fr track
+   rather than centering or stretching within it). */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 32px;
+  gap: 20px;
   align-items: start;
+  max-width: 420px;
+  justify-self: start;
 }
 .instagram-feed__col {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
 }
-/* Stagger amount — roughly half a card's own height (posts are square,
-   so half of one column's width), per the reference mockup. */
+/* Negative — per explicit request that the 2nd (right) column actually
+   starts HIGHER than the first, not lower (a reversal of the original
+   reference mockup's own down-offset). initInstagramColumnParallax()
+   in main.js adds a further scroll-linked drift on top of this same
+   element (its own transform, this element's OWN separate margin — the
+   2 don't fight over the same property), so the 2 add together: this
+   sets the STARTING stagger, that makes it drift slightly slower than
+   the left column as the page scrolls, deepening the offset over time
+   for the "almost parallax" feel that was asked for. */
 .instagram-feed__col--offset {
-  margin-top: 15%;
+  margin-top: -15%;
 }
 .instagram-card {
   display: block;
@@ -6249,16 +6286,6 @@ body.edition-lightbox-open {
   display: block;
   width: 100%;
   height: auto;
-  transition: transform 0.5s cubic-bezier(0.33, 1, 0.68, 1);
-}
-/* Small hover feedback on the image itself now that the caption has
-   moved off it entirely (into the sticky panel instead — see
-   .instagram-feed__hover-caption above), so hovering still reads as
-   "this card is interactive" even with no overlay/caption appearing on
-   top of it anymore. */
-.instagram-card:hover .instagram-card__cover img,
-.instagram-card:focus-visible .instagram-card__cover img {
-  transform: scale(1.05);
 }
 @media (max-width: 900px) {
   .instagram-feed {

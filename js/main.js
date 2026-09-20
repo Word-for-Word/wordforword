@@ -209,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initPublicationsDropdown();
     initEditionLightbox();
     initInstagramHoverCaption();
+    initInstagramColumnParallax();
     initPublicationFamilyTransitions();
     initDevPanel();
     // Last on purpose — see this function's own comment on why it needs
@@ -415,6 +416,45 @@ function initInstagramHoverCaption() {
     const card = e.target.closest(".instagram-card");
     if (card && !card.contains(e.relatedTarget)) hide();
   });
+}
+
+// The 2nd (right) post column starts higher than the 1st (see
+// .instagram-feed__col--offset's own negative margin-top in style.css)
+// and, per explicit follow-up, should also drift slightly SLOWER than
+// the 1st as the page scrolls, for "a staggered almost parallax
+// sensation" — this is what adds that drift on top of the static CSS
+// offset (a separate property — a transform here, margin-top there —
+// so the two don't fight over the same one).
+const INSTAGRAM_COL_PARALLAX_STRENGTH = 0.1;
+function initInstagramColumnParallax() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const col = document.querySelector(".instagram-feed__col--offset");
+  const section = document.querySelector(".instagram-feed");
+  if (!col || !section) return;
+
+  const update = () => {
+    // rect.top goes negative as the section scrolls up past the
+    // viewport's own top edge — clamped to never go below 0 first, so
+    // the column sits at its plain CSS starting offset (no added drift
+    // yet) the whole time the section is still below the viewport,
+    // rather than picking up a head start before it's even in view.
+    const scrolledPast = Math.max(0, -section.getBoundingClientRect().top);
+    col.style.transform = `translateY(${scrolledPast * INSTAGRAM_COL_PARALLAX_STRENGTH}px)`;
+  };
+
+  let ticking = false;
+  const scheduleUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      update();
+      ticking = false;
+    });
+  };
+
+  update();
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", scheduleUpdate);
 }
 
 // Lets a finished edition's publication-card (see the data-pdf attribute
