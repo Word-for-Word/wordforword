@@ -296,27 +296,12 @@ document.addEventListener("DOMContentLoaded", () => {
 // browsers without visualViewport support.
 function initViewportFrameSync() {
   if (!window.visualViewport) return;
-  const vv = window.visualViewport;
-  const zoomLock = document.querySelector(".viewport-frame-zoom-lock");
   function sync() {
-    document.documentElement.style.setProperty("--real-vh", `${vv.height}px`);
-    // Counters trackpad/pinch zoom for .viewport-frame-zoom-lock (see its
-    // own CSS comment for the full reasoning) — vv.offsetLeft/offsetTop
-    // is the visual viewport's current pan position, in the SAME layout-
-    // viewport coordinate space position:fixed is anchored to, and
-    // vv.scale is the current pinch-zoom factor (1 = no zoom). Since the
-    // wrapper spans that layout viewport's true (0,0) origin exactly
-    // (inset:0), translating by the pan offset then scaling down by the
-    // zoom factor exactly cancels the browser's own zoom/pan transform,
-    // leaving the frame always rendering at its original real-screen
-    // position and size regardless of zoom/pan.
-    if (zoomLock) {
-      zoomLock.style.transform = `translate(${vv.offsetLeft}px, ${vv.offsetTop}px) scale(${1 / vv.scale})`;
-    }
+    document.documentElement.style.setProperty("--real-vh", `${window.visualViewport.height}px`);
   }
   sync();
-  vv.addEventListener("resize", sync);
-  vv.addEventListener("scroll", sync);
+  window.visualViewport.addEventListener("resize", sync);
+  window.visualViewport.addEventListener("scroll", sync);
 }
 
 function initPageFlashReady() {
