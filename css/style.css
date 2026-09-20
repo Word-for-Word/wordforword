@@ -5798,14 +5798,16 @@ body.edition-lightbox-open {
    give, per explicit request, since this is a secondary CTA that
    shouldn't read as just another grid row. */
 /* Wraps the arc text + diamond together (same pairing as
-   .square__deco-content elsewhere) so the 100px separation from the
-   grid above applies to the whole block, while the diamond keeps only
-   its own normal small gap under the arc. */
+   .square__deco-content elsewhere) so the grid-separation gap applies to
+   the whole block, while the diamond keeps only its own normal small
+   gap under the arc. 60px, not the original 100px — per explicit
+   follow-up request to tighten the gap between the volumes grid and
+   this block. */
 .publications__view-more-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 100px;
+  margin-top: 60px;
 }
 .publications__view-more {
   margin: 16px auto 0;
@@ -7699,6 +7701,17 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
      above the title on a phone. */
   margin-top: 150px;
 }
+/* /publications/'s own "Articles" section — every published article
+   across all 4 categories, sitting below the Volumes grid on that same
+   page. Same horizontal inset as .publications-category (the identical
+   article-teaser-grid on a per-category page), but deliberately NO
+   top-clearance margin — unlike .publications-category, this section is
+   never the first thing in <main> here (Volumes always comes first), so
+   it relies on main's own 60px gap between sections instead of its own
+   fixed-header clearance. */
+.publications-articles {
+  padding: 0 100px;
+}
 .article-teaser-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -7748,6 +7761,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 @media (max-width: 720px) {
   .publications-main { padding-top: 120px; }
   .publications-category { padding: 0 24px; margin-top: 48px; }
+  .publications-articles { padding: 0 24px; }
   .article-teaser-grid { grid-template-columns: repeat(2, 1fr); }
 }
 

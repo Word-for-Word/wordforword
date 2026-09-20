@@ -202,6 +202,19 @@
       </div>
     </section>
 
+    <!-- ============ ARTICLES ============ -->
+    <!-- Every published article across all 4 categories, newest first —
+         same article-teaser-grid markup/CSS the per-category pages
+         (interviews/essays/narratives/outreach) already use, just fed
+         ALL articles here instead of one category's — see
+         build_article_teaser_cards() in scripts/build_articles.py. -->
+    <section id="articles" class="publications-articles">
+      <div class="section-eyebrow">
+        <span>Articles</span>
+        <span class="section-eyebrow__rule" aria-hidden="true"></span>
+      </div>
+{{ARTICLES_BLOCK}}    </section>
+
     <!-- ============ SPOTLIGHT ============ -->
     <!-- TEMPORARY: hidden (style="display:none;") along with the quote-
          block and partner-logos sections below it — everything after the

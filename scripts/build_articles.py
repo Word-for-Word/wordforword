@@ -326,32 +326,40 @@ def build_article(md_path, css_version, js_version, base_url):
     }
 
 
+def build_article_teaser_cards(articles):
+    """Shared by build_category_page (one category) and build_publications_page's
+    "Articles" section (every category at once) — same card markup either
+    way, just a different article list going in, always newest first."""
+    cards = []
+    for art in sorted(articles, key=lambda a: a["date"] or datetime.min, reverse=True):
+        meta = art["date_display"] or ""
+        cards.append(
+            "        <a class=\"article-teaser\" href=\"/articles/{slug}.html\">\n"
+            "          <div class=\"article-teaser__cover\">\n"
+            "            <img src=\"/{illustration}\" alt=\"{alt}\" />\n"
+            "          </div>\n"
+            "          <p class=\"article-teaser__title\">{title}</p>\n"
+            "          <p class=\"article-teaser__summary\">{summary}</p>\n"
+            "          <p class=\"article-teaser__meta\">{meta}</p>\n"
+            "        </a>".format(
+                slug=art["slug"],
+                illustration=html.escape(art["illustration"], quote=True),
+                alt=html.escape(art["illustration_alt"], quote=True),
+                title=html.escape(art["title"]),
+                summary=html.escape(art["summary"]),
+                meta=html.escape(meta),
+            )
+        )
+    return "\n".join(cards)
+
+
 def build_category_page(category, articles_in_category, css_version, js_version, base_url):
     label = category.capitalize()
     if not articles_in_category:
         body = f'      <p class="publications-category__empty">More {label.lower()} coming soon.</p>\n'
     else:
-        cards = []
-        for art in sorted(articles_in_category, key=lambda a: a["date"] or datetime.min, reverse=True):
-            meta = art["date_display"] or ""
-            cards.append(
-                "        <a class=\"article-teaser\" href=\"/articles/{slug}.html\">\n"
-                "          <div class=\"article-teaser__cover\">\n"
-                "            <img src=\"/{illustration}\" alt=\"{alt}\" />\n"
-                "          </div>\n"
-                "          <p class=\"article-teaser__title\">{title}</p>\n"
-                "          <p class=\"article-teaser__summary\">{summary}</p>\n"
-                "          <p class=\"article-teaser__meta\">{meta}</p>\n"
-                "        </a>".format(
-                    slug=art["slug"],
-                    illustration=html.escape(art["illustration"], quote=True),
-                    alt=html.escape(art["illustration_alt"], quote=True),
-                    title=html.escape(art["title"]),
-                    summary=html.escape(art["summary"]),
-                    meta=html.escape(meta),
-                )
-            )
-        body = '      <div class="article-teaser-grid">\n' + "\n".join(cards) + "\n      </div>\n"
+        cards = build_article_teaser_cards(articles_in_category)
+        body = '      <div class="article-teaser-grid">\n' + cards + "\n      </div>\n"
 
     values = {
         "CATEGORY": category,
@@ -376,12 +384,19 @@ def build_category_page(category, articles_in_category, css_version, js_version,
     (category_dir / "index.html").write_text(output_html, encoding="utf-8")
 
 
-def build_publications_page(css_version, js_version, base_url):
+def build_publications_page(all_articles, css_version, js_version, base_url):
+    if not all_articles:
+        articles_body = '      <p class="publications-category__empty">More articles coming soon.</p>\n'
+    else:
+        cards = build_article_teaser_cards(all_articles)
+        articles_body = '      <div class="article-teaser-grid">\n' + cards + "\n      </div>\n"
+
     values = {
         "BASE": "/",
         "CSS_VERSION": css_version,
         "HEADER": build_partial("_header.html", "/", js_version),
         "FOOTER": build_partial("_footer.html", "/", js_version),
+        "ARTICLES_BLOCK": articles_body,
         "DESCRIPTION": html.escape(
             "Browse published volumes and articles from Word for Word, the "
             "University of Pennsylvania's undergraduate medical humanities journal.",
@@ -670,7 +685,7 @@ def main():
         build_category_page(category, by_category[category], css_version, js_version, base_url)
         print(f"Built {category}/index.html")
 
-    build_publications_page(css_version, js_version, base_url)
+    build_publications_page(all_articles, css_version, js_version, base_url)
     print("Built publications/index.html")
 
     build_volumes_page(css_version, js_version, base_url)
