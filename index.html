@@ -130,10 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=293" />
+  <link rel="stylesheet" href="/css/style.css?v=347" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -328,28 +325,38 @@
        shares the same slow "easeOutCubic" curve
        (fast start, slow finish that stays visible the whole way; see
        .intro-reveal--slide-slow). -->
-  <!-- .nav__item--publications is the dropdown trigger AND .nav__dropdown's
-       own containing block — nested directly inside the <li> (not a
-       sibling of .nav living elsewhere in .site-header, as an earlier
-       pass tried) now that the dropdown is a left-aligned vertical list
-       under "Publications" rather than a row centered under the FULL
-       bar: nesting means top:100%/left:0 resolve against the <li> itself
-       (which has its own position:relative), sidestepping .nav's own
-       transform:translateY(-50%) entirely, AND means hovering the
-       dropdown's own visible text is hovering a descendant of the
-       trigger, no gap between the two. .nav__dropdown-hover-zone (see
-       its own CSS comment) is a SEPARATE mechanism layered on top of
-       that — it sustains the open state across the full width/height of
-       the expanded bar, not just the narrow text column, and needs its
-       own second :has() clause since it's a sibling of .site-header
-       __clip (not nested inside the trigger <li>) specifically so it
-       can escape that element's own overflow:hidden clipping. The
-       asterisk after "Publications" is a plain text character (matching
-       the site's own "*" convention elsewhere, e.g. the role squares)
-       indicating more content is available, not a separate interactive
-       element. "Volumes" points back at THIS page's own #publications
-       section (the existing hand-maintained issue-cover cards) rather
-       than the generated publications.html — that page is only for the
+  <!-- .nav__item--publications is the dropdown TRIGGER only now — per the
+       Figma redesign (numbered rows spanning the full header width, plus
+       the bottom-left illustration), .nav__dropdown itself moved OUT of
+       this <li> to be a sibling of .site-header__clip's own <nav>
+       instead (still inside .site-header__clip, so it's still clipped by
+       that element's overflow:hidden as the header's height animates
+       open/closed — same as .nav itself). It used to live nested inside
+       this <li> specifically so top:100%/left:0 could resolve against
+       the <li>'s own (narrow, "Publications"-sized) box — that's exactly
+       what made it impossible to span the FULL header width once the
+       redesign needed the divider lines to actually reach edge to edge.
+       As a direct child of .site-header__clip instead, left:0/right:0
+       resolve against THAT box's own (already 32px-padded) content
+       width, which is exactly the span the lines need, with no extra
+       math. .nav__dropdown ITSELF does NOT get its own mouseenter/
+       mouseleave listeners in initPublicationsDropdown() (main.js) —
+       tried once, and it made the dropdown open from hovers anywhere
+       across the full header width, nowhere near "Publications" (that
+       element is unconditionally pointer-events:auto, spanning the
+       whole width, not just the visible rows). The 5 individual
+       .nav__dropdown a rows get their own listeners instead — see that
+       function's own comment for why .nav__dropdown-hover-zone alone
+       isn't enough for that (it's a SIBLING of these rows, not their
+       ancestor, so it doesn't reliably see mouseenter/leave while the
+       cursor sits over actual row content, which paints on top of it).
+       The asterisk after "Publications" is a plain text character
+       (matching the site's own "*" convention elsewhere, e.g. the role
+       squares) indicating more
+       content is available, not a separate interactive element.
+       "Volumes" points back at THIS page's own #publications section
+       (the existing hand-maintained issue-cover cards) rather than the
+       generated publications.html — that page is only for the
        article-publishing system's 4 categories, not whole-issue
        volumes, which are a separate, already-existing concept. -->
   <header class="site-header intro-reveal intro-reveal--drop intro-reveal--drop-staggered" style="--intro-delay: 4870ms;">
@@ -363,19 +370,48 @@
           <li class="nav-entrance-item" style="--entry-delay: 90ms"><a href="/">Overview</a></li>
           <li class="nav__item--publications nav-entrance-item" style="--entry-delay: 180ms">
             <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
-            <div class="nav__dropdown">
-              <a href="/volumes/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
-              <a href="/interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
-              <a href="/essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
-              <a href="/narratives/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Narratives</span></a>
-              <a href="/outreach/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Outreach</span></a>
-            </div>
           </li>
           <li class="nav-entrance-item" style="--entry-delay: 270ms"><a href="/about/">About Us</a></li>
           <li class="nav-entrance-item" style="--entry-delay: 360ms"><a href="/get-involved/">Get Involved</a></li>
           <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
         </ul>
       </nav>
+      <!-- See the HTML comment above <header> for why this lives here
+           now instead of nested inside .nav__item--publications. Each
+           row's leading "(0N)" number is Instrument Serif (--font-
+           display), per the Figma mockup, as is the "*" — everything
+           else (the row text itself) is unchanged, still Newsreader/
+           uppercase like the rest of the nav. .nav__dropdown-visual is
+           the bottom-left illustration (assets/images/Dropdown
+           Visual.png) called out in that same mockup. -->
+      <div class="nav__dropdown">
+        <a href="/volumes/">
+          <span class="nav__dropdown-number">(01)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span>
+        </a>
+        <a href="/interviews/">
+          <span class="nav__dropdown-number">(02)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span>
+        </a>
+        <a href="/essays/">
+          <span class="nav__dropdown-number">(03)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span>
+        </a>
+        <a href="/narratives/">
+          <span class="nav__dropdown-number">(04)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Narratives</span>
+        </a>
+        <a href="/outreach/">
+          <span class="nav__dropdown-number">(05)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Outreach</span>
+        </a>
+        <div class="nav__dropdown-visual" aria-hidden="true">
+          <img class="nav__dropdown-visual-img" src="/assets/images/Dropdown Visual.png" alt="" />
+          <div class="nav__dropdown-visual-asterisk-wrap">
+            <img class="nav__dropdown-visual-asterisk" src="/assets/images/Asterisk - Default, Cream.png" alt="" />
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <!-- Dims the page behind the header while the Publications dropdown
@@ -724,24 +760,24 @@
          desktop, via a plain .is-tapped class. -->
     <section class="square-grid square-grid--4col square-grid--rows-2">
       <div class="square square--red square--role-reveal square--pad-lg">
-        <h3 class="square__role square__role--display-italic">Interviewer*</h3>
+        <h3 class="square__role square__role--display-italic">Interviewer<span class="square__role-asterisk">*</span></h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Interviewer"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*<strong>Interview individuals with experiences in medicine and the humanities</strong>, and shape those conversations into written narratives.</span></p>
+        <p class="square__role-description"><span><span class="square__role-asterisk">*</span><strong>Interview individuals with experiences in medicine and the humanities</strong>, and shape those conversations into written narratives.</span></p>
       </div>
       <div class="square square--tan square--role-reveal square--pad-lg">
-        <h3 class="square__role square__role--caps">Columnist*</h3>
+        <h3 class="square__role square__role--caps">Columnist<span class="square__role-asterisk">*</span></h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Columnist"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*<strong>Create narratives on the human side of healthcare</strong>, with freedom to write book reviews, opinions, poetry, prose, or analysis.</span></p>
+        <p class="square__role-description"><span><span class="square__role-asterisk">*</span><strong>Create narratives on the human side of healthcare</strong>, with freedom to write book reviews, opinions, poetry, prose, or analysis.</span></p>
       </div>
       <div class="square square--grey square--role-reveal square--pad-lg">
-        <h3 class="square__role square__role--display">Editor*</h3>
+        <h3 class="square__role square__role--display">Editor<span class="square__role-asterisk">*</span></h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Editor"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*<strong>Work closely with columnists and interviewers</strong> to refine clarity, structure, and flow, while respecting the writer&rsquo;s intent.</span></p>
+        <p class="square__role-description"><span><span class="square__role-asterisk">*</span><strong>Work closely with columnists and interviewers</strong> to refine clarity, structure, and flow, while respecting the writer&rsquo;s intent.</span></p>
       </div>
       <div class="square square--dark square--role-reveal square--pad-lg">
-        <h3 class="square__role square__role--script">Designer*</h3>
+        <h3 class="square__role square__role--script">Designer<span class="square__role-asterisk">*</span></h3>
         <button type="button" class="square__role-tap-btn" aria-label="Show details for Designer"><span aria-hidden="true">*</span></button>
-        <p class="square__role-description"><span>*<strong>Translate narrative into visual form</strong>, illustrating written pieces in the journal&rsquo;s signature fine-arts aesthetic.</span></p>
+        <p class="square__role-description"><span><span class="square__role-asterisk">*</span><strong>Translate narrative into visual form</strong>, illustrating written pieces in the journal&rsquo;s signature fine-arts aesthetic.</span></p>
       </div>
 
       <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
@@ -843,32 +879,142 @@
             <div class="split-cta__illustration-tile"></div>
             <div class="split-cta__illustration-tile"></div>
           </div>
-          <img class="split-cta__illustration" src="/assets/images/Section 3 Artwork.png" alt="" />
-          <!-- <div>s, not <img>s, now that these are beige (--color-tan)
-               instead of the asset's own native cream — mask-image (the
-               same PNG, used purely as an alpha stencil) + an explicit
-               background-color is the only reliable way to recolor a
-               raster asset to an arbitrary exact color; a plain <img>'s
-               own pixel colors can't be overridden by CSS. Same
-               technique already used for .intro-splash__asterisk--2/3/4.
+          <!-- .split-cta__parallax(--image/--asterisks): pure transform
+               layers for the scroll-linked parallax drift
+               (initSplitCtaParallax() in main.js), per explicit request —
+               deliberately 2 separate, otherwise-inert wrappers rather
+               than applying translateY directly to .split-cta__
+               illustration or the asterisk wraps below. Both of those
+               already own a transform of their own (the illustration's
+               reveal transition; the asterisk wraps' hero-asterisk-intro
+               pop-in plus the inner div's continuous spin) — `transform`
+               is a single shorthand, so a 2nd source fighting over the
+               same property on the same element would silently replace
+               whichever one loses (or, for the forwards-filled pop-in
+               specifically, an animation keeps winning over any inline
+               style indefinitely, so JS couldn't touch that element's
+               transform at all once it's played). Wrapping instead gives
+               the parallax its own element/property to own, with zero
+               risk to any of the existing reveal/pop-in/spin animations
+               nested inside it. position:absolute + inset:0 exactly
+               matches .split-cta__illustration-wrap's own box, so each
+               becomes the new nearest positioned ancestor for its own
+               children's top/left/bottom/right percentages without
+               changing any of those values.
 
-               Split across a wrap + inner div, same reason
-               .hero__wordmark-asterisk-wrap/asterisk are split: the wrap
-               holds position + the one-shot scroll-triggered intro pop-in
-               (hero-asterisk-intro — opacity/scale/decelerating extra
-               spin), the inner div holds only its own continuous
-               constant-speed spin. One element can't run both animations
-               at once since they'd fight over the same transform
-               property. -->
-          <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--small">
-            <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+               2 SEPARATE layers (not 1 shared one, like the original
+               version of this) specifically so the asterisks can drift
+               at their own, slower rate than the image — per explicit
+               follow-up request ("have the asterisks move slightly
+               slower than the img... so they're staggered"). Both still
+               read the SAME underlying scroll position
+               (.split-cta__illustration-wrap's own rect — see
+               initSplitCtaParallax()'s own comment), just scaled by a
+               different strength constant each, so they stay in sync
+               (same direction, same timing) while visibly lagging
+               relative to each other. -->
+          <div class="split-cta__parallax split-cta__parallax--image" aria-hidden="true">
+            <img class="split-cta__illustration" src="/assets/images/Section 3 Artwork.png" alt="" />
           </div>
-          <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--large">
-            <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+          <div class="split-cta__parallax split-cta__parallax--asterisks" aria-hidden="true">
+            <!-- <div>s, not <img>s, now that these are beige (--color-tan)
+                 instead of the asset's own native cream — mask-image (the
+                 same PNG, used purely as an alpha stencil) + an explicit
+                 background-color is the only reliable way to recolor a
+                 raster asset to an arbitrary exact color; a plain <img>'s
+                 own pixel colors can't be overridden by CSS. Same
+                 technique already used for .intro-splash__asterisk--2/3/4.
+
+                 Split across a wrap + inner div, same reason
+                 .hero__wordmark-asterisk-wrap/asterisk are split: the wrap
+                 holds position + the one-shot scroll-triggered intro pop-in
+                 (hero-asterisk-intro — opacity/scale/decelerating extra
+                 spin), the inner div holds only its own continuous
+                 constant-speed spin. One element can't run both animations
+                 at once since they'd fight over the same transform
+                 property. -->
+            <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--small">
+              <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+            </div>
+            <div class="split-cta__illustration-asterisk-wrap split-cta__illustration-asterisk-wrap--large">
+              <div class="split-cta__illustration-asterisk" aria-hidden="true"></div>
+            </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- ============ SCROLL-PIN-GROW PROTOTYPE (SHELVED) ============ -->
+    <!-- SHELVED per explicit request — the effect itself worked (start
+         position matching section 3's real black bg, growing into
+         .featured-carousel's own footprint, real carousel UI reused for
+         the content) but isn't wanted live right now. Commented out
+         rather than deleted since it may be repurposed later — the
+         markup below, plus .pin-grow-*/initPinGrowDemo() in style.css/
+         main.js, are all left completely in place and unused while this
+         stays commented out; initPinGrowDemo() itself no-ops cleanly
+         with no elements to find (see its own early-return). To bring
+         this back, just remove the 2 comment markers around the <div>
+         below. Original notes, kept for context:
+         EXPERIMENTAL — per explicit request to "try" a scroll-linked
+         pin-and-grow effect (Apple product-page style: locks in place on
+         screen as you scroll, grows to fill more space, then releases
+         and lets the page scroll past it normally), sized/positioned to
+         end up matching .featured-carousel's own footprint (section 4,
+         right below).
+         A NEW, SEPARATE element — not the real section 3 black tile box
+         (.split-cta__illustration-tiles above) — specifically so this
+         stays a zero-risk, easily-removable experiment: that element is
+         position:absolute, tightly coupled to the illustration overlay
+         above it (tile-hover-reveal, image bleed, and asterisk
+         positioning all depend on today's exact setup), and the sticky
+         positioning this needs for the pin-then-release mechanic simply
+         doesn't work on a position:absolute element — reworking that
+         element to support it risked regressing everything already
+         tuned there. .featured-carousel itself is completely untouched;
+         this sits near it, not replacing it, unless/until this
+         prototype is adopted for real.
+         See initPinGrowDemo() in main.js for the scroll mechanics — its
+         starting rect is now .split-cta__illustration-wrap's own real,
+         live-measured position/size (not an invented proportion), per
+         explicit follow-up request that this match its "predecessor"
+         exactly.
+         The content below reuses the REAL .featured-carousel__* classes
+         directly (photo/scrim/title/edition/number/nav), per a follow-up
+         correction that the earlier 3-card layout + custom diamond
+         buttons didn't match the real carousel — this is now one photo
+         filling the whole box, same caption + nav styling as the real
+         thing, just toggled visible by initPinGrowDemo() off the same
+         grow progress (see that function's own comment for the exact
+         thresholds) instead of a separate trigger. Still just a
+         prototype, not real wired-up navigation (hence aria-hidden, and
+         <div>s rather than the real carousel's <button>s — clicks are
+         inert anyway since .pin-grow-sticky is pointer-events:none). -->
+    <!--
+    <div class="pin-grow-spacer">
+      <div class="pin-grow-sticky" aria-hidden="true">
+        <div class="pin-grow-box">
+          <img class="featured-carousel__photo" src="/assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="" />
+          <div class="featured-carousel__scrim" aria-hidden="true"></div>
+          <a href="#" class="featured-carousel__title">Online articles coming soon!</a>
+          <a href="#" class="featured-carousel__edition">Illustration from Volume 2</a>
+          <p class="featured-carousel__number">(01)</p>
+          <div class="featured-carousel__nav featured-carousel__nav--prev diamond-cta diamond-cta--fill-on-hover diamond-cta--tight">
+            <span class="arrow-glyph">
+              <img class="arrow-glyph__default" src="/assets/images/Arrow, beige.png" alt="" />
+              <img class="arrow-glyph__hover" src="/assets/images/Arrow, blue.png" alt="" />
+            </span>
+          </div>
+          <div class="featured-carousel__nav featured-carousel__nav--next diamond-cta diamond-cta--fill-on-hover diamond-cta--tight">
+            <span class="arrow-glyph">
+              <img class="arrow-glyph__default" src="/assets/images/Arrow, beige.png" alt="" />
+              <img class="arrow-glyph__hover" src="/assets/images/Arrow, blue.png" alt="" />
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    -->
 
     <!-- ============ NEWSLETTER / SOCIAL SQUARE GRID + FEATURED CAROUSEL ============ -->
     <!-- Section 4: the square-grid and .featured-carousel below are wrapped
@@ -881,72 +1027,61 @@
          grid's own bottom corners (normally rounded via the base
          .square-grid rule) so the carousel's bottom corners are the ones
          that visually conclude the section — see .featured-carousel. -->
+    <!-- Was a 2-row, 8-tile grid (Instagram follow/CTA + a filler pair +
+         the ladybug photo + a "peruse the articles below" pointer +
+         a closing checker) shared with the carousel below it — per
+         explicit request to eventually split Instagram content and the
+         spotlight-article carousel into 2 independent sections, this is
+         step 1: down to a single row of 4 tiles, keeping only the ones
+         that belong with the spotlight carousel (Instagram's own tiles
+         move to their own section later; copy text is unchanged for
+         now, only the tile structure). -->
     <section>
-      <div class="square-grid square-grid--4col square-grid--rows-2 square-grid--flush-bottom">
+      <div class="square-grid square-grid--4col square-grid--rows-1 square-grid--flush-bottom">
         <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
         <div class="square square--red square--pad-lg square--text-gap-30 square--align-left">
-          <p class="square__body">For news &amp; events, follow us on Instagram:</p>
-          <!-- Own block now (was inline in the paragraph above) — italic
-               is a deliberate one-off exception to "Newsreader is never
-               italic" elsewhere on the page: a real italic face exists
-               (Newsreader Italic, see the @font-face block), so this
-               isn't the browser faux-slanting a face that has none. -->
-          <p class="square__body square__handle square__body--natural-height">@pennword4word</p>
+          <!-- Copy replaced per explicit follow-up now that this tile no
+               longer sits next to its old Instagram CTA neighbor —
+               introduces the spotlight picks below instead. -->
+          <p class="square__body">Our digital library spans interviews, essays, narratives, and more.</p>
+          <p class="square__body square__body--natural-height">Start exploring with one of our spotlight picks below.</p>
         </div>
-        <!-- Just the diamond now (no arc text above it) — base .square
-             already centers a single child on both axes, so no
-             .square--deco/.square__deco-content wrapper needed here
-             (those exist specifically to correct for an arc+diamond
-             COMBINATION's off-center rotation quirk — see their own
-             comments — which doesn't apply with only one child). -->
-        <div class="square square--tan">
-          <a href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-tan">
-            <span>Check<br />us out!<br />
+        <!-- Links to /publications/ instead of Instagram — base
+             .diamond-cta's own DEFAULT (unmodified) coloring is already
+             tan border/text, exactly what reads against this tile's dark
+             brown background with no color override needed (see that
+             rule's own comment); --fill-on-hover--dark picks the hover
+             text color to match this tile's own brown (per explicit
+             follow-up correcting an initial --red guess), same
+             match-the-tile convention "Learn more" (--blue, on a grey
+             tile) already uses. Base .square already centers a single
+             child on both axes, so no .square--deco/.square__deco-content
+             wrapper is needed. -->
+        <div class="square square--dark">
+          <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--fill-on-hover--dark">
+            <span>Browse some<br />more!<br />
               <span class="arrow-glyph">
+                <img class="arrow-glyph__default" src="/assets/images/Arrow, beige.png" alt="" />
                 <!-- "Arrow, blue.png" is the misnamed file for
                      --color-dark — see the .arrow-glyph comment in
-                     style.css. Default arrow here (not hover) since the
-                     default state is dark-on-tan, the reverse of square
-                     11's beige-on-grey default. -->
-                <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
-                <!-- Beige mask, not a PNG — reuses
-                     .split-cta__diamond-arrow-cream's own mask-image
-                     machinery, just recolored via
-                     .diamond-cta--dark-on-tan's own override (see
-                     style.css) rather than cream. -->
-                <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+                     style.css. -->
+                <img class="arrow-glyph__hover" src="/assets/images/Arrow, blue.png" alt="" />
               </span>
             </span>
           </a>
         </div>
-        <div class="square square--red" aria-hidden="true"></div>
-
-        <div class="square square--dark" aria-hidden="true"></div>
-        <!-- Circle img + asterisk moved back here per explicit request
-             (had briefly relocated one tile left) — exact same photo/
-             asterisk-decoration as section 1 square 4. -->
-        <div class="square square--grey square--inset">
+        <!-- Same photo/asterisk decoration as section 1 square 4, but on
+             a tan (beige) tile instead of grey, with the asterisk
+             recolored red instead of the shared class's default beige —
+             .square__inset-asterisk--red overrides just the mask's own
+             background-color, scoped so section 1's own instance (same
+             shared classes) stays beige, unaffected. -->
+        <div class="square square--tan square--inset">
           <img class="square__inset-image" src="/assets/images/Section 1 Square 4.png" alt="Ladybug resting on a flower bud" />
           <div class="square__inset-asterisk-wrap square__inset-asterisk-wrap--top-left" aria-hidden="true">
-            <div class="square__inset-asterisk"></div>
+            <div class="square__inset-asterisk square__inset-asterisk--red"></div>
           </div>
         </div>
-        <div class="square square--dark square--pad-lg">
-          <p class="square__body">Interested in what we do? Peruse the featured articles below.</p>
-          <!-- Points down toward the carousel directly below this grid.
-               3 stacked copies of the same static beige arrow (not
-               .arrow-glyph — that class is for the default/hover
-               CROSSFADE pair inside a diamond-cta, a different thing),
-               opacity-cycled 120deg out of phase with each other via
-               .square__down-arrow-group's own CSS animation — see that
-               rule for how the "traveling downward" illusion works. -->
-          <div class="square__down-arrow-group" aria-hidden="true">
-            <img class="square__down-arrow" src="/assets/images/Arrow, beige.png" alt="" />
-            <img class="square__down-arrow" src="/assets/images/Arrow, beige.png" alt="" />
-            <img class="square__down-arrow" src="/assets/images/Arrow, beige.png" alt="" />
-          </div>
-        </div>
-        <div class="square square--checker" style="--checker-a: var(--color-red); --checker-b: var(--color-tan);" aria-hidden="true"></div>
       </div>
 
       <!-- Carousel: .featured-carousel is BOTH the rounded/clipped VIEWPORT
@@ -981,7 +1116,7 @@
                markup once that switch happens, since the next build just
                overwrites everything between the 2 sentinel comments below. -->
           <!-- CAROUSEL_SLIDES:START -->
-          <div class="featured-carousel__slide featured-carousel__slide--first" data-title="The Consumptive&rsquo;s Kiss: Tuberculosis &amp; the Elegance of Death" data-edition="Finn Ryan, Edition 2" data-number="(01)" data-article-url="/articles/the-consumptives-kiss.html">
+          <div class="featured-carousel__slide featured-carousel__slide--first" data-title-intro="The Consumptive&rsquo;s Kiss:" data-title="Tuberculosis &amp; the Elegance of Death" data-edition="Finn Ryan, Edition 2" data-number="(01)" data-article-url="/articles/the-consumptives-kiss.html">
             <img class="featured-carousel__photo" src="/assets/images/carousel/ILLUST The Consumptive's Kiss.jpg" alt="Illustration: The Consumptive's Kiss" />
             <div class="featured-carousel__scrim mosaic-reveal" aria-hidden="true"></div>
             <div class="featured-carousel__masks">
@@ -1070,7 +1205,7 @@
         <!-- Regenerated together with CAROUSEL_SLIDES above, matching
              slide 1 — see that block's own comment. -->
         <!-- CAROUSEL_CAPTION:START -->
-        <a href="/articles/the-consumptives-kiss.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">The Consumptive&rsquo;s Kiss: Tuberculosis &amp; the Elegance of Death</a>
+        <a href="/articles/the-consumptives-kiss.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide"><span class="featured-carousel__title-intro">The Consumptive&rsquo;s Kiss:</span><span class="featured-carousel__title-main">Tuberculosis &amp; the Elegance of Death</span></a>
         <a href="/publications/" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">Finn Ryan, Edition 2</a>
         <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>
         <!-- CAROUSEL_CAPTION:END -->
@@ -1187,21 +1322,19 @@
     </section>
 
     <!-- ============ QUOTE / SLOGAN ============ -->
-    <!-- .quote-block__masks (the tile grid that assembles the photo
-         tile-by-tile on scroll) is injected here by initQuoteBlockTiles()
-         in main.js — see that function's own comment for why it isn't
-         hand-written here. -->
-    <section class="quote-block">
-      <div class="quote-block__image">
-        <img class="quote-block__photo" src="/assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
-      </div>
-      <!-- mosaic-reveal: fires once the mask grid's LAST tile actually
-           finishes revealing (see initQuoteBlockReveal() in main.js), so
-           this reads as a deliberate second step once the photo has
-           genuinely finished assembling, not simultaneous with it. -->
-      <div class="quote-block__overlay mosaic-reveal">
-        <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
-      </div>
+    <!-- Plain text version, per explicit request (reverting the
+         Slogan.jpg photo + mosaic-reveal treatment tried here) — same
+         .slogan-preview markup/classes the About page briefly used in
+         its place before swapping back to the photo (see .slogan-preview
+         in style.css for the reveal mechanics: each line is a
+         .split-cta__text-line span, already registered in
+         initRevealOnScroll()'s staggeredTargets, so it fades/slides in
+         on scroll with zero extra JS needed here). -->
+    <section class="slogan-preview">
+      <p class="slogan-preview__text">
+        <span class="split-cta__text-line"><em>Empowering</em> voices</span>
+        <span class="split-cta__text-line">previously <em>unheard</em></span>
+      </p>
     </section>
 
     <!-- ============ PARTNER LOGOS ============ -->
@@ -1402,6 +1535,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=178" defer></script>
+  <script src="/js/main.js?v=204" defer></script>
 </body>
 </html>

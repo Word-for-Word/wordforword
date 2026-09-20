@@ -51,19 +51,38 @@
   /* clamp()'d per explicit request, matching --text-small's own pattern
      right below — the comment above already documented this as the
      intent ("checked against 320-430px viewports") but this was left as
-     a flat value. 17px floor holds through small phones (up to ~378px,
-     where 4.5vw crosses it), then grows back to the original 22px by
-     ~489px — bigger phones/phablets read at the same size as desktop;
-     only genuinely narrow screens get the reduction. */
-  --text-body: clamp(17px, 4.5vw, 22px);
-  --text-small: clamp(12.5px, 3.2vw, 15px);
+     a flat value. Ceiling (20px) still grows back to the desktop value
+     by ~488px (2000/4.1) — bigger phones/phablets read at the same size
+     as desktop; only genuinely narrow screens get the reduction. Floor
+     lowered again, 16px -> 14px, per a further explicit follow-up ("body
+     text should resize to be even smaller for smaller viewports") — the
+     narrowest common phones (~320-360px) now read noticeably smaller
+     than the 360-430px range does, rather than both hitting the same
+     16px floor; vw slope (4.1) and ceiling were unchanged THAT round, so
+     nothing above ~340px was affected then. Slope widened since, though
+     (4.1 -> 1.43) — per a later explicit follow-up that body text across
+     the site "wasn't scaling enough to fit," now that fixed padding/gaps
+     on tiles were also found to be squeezing the actual text column much
+     faster than a flat-until-488px ceiling ever adjusted for (see
+     .square's own padding comment for the full diagnosis) — the ceiling
+     is now reached around 1400px instead, so this shrinks continuously
+     across ordinary desktop/tablet/phone widths rather than sitting
+     flat for most of that range. Same 14-20px floor/ceiling either way. */
+  --text-body: clamp(14px, 1.43vw, 20px);
+  /* Same ceiling-crossover widening as --text-body above, same reasoning. */
+  --text-small: clamp(12.5px, 1.07vw, 15px);
   /* The marquee strips' own unique size (see .marquee-banner) — a
      deliberate third value roughly midway between --text-body and the
      marquees' old 40px display size, promoted to a shared root token so
      other spots (e.g. .square__role, the Get Involved roles grid's
      default role-name text) can reuse the exact same size on request,
-     not just the marquees themselves. */
-  --marquee-text-size: clamp(21px, 6.5vw, 32px);
+     not just the marquees themselves. Ceiling brought down from 32px to
+     28px per explicit request (read as too large on .square__role, the
+     section 2 role-name text) — vw slope recomputed (6.5 -> 5.7, then
+     later widened again to 2 for the same ~1400px-ceiling reasoning
+     --text-body's own comment explains) — 21-28px span unchanged
+     throughout. */
+  --marquee-text-size: clamp(21px, 2vw, 28px);
 
   --page-margin: 10px;
   /* Logo is 52px tall, centered 38px from the top (see --nav-item-center
@@ -80,11 +99,21 @@
      frame begins. */
   --nav-item-center: 40px;
   /* How tall .site-header grows to while the Publications dropdown is
-     open — tall enough to fit .nav__dropdown's own 5-item vertical list
-     (see that rule for its own sizing/padding) below the main nav row.
-     Value confirmed against the list's actual rendered height via
-     Playwright, not just estimated from font metrics. */
-  --nav-height-expanded: 312px;
+     open — tall enough to fit .nav__dropdown's own 5-item list (see that
+     rule for its own sizing) below the main nav row. 70 (--nav-height) +
+     28 (.nav__dropdown's own padding-top, breathing room before row 1) +
+     390 (5 rows x the 78px min-height each row is given explicitly) + 72
+     (padding-bottom, breathing room after row 5) = exact arithmetic, not
+     a measured/eyeballed guess. Bumped repeatedly (312 -> 390 -> 460 ->
+     500 -> 532 -> 604) across several follow-up requests — redesigned
+     rows + the illustration, then taller rows, then more bottom
+     breathing room twice over, then matching top breathing room — then
+     brought back down (604 -> 560) once the matched top gap turned out
+     to be too much. The illustration ignores both paddings entirely (see
+     its own comment) and is sized to fit within the rows' own 390px
+     without needing any extra space of its own, regardless of how much
+     padding this total ends up including. */
+  --nav-height-expanded: 560px;
 
   /* Shared by the hero asterisk and the intro splash's cream asterisk —
      computed out to a fixed clamp so both are guaranteed the exact same
@@ -129,6 +158,29 @@
   src: url("../assets/Kapakana-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
+}
+
+/* Instrument Serif, self-hosted for the same reason as Newsreader/
+   Kapakana above — the Google Fonts CDN link this replaced
+   (fonts.googleapis.com) is a common target for ad blockers/privacy
+   extensions (uBlock Origin, Brave Shields, Privacy Badger), which
+   silently drop the request and leave the page falling back to the
+   generic serif in --font-display, with no console error to point at
+   the cause. Self-hosting removes the third-party request entirely.
+   Only the single 400-weight upright + italic static instances are
+   needed (matches the ital@0;1 axis the old CDN link requested), not
+   the variable font. */
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("../assets/InstrumentSerif-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("../assets/InstrumentSerif-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
 }
 
 /* ===================================================================
@@ -1000,16 +1052,20 @@ html.show-page-flash.page-flash-ready .site-header {
    itself, to sustain) is already hovered. */
 .nav__dropdown-hover-zone {
   position: absolute;
-  /* top:0/height:100% of the WHOLE expanded bar (not just the sliver
-     below the main nav row) — harmless, since this only ever becomes
-     interactive (pointer-events:auto, below) once the dropdown is
-     already open; hovering elsewhere up there (the logo, "About Us")
-     while it's open just keeps it open, a reasonable trade for staying
-     immune to the trigger <li>'s exact geometry entirely. */
-  top: 0;
+  /* Was top:0/height:100% of the WHOLE expanded bar, INCLUDING the main
+     nav row itself — "harmless," the reasoning went, "since hovering
+     elsewhere up there (the logo, 'About Us') while it's open just keeps
+     it open, a reasonable trade." Per explicit follow-up request, that's
+     no longer the wanted behavior: the dropdown should only stay open
+     near Publications/its own rows, not from hovering toward Overview/
+     About Us/Get Involved too. Scoped to start at var(--nav-height) (the
+     main nav row's own height) instead of 0, and height shortened to
+     match — this zone now covers only the DROPDOWN's own revealed area,
+     the same span .nav__dropdown itself occupies, not the row above it. */
+  top: var(--nav-height);
   left: 0;
   right: 0;
-  height: var(--nav-height-expanded);
+  height: calc(var(--nav-height-expanded) - var(--nav-height));
   pointer-events: none;
 }
 /* pointer-events keyed off the SAME .nav__dropdown-is-open class that
@@ -1191,6 +1247,12 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   transition: color 0.15s ease;
 }
 .nav__links a:hover { color: var(--color-red); }
+/* Instrument Serif per explicit request, matching the dropdown's own
+   asterisks (.nav__dropdown-asterisk) — was inheriting "Publications"'s
+   own Newsreader by default. */
+.nav__link-asterisk {
+  font-family: var(--font-display);
+}
 
 /* Underline for whichever nav link is the current page — positioned via
    JS (left/width matched to the active link's own offsetLeft/
@@ -1213,7 +1275,9 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
 }
 .nav__indicator {
   position: absolute;
-  bottom: -3px;
+  /* Was -3px — reduced per explicit request to sit closer to the nav
+     item it underlines. */
+  bottom: -1.5px;
   height: 1px;
   /* Scaling a 1px box down renders as a true sub-pixel hairline on
      retina displays instead of a flat 1px bar — thinner than height
@@ -1257,47 +1321,370 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   background: var(--color-red);
 }
 
-/* .nav__item--publications is .nav__dropdown's own containing block (see
-   the HTML comment above <header>) — position:relative here is what lets
-   the dropdown's top:100%/left:0 resolve against the <li> itself rather
-   than needing to bypass .nav's own transform:translateY(-50%). */
+/* .nav__item--publications no longer contains .nav__dropdown (see the
+   HTML comment above <header> for why it moved) — this position:relative
+   is only needed now for "Publications*"'s own .nav__link-asterisk/
+   .nav__indicator geometry, unrelated to the dropdown itself. */
 .nav__item--publications {
   position: relative;
 }
 
-/* Publications dropdown — a left-aligned vertical list revealed by
-   .site-header growing taller (see that rule's own :has()), not a
-   separate floating panel. top:100%/left:0 sit flush against the trigger
-   <li>'s own box (nested inside it — see the HTML comment above
-   <header>), so there's no gap between "Publications*" and the list
-   below it: hovering anywhere in the list is hovering a descendant of
-   the <li>, which is what keeps .site-header:has(.nav__item--
-   publications:hover) matching continuously as the cursor moves from
-   one into the other, no separate bridge element needed. */
+/* Publications dropdown — redesigned per Figma mockup: numbered rows
+   spanning the full header width (not a narrow left-aligned list under
+   "Publications" anymore) plus a bottom-left illustration. Now a direct
+   child of .site-header__clip (see the HTML comment above <header> for
+   why), so left:0/right:0 resolve against THAT box's own (already
+   32px-padded) content width — exactly the span the divider lines below
+   need, no extra math required. top:var(--nav-height) sits it flush
+   under the main nav row. */
 .nav__dropdown {
   position: absolute;
-  top: 100%;
+  /* Establishes this as its OWN stacking context — needed for
+     .nav__dropdown-visual's negative z-index (see that rule's own
+     comment) to mean "behind this element's other children" rather than
+     "behind .site-header__clip's own cream background," which is what
+     actually happened without this: .nav__dropdown itself was
+     position:absolute with no z-index, so it never formed a stacking
+     context of its own, and the illustration's negative z-index escaped
+     all the way out to the nearest ANCESTOR that does have one
+     (.site-header, z-index:100) — painting it below .site-header__clip's
+     opaque background in that shared context and making it invisible
+     entirely. Any explicit integer works here; 0 changes nothing else
+     about how this renders. */
+  z-index: 0;
+  top: var(--nav-height);
   left: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 22px;
-  padding: 32px 0 24px;
+  right: 0;
+  /* Breathing room above row 1 and below row 5. Top was briefly matched
+     exactly to the bottom (72px, "try the same amount of space as the
+     breathing room at the bottom"), then reduced per a follow-up
+     correction ("the gap between nav and dropdown items is too much") —
+     the 2 ends are independently tuned now, not required to match.
+     .nav__dropdown's own height is otherwise just the 5 in-flow rows
+     stacked (5 x 78px), so this genuinely adds visible space at each end
+     rather than squeezing the rows themselves. .nav__dropdown-visual
+     (position:absolute; bottom:0 — see its own comment) still anchors to
+     the BOTTOM padding box's outer edge same as any absolutely-
+     positioned child does, completely ignoring padding-bottom, exactly
+     as requested earlier ("the dropdown visual/graphic ignores this of
+     course") — padding-top doesn't concern it at all, since it's
+     bottom-anchored. */
+  padding-top: 28px;
+  padding-bottom: 72px;
   pointer-events: auto;
 }
+/* The separator line above row 1 — a true sub-pixel hairline (same
+   height:1px + transform:scaleY(0.75) technique .nav__indicator itself
+   uses, per explicit request: "as thin as the underline of overview"; a
+   plain border renders a full 1px, visibly thicker). A pseudo-element
+   rather than border-top for the same reason: scaling a BORDER isn't
+   possible without also scaling the row content inside it. left/right
+   match .nav__dropdown a's own margin exactly (var(--nav-dropdown-indent)
+   / 40px) — a plain left:0/right:0 here was an earlier bug reported
+   ("the first dropdown line... spans the entire width... when it should
+   be the same length as the other lines"): .nav__dropdown's own box is
+   genuinely edge-to-edge (see its own earlier comment), so without this
+   the top line and the 5 row lines below it had 2 different spans.
+   opacity (rather than always fully visible, as an earlier version of
+   this rule was) fixes a 2nd, separate bug: with no opacity of its own,
+   this line stayed fully solid for the ENTIRE ~0.65s height-collapse
+   when the dropdown closes, while the 5 rows below it (each fading via
+   their own <a>'s opacity transition, 0.35s, no delay once
+   .nav__dropdown-is-open is removed — see that rule's own comment) had
+   already faded to invisible ~300ms earlier — reported as this line
+   "lingering" well after the rows around it were already gone, breaking
+   what should read as one unified fade. Matching that SAME 0.35s/no-
+   delay transition here (rather than tying it to the height-collapse
+   somehow) makes it disappear in the same instant as the rows, at the
+   same speed, with zero extra plumbing. */
+.nav__dropdown::before {
+  content: "";
+  position: absolute;
+  /* Matches .nav__dropdown's own padding-top — this pseudo is
+     position:absolute, so it doesn't shift down with that padding on its
+     own the way an in-flow child (the rows) does; this keeps it sitting
+     immediately above row 1 rather than left behind at the nav row's own
+     boundary once that padding pushed row 1 down. */
+  top: 28px;
+  left: var(--nav-dropdown-indent, 260px);
+  right: 40px;
+  height: 1px;
+  transform: scaleY(0.75);
+  background: var(--color-dark);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.site-header.nav__dropdown-is-open .nav__dropdown::before {
+  opacity: 1;
+}
 .nav__dropdown a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* While closed, this sits at opacity:0 AND transform:translateY(-10px)
+     (see further down) as part of its own entrance treatment — that
+     translateY shifts its RENDERED position 10px up from its layout
+     position, and .site-header__clip's overflow:hidden clips based on
+     that rendered geometry, not the pre-transform layout box. Since row
+     1 ("Volumes") sits at the very top of .nav__dropdown (itself flush
+     against the closed header's own clip boundary), that 10px shift
+     pokes a genuinely un-clipped, invisible-but-still-there sliver of it
+     UP into the visible, closed nav bar — and with pointer-events left
+     at its default (auto) here, that sliver was fully hoverable, not
+     just rendered. Reported live as "a thin strip spanning the entire
+     width of the nav bar" that opened the dropdown from anywhere along
+     it, confirmed directly (getComputedStyle: opacity:0, pointer-
+     events:auto, translateY(-10px), and elementFromPoint at that exact
+     strip resolving to this very row). pointer-events:none here (auto
+     again only once genuinely open, below) closes that off at the root —
+     nothing about the entrance transform/timing needed to change. */
+  pointer-events: none;
+  /* Fixed, not content-derived — see --nav-height-expanded's own comment
+     for why this exact number is what that constant's arithmetic is
+     built on. */
+  min-height: 78px;
+  /* margin, not padding, for the left/right insets — per explicit
+     request, the divider line (::after below) needs to START aligned
+     with "Publications" and END with a bit of clearance before the true
+     right edge, not span the row's full 0-100% width. As a side effect,
+     the row's own hoverable/clickable area now matches its visible span
+     too, rather than including the empty margin on either side.
+     --nav-dropdown-indent is set by initDropdownIndent() in main.js —
+     the real, measured left edge of "Overview" (getBoundingClientRect(),
+     immune to the nav's own centered/variable-width layout — same
+     technique initNavHighlight() already uses for the active-page
+     underline, see that function's own comment). 260px is a rough
+     starting fallback only, for the instant before that JS has run. */
+  margin: 0 40px 0 var(--nav-dropdown-indent, 260px);
   color: var(--color-dark);
   /* Matches the main nav items' own size/weight/tracking exactly, per
-     request — no longer a visibly "smaller/secondary" tier. */
+     an earlier request — no longer a visibly "smaller/secondary" tier. */
   font-size: var(--text-small);
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: color 0.15s ease;
+  /* Fade + slide-down cascade, per explicit request. Starting state
+     lives here (not gated behind .nav__dropdown-is-open) so these sit
+     hidden/raised by default — harmless while closed since
+     .site-header__clip's own overflow:hidden already keeps the whole
+     dropdown offscreen regardless (see that rule's comment). The
+     per-item transition-delay below is what actually staggers them;
+     closing removes .nav__dropdown-is-open entirely, so these delay
+     rules stop matching and every item fades back out together,
+     in lockstep with the header's own height-collapse, rather than
+     reverse-cascading on the way out. */
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.33, 1, 0.68, 1), color 0.15s ease;
+}
+/* Each row's own divider — same sub-pixel-hairline technique as
+   .nav__dropdown::before above (see that rule's own comment for why this
+   isn't a plain border). inset:0 within the row's own (already
+   margin-inset) box, not left:0/right:0 relative to .nav__dropdown
+   itself, so this naturally spans the exact same width the row's visible
+   content does — no separate measurement needed. position:relative on
+   .nav__dropdown a above is what lets this position:absolute pseudo-
+   element anchor to the row's own box rather than escaping to
+   .nav__dropdown's. */
+.nav__dropdown a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  transform: scaleY(0.75);
+  background: var(--color-dark);
+  pointer-events: none;
+  transition: opacity 0.35s ease;
 }
 .nav__dropdown a:hover {
   color: var(--color-red);
+}
+.site-header.nav__dropdown-is-open .nav__dropdown a {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* Cascade stagger — 60ms apart, matching the hero letters'/nav entrance
+   items' own stagger elsewhere on the site. nth-child rather than a JS-
+   set custom property since this list is static markup, not generated —
+   still correctly counts only the 5 <a> rows even with
+   .nav__dropdown-visual (an <img>, not an <a>, and last in DOM order)
+   as a 6th sibling. */
+.site-header.nav__dropdown-is-open .nav__dropdown a:nth-child(1) { transition-delay: 0.05s; }
+.site-header.nav__dropdown-is-open .nav__dropdown a:nth-child(2) { transition-delay: 0.11s; }
+.site-header.nav__dropdown-is-open .nav__dropdown a:nth-child(3) { transition-delay: 0.17s; }
+.site-header.nav__dropdown-is-open .nav__dropdown a:nth-child(4) { transition-delay: 0.23s; }
+.site-header.nav__dropdown-is-open .nav__dropdown a:nth-child(5) { transition-delay: 0.29s; }
+/* Hovering one row dims the OTHERS to a paler opacity, per explicit
+   request ("the rest of the dropdown items turn a little pale...
+   transition between states, not just a hard cut") — a classic
+   "spotlight" list pattern. :has() (already used elsewhere in this
+   file, e.g. .nav__links li:has(> a.is-active:hover)) is what lets this
+   be pure CSS, no JS needed: targets every row's own <a> that is NOT
+   itself the one currently hovered, whenever ANY row within
+   .nav__dropdown is.
+   Dims each row's own CHILDREN (its number/asterisk/text spans, via the
+   `> *` below), not the <a> itself — dimming the <a> directly would
+   dim its own ::after (the row's bottom line, see .nav__dropdown
+   a::after further down) right along with it, as one compositing layer,
+   which is wrong for the SAME reason described below for the lines
+   specifically. */
+.nav__dropdown a > * {
+  transition: opacity 0.35s ease;
+}
+.site-header.nav__dropdown-is-open .nav__dropdown:has(a:hover) a:not(:hover) > * {
+  opacity: 0.55;
+}
+/* The 2 lines immediately bordering whichever row is hovered — its own
+   (below) and the one above it — stay fully opaque; every OTHER line
+   dims along with the rest of the non-hovered rows, per explicit
+   follow-up request ("i dont think the lines that arent directly next
+   to the dropdown item are turning pale" — an earlier version of this
+   exempted EVERY line unconditionally, overcorrecting).
+   A row's own bottom line is its OWN ::after (excluded here via
+   :not(:hover), same as the text dimming above — the hovered row's own
+   line is never targeted at all). The line immediately ABOVE a hovered
+   row is a DIFFERENT row's ::after — specifically, the PREVIOUS row's:
+   consecutive rows sit flush against each other with zero gap, so row
+   N's own bottom border IS the line rendered between row N and row
+   N+1. :not(:has(+ a:hover)) is what identifies "the row immediately
+   before the hovered one": :has(+ a:hover) matches when the very next
+   sibling is hovered, so negating it excludes exactly that row from
+   being dimmed, leaving every row further away (2+ rows from the
+   hovered one) to dim normally. */
+.site-header.nav__dropdown-is-open .nav__dropdown:has(a:hover) a:not(:hover):not(:has(+ a:hover))::after {
+  opacity: 0.55;
+}
+/* Same idea for the separator line ABOVE row 1 (.nav__dropdown::before,
+   a container-level pseudo-element, not any row's own ::after) — that
+   line is only ever "directly bordering" row 1 specifically, so it
+   dims whenever some OTHER row is hovered, and stays opaque when row 1
+   itself is (or when nothing is). */
+.site-header.nav__dropdown-is-open .nav__dropdown:has(a:hover):not(:has(a:nth-child(1):hover))::before {
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav__dropdown a {
+    opacity: 1;
+    transform: none;
+    transition: color 0.15s ease;
+  }
+  .nav__dropdown::before {
+    opacity: 1;
+    transition: none;
+  }
+}
+/* Number column ("(01)" etc.) — Instrument Serif per the Figma mockup,
+   distinct from the row text itself (still Newsreader/uppercase,
+   unchanged). flex-basis is --nav-dropdown-number-width, set by
+   initDropdownIndent() in main.js — per explicit follow-up request, the
+   number itself aligns with "Overview" (the row's own margin-left,
+   var(--nav-dropdown-indent) above) while the asterisk+text after it
+   aligns with "Publications" — this column's width is exactly the gap
+   between those 2 measured positions, so both alignments hold at once
+   regardless of viewport width. 70px is a rough fallback only, for the
+   instant before that JS has run. */
+.nav__dropdown-number {
+  display: inline-block;
+  flex: 0 0 var(--nav-dropdown-number-width, 70px);
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+/* Instrument Serif per the Figma mockup — was inheriting .nav__dropdown
+   a's own Newsreader by default like the row text next to it. No margin
+   between this and .nav__dropdown-text: adjacent with zero gap ("*
+   VOLUMES" reading as one unit) matches both the mockup and the site's
+   own "*" convention elsewhere (e.g. .nav__link-asterisk right after
+   "Publications", same zero-gap treatment). */
+.nav__dropdown-asterisk {
+  font-family: var(--font-display);
+}
+/* The illustration (assets/images/Dropdown Visual.png), bottom-left per
+   the Figma mockup. left:0 flush with the true left edge of
+   .nav__dropdown, which is itself flush with the true left edge of the
+   viewport (.nav__dropdown has no padding/border of its own to inset it
+   horizontally — see that rule's own comment). bottom:0 anchors to
+   .nav__dropdown's own PADDING box, same as any absolutely-positioned
+   child — since that element's padding-bottom exists specifically to
+   add space this illustration should ignore (per explicit request), this
+   naturally does: the padding box's outer edge is unaffected by the
+   padding itself, so this still sits at the true bottom regardless of
+   how much (or little) padding-bottom that rule ends up with.
+   Width bumped repeatedly (240 -> 320 -> 400 -> 480, "bigger in
+   general," then "even bigger," then bigger again) then brought back
+   down a touch (480 -> 450) per a follow-up — still comfortably inside
+   .nav__dropdown a's own
+   var(--nav-dropdown-indent) left margin at any realistic viewport width
+   (that indent tracks "Overview"'s own position now, not "Publications"
+   — see initDropdownIndent() in main.js — but either way sits well clear
+   of the left edge in a centered nav), so it still can't collide with
+   row text even though neither value is measured against the other
+   directly. pointer-events:none — purely decorative, and sitting UNDER
+   rows 3-5 in paint order (later siblings win ties) would otherwise be
+   able to intercept hover/clicks meant for whatever's visually on top of
+   it at the same coordinates.
+   z-index:-1, per explicit request — a safety net for narrow viewports,
+   where this and the row text (indented to var(--nav-dropdown-indent),
+   which shrinks along with everything else at narrow widths) risk
+   overlapping: this guarantees the text stays on top and legible even
+   then, rather than relying on the 2 values happening to never collide.
+   A negative z-index here (rather than reordering the HTML so this
+   paints first naturally) keeps every row's own :nth-child(1)-(5)
+   stagger-delay selector below matching correctly — those count on the
+   5 <a> rows being children 1-5 specifically. */
+.nav__dropdown-visual {
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  bottom: 0;
+  width: 450px;
+  pointer-events: none;
+}
+/* The illustration photo itself — was directly on .nav__dropdown-visual
+   before this became a wrap (see that rule's own comment) to also hold
+   the cream corner asterisk below; this just fills the wrap's own
+   400px-wide box exactly like it did as a plain <img> before. */
+.nav__dropdown-visual-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Cream asterisk, over the illustration's own upper area, per explicit
+   request — passively spinning like the hero wordmark's own asterisk
+   and section 3's illustration asterisks. Split across a wrap (this,
+   holding position only) + an inner img (holding only the continuous
+   spin) for the same reason those 2 are split: an `animation` touching
+   `transform` fully replaces an element's own transform outright, so
+   this element's positioning transform and the spin can't safely share
+   one element. top/right as percentages (not 0/0 + a corner-hang
+   translate, tried first) so it tracks the illustration's own box
+   proportionally — these resolve against .nav__dropdown-visual's own
+   box (this element's containing block), which has a definite auto
+   height from its own in-flow image child. Was top:14%/right:14% (near
+   the corner) — moved further in per a follow-up request ("too far away
+   from the actual contents of the illust to be visible... move it way
+   more to the left, down a bit"): the corner itself is mostly empty
+   pale-sky background in the artwork, low-contrast against this same
+   cream asterisk, unlike the woman/bird lower and more central. Nudged
+   down a little further still, and sized down (44px -> 32px), per a
+   later follow-up once the color was confirmed back to cream. */
+.nav__dropdown-visual-asterisk-wrap {
+  position: absolute;
+  top: 28%;
+  right: 38%;
+  width: 32px;
+}
+.nav__dropdown-visual-asterisk {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: hero-asterisk-spin 8s linear infinite;
 }
 /* The dropdown item matching the CURRENT page (e.g. "Interviews" while
    on interviews.html — see initNavHighlight() in main.js) gets its own
@@ -1569,7 +1956,13 @@ main {
      earlier attempt produced (~66px) — ~2.1x. */
   font-size: clamp(104px, 14.85vw, 192px);
   line-height: 1;
-  letter-spacing: -0.02em;
+  /* Was -0.02em — slightly tighter per explicit follow-up request. The
+     "for" image + asterisk positioning both anchor off .hero__wordmark-
+     d-anchor's live-measured rect (see positionHeroWordmarkFor()/
+     positionHeroAsterisk() in main.js), not a hardcoded offset, so they
+     naturally track whatever width this produces without needing their
+     own update here. */
+  letter-spacing: -0.04em;
   display: block;
 }
 /* Same fixed-floor problem as .hero__wordmark-wrap right above — a
@@ -1692,10 +2085,13 @@ main {
   max-width: 12em;
   /* Solid --color-dark (inherited from body) — no opacity dimming. A
      dimmed brand color reads as an off-palette color, not a real one. */
-  /* Its own size — not tied to --text-small/--text-body, since it needs
-     to sit bigger than nav/caption text but isn't part of the 2-size
-     body/UI scale either. Sized up from 18px per explicit request. */
-  font-size: 20px;
+  /* Was a fixed 20px (sized up from 18px per an earlier request,
+     deliberately NOT tied to --text-small/--text-body since it needed to
+     sit bigger than nav/caption text), then briefly var(--text-small)
+     (nav-item size) per a follow-up asking for something smaller. Per a
+     further explicit correction, this should match the site's BODY text
+     size instead — --text-body, not --text-small. */
+  font-size: var(--text-body);
   /* No font-weight of its own anymore, per explicit request to match
      body text's own thickness exactly — this now just inherits body's
      (300 by default, 360 on mobile, see that rule) rather than carrying
@@ -1877,6 +2273,45 @@ main {
      is now shared by name instead of duplicated. */
   -webkit-text-stroke: 8px var(--color-cream);
   paint-order: stroke;
+  /* Only actually needed for .hero__wordmark-word-outline (below) to
+     position itself against this element's own box rather than the
+     next positioned ancestor up the chain — harmless no-op for get-
+     involved.html's own use of this class, which has no such child. */
+  position: relative;
+}
+/* Publications' "Publications" combines this outline treatment with
+   per-letter animation (.hero__title-exit--lettered) — the stroke above
+   is inherited, so before this it painted separately on each
+   .hero__title-letter (each its own inline box), which visibly
+   overlapped at neighboring letters once .hero__wordmark-word's own
+   letter-spacing was tightened. This plain, un-split duplicate of the
+   whole word sits behind the real letters and inherits that SAME
+   stroke, but with its own fill made transparent — so the outline
+   reads as one continuous shape, painted once, while the actual
+   letters (stroke zeroed back off below) contribute only their solid
+   fill on top of it, still animating exactly as before. aria-hidden in
+   the HTML — decorative, the real text lives on the letters underneath
+   (both already sit inside a bigger aria-hidden wrapper regardless).
+   Also carries .hero__title-exit intro-reveal intro-reveal--slide-slow
+   in the HTML, with the SAME --intro-delay as its lettered sibling —
+   per explicit follow-up report that this element, having none of
+   those classes, sat fully visible from page load with no entrance of
+   its own, completely detached from the letters cascading in on top of
+   it. Same classes "for" image (.hero__wordmark-for) already uses for
+   its own single-unit 140px slide+fade — reused verbatim here rather
+   than inventing a new entrance, so this starts sliding/fading in at
+   the exact same instant the first letter does (both key off the same
+   --intro-delay, no --letter-delay on this one), reading as one
+   coordinated arrival instead of 2 unrelated ones. */
+.hero__wordmark-word-outline {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  pointer-events: none;
+}
+.hero__wordmark-word--outlined .hero__title-exit--lettered .hero__title-letter {
+  -webkit-text-stroke: 0;
 }
 /* about.html's own composition — page-specific modifiers (not edits to
    the shared --compact rules above) since get-involved.html/
@@ -1976,8 +2411,21 @@ main {
   /* "Padding" is the term — space inside a box, between its content and
      its own edge (vs. "margin", which is space outside a box, between
      it and its neighbors). Bumped up for a more generous, breathing-room
-     feel. */
-  padding: 40px;
+     feel.
+     Was a flat 40px (only dropping to 16px via the @media(max-width:720px)
+     rule further down) — per explicit follow-up that tile body text
+     wasn't scaling enough to actually fit, the REAL culprit turned out
+     to be this fixed padding, not font-size: a square tile's own width
+     already shrinks with the viewport, but fixed padding eats a GROWING
+     fraction of that shrinking box, so the actual text column collapses
+     much faster than the tile itself does (confirmed live: "Through
+     interviews…" fits fine at 1440px but overflows by 1200px, despite
+     .square__body's own font-size barely having moved in that range).
+     A clamp here — same 40px ceiling as before, reached at ~1300px+ —
+     starts giving padding back well above the old 720px cutoff, so
+     there's more room for text (and font-size) to work with well before
+     that breakpoint's own harder rescue kicks in. */
+  padding: clamp(16px, 2.76vw, 40px);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2119,8 +2567,13 @@ main {
    description). Tiles that are decorative-only, button/CTA-only, or use
    specially centered short text (not body-text paragraphs) intentionally
    stay at the base .square 40px instead. */
+/* Was a flat 70px — same reasoning as the base .square padding's own
+   clamp above (see that rule's comment): this is the bigger of the 2
+   padding sizes, so it was squeezing its own text column even harder as
+   its tile shrank. Same ~1300px ceiling crossover as that rule, just
+   scaled up for the bigger 70px/20px floor-ceiling pair. */
 .square--pad-lg {
-  padding: 70px;
+  padding: clamp(20px, 4.83vw, 70px);
 }
 /* .square__body's shared flex: 1 (see that rule's own comment — it's
    there for multi-paragraph tiles where the LAST paragraph should fill
@@ -2174,7 +2627,11 @@ main {
    text + Instagram handle) — NOT the old .square--split's space-between
    (which stretched them to the tile's own top/bottom edges, however
    tall the tile happened to be). */
-.square--text-gap-30 { gap: 30px; }
+/* Was a flat 30px — same fixed-value squeeze as the padding rules above
+   (see .square's own comment): a tile with multiple stacked text blocks
+   needs this gap to shrink too as the tile does, not just the text
+   itself, to keep fitting. Same ~1300px ceiling crossover. */
+.square--text-gap-30 { gap: clamp(12px, 2.07vw, 30px); }
 
 /* Shared face/size/weight for every real section title on the site —
    about.html section 1's "What is Word for Word?", index.html section
@@ -2189,7 +2646,12 @@ main {
    titles read as the same size, matching section 1's (the larger) one. */
 .section-title {
   font-family: var(--font-display);
-  font-size: clamp(32px, 9vw, 48px);
+  /* Was clamp(32px, 9vw, 48px) — same narrow-band problem as --text-body
+     (ceiling only reached by ~533px, flat above that despite the section
+     it sits in continuing to shrink) — widened to the same ~1400px
+     ceiling crossover, per the same explicit follow-up. Same 32-48px
+     span either way. */
+  font-size: clamp(32px, 3.43vw, 48px);
   font-weight: 400;
 }
 /* About page section 1's merged 2x2 "What is Word for Word?" tile —
@@ -2328,8 +2790,14 @@ main {
   background: var(--checker-b);
   -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cG9seWdvbiBwb2ludHM9JzUwLDAgMTAwLDUwIDUwLDEwMCAwLDUwJyBmaWxsPSd3aGl0ZScvPjwvc3ZnPg==");
   mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cG9seWdvbiBwb2ludHM9JzUwLDAgMTAwLDUwIDUwLDEwMCAwLDUwJyBmaWxsPSd3aGl0ZScvPjwvc3ZnPg==");
-  -webkit-mask-size: calc(100% / 6) calc(100% / 6);
-  mask-size: calc(100% / 6) calc(100% / 6);
+  /* 6x6 originally, tried 9x9 (too many), then 8x8 (still too dense per
+     explicit follow-up) — settled at 7x7. Any integer here tiles
+     perfectly edge-to-edge with zero remainder (mask-size is a % of the
+     tile's own box, not a fixed px value), so this is a pure density
+     knob with no side effects on the "always fully inscribed" guarantee
+     described above. */
+  -webkit-mask-size: calc(100% / 7) calc(100% / 7);
+  mask-size: calc(100% / 7) calc(100% / 7);
   -webkit-mask-repeat: repeat;
   mask-repeat: repeat;
 }
@@ -2351,7 +2819,19 @@ main {
   font-size: var(--text-body);
 }
 .square__script--sub { font-size: var(--text-body); }
-.square__body { font-size: var(--text-body); flex: 1; }
+/* Was var(--text-body) (clamp(14px, 4.1vw, 20px)) — per explicit follow-
+   up that tile body text should visibly shrink as the viewport does,
+   which that shared clamp technically already does, but only across a
+   narrow 341-488px band (a fixed min/max pair always spans the same
+   ratio of viewport widths regardless of the vw coefficient chosen) —
+   outside a few small-phone widths it just sits flat at 20px, reading
+   as "doesn't resize" across every ordinary desktop/tablet resize.
+   Same 14-20px floor/ceiling, but the "Nvw + Mpx" idiom here spreads the
+   transition across a much wider ~400-1000px band instead, so shrinking
+   the window actually shows this shrinking well before phone width.
+   Scoped to just tile body copy (not the shared --text-body variable
+   itself) so every OTHER --text-body consumer sitewide is unaffected. */
+.square__body { font-size: clamp(9px, 1.5vw, 20px); flex: 1; }
 /* A plain <strong> falls back to the browser default bold (700) —
    reported live as too heavy, twice over (800 first, then even the
    plain 700 default). Settled on 500 — enough weight to read as real
@@ -2376,7 +2856,7 @@ main {
    own 36px margin) — reset to natural height any time this isn't the
    last child, rather than special-casing each sibling one at a time. */
 .square__body:not(:last-child) { flex: none; }
-.square__body--small { font-size: var(--text-body); }
+.square__body--small { font-size: clamp(9px, 1.5vw, 20px); }
 /* Section 4 square 2's Instagram handle mention — a deliberate one-off
    exception to "Newsreader is never italic" elsewhere on the page (see
    the comment above .square__script): a real italic face exists
@@ -2478,6 +2958,23 @@ main {
    bumped to --marquee-text-size. This keeps the same 1.65x ratio but
    chained off the value that's actually meant to scale it. */
 .square__role--script { font-family: "Kapakana", cursive; font-size: calc(var(--marquee-text-size) * 1.65); }
+/* Section 2's asterisks specifically (the trailing one in each role
+   name, and the leading one in its hover-revealed description) —
+   Instrument Serif, per explicit request. Deliberately scoped to just
+   this span, not .square__role/.square__role-description themselves —
+   an earlier pass mistakenly changed the whole roles' text to Instrument
+   Serif; this reverts that and keeps each role's own display face
+   (italic/caps/script) exactly as it was, with only the asterisk
+   glyph itself pulled out into its own font. font-style:normal
+   overrides Interviewer's own italic ancestor specifically for this
+   span — the asterisk stays upright even there. A directly-targeted
+   rule on this element always wins over whatever font-family/font-style
+   it would otherwise have inherited, regardless of the ancestor rule's
+   own specificity. */
+.square__role-asterisk {
+  font-family: var(--font-display);
+  font-style: normal;
+}
 
 /* Roles grid hover reveal (squares 1-4: Interviewer/Columnist/Editor/
    Designer) — the role name slides up and fades away as its description
@@ -2521,13 +3018,17 @@ main {
 .square__role-description {
   position: absolute;
   inset: 0;
-  /* Matches its own tile's padding (.square--pad-lg, 70px — see the
+  /* Matches its own tile's padding (.square--pad-lg — see the
      role-reveal squares' own class list in index.html) rather than the
-     base .square 40px: this overlay is absolutely positioned over the
+     base .square's own: this overlay is absolutely positioned over the
      SAME tile, so a mismatched inset here would make the revealed
      description text jump to a different left/top edge than the
-     heading it's replacing. */
-  padding: 70px;
+     heading it's replacing. Was a flat 70px (matching that rule's own
+     old flat value); now copies its clamp() exactly, for the same
+     reason — a separate, hardcoded copy of the old value would have
+     left this hover overlay's own text just as squeezed as the tile's
+     default-state text was before that fix. */
+  padding: clamp(20px, 4.83vw, 70px);
   display: flex;
   align-items: center;
   text-align: left;
@@ -2732,14 +3233,19 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
    setTimeout pause at each handoff. See initMosaicReveal(). */
 .mosaic-reveal {
   opacity: 0;
-  transition: opacity 0.5s ease-out;
+  /* Was 0.5s — shortened slightly per explicit request to speed up the
+     overall fade-in, matching the shared tile-reveal rule's own
+     speed-up (see .square etc. further down) so the scrim/caption/nav
+     that chain right after the tiles don't suddenly feel slower by
+     comparison. */
+  transition: opacity 0.4s ease-out;
 }
 .mosaic-reveal.is-visible {
   opacity: 1;
 }
 .mosaic-reveal--slide {
   transform: translateY(20px);
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 .mosaic-reveal--slide.is-visible {
   transform: none;
@@ -2800,6 +3306,14 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
   mask-position: center;
   animation: hero-asterisk-spin 8s linear infinite;
 }
+/* Section 4's own ladybug tile only — per explicit request, red instead
+   of the shared class's default beige now that this tile's own bg is
+   tan (beige on beige would barely read). Scoped as a modifier rather
+   than edited on the shared rule above, so section 1 square 4's own
+   instance (same base classes, grey tile) stays beige. */
+.square__inset-asterisk--red {
+  background: var(--color-red);
+}
 
 /* Curved along an actual circular arc via SVG textPath (see the HTML) —
    width caps the rendered size. Height/viewBox trimmed to a shallow
@@ -2856,9 +3370,18 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
      a responsive size: it's what stops flexbox's own default
      shrink-the-main-axis-only behavior from squashing just the height
      once its column runs out of room, independent of whatever this
-     clamp() itself resolves to. */
-  width: clamp(70px, 20vw, 130px);
-  height: clamp(70px, 20vw, 130px);
+     clamp() itself resolves to.
+     20vw's own ceiling crossover was only ~650px — meaning this stayed
+     rigidly at 130px for the ENTIRE 650-1440px range despite its square
+     shrinking continuously that whole time, same narrow-band mismatch
+     .square's own padding/.square__body's own font-size clamps had (see
+     those rules' comments) — confirmed live: the diamond's square
+     started overflowing (its own scrollHeight exceeding clientHeight) by
+     900px, well before this clamp ever budged. 9.3vw pushes the ceiling
+     crossover out to ~1400px instead, so it's already shrinking well
+     above where the square itself starts feeling it. */
+  width: clamp(70px, 9.3vw, 130px);
+  height: clamp(70px, 9.3vw, 130px);
   /* Bumped back up from 6px — that read as too tight against the arc
      text above it. */
   margin-top: 16px;
@@ -2956,6 +3479,115 @@ a.diamond-cta {
 .image-mosaic__caption--headline:hover .arrow-glyph__default {
   opacity: 0;
 }
+/* "Pizzazz" hover flourish, per explicit request: the arrow itself
+   (not either individual default/hover image above — see why below)
+   quickly fades+slides away, jumps to the opposite side while invisible,
+   then slides+fades back in — on EVERY hover-in, not just once.
+   Deliberately targets .arrow-glyph itself (the outer span), not
+   .arrow-glyph__default/__hover directly: those 2 already own `opacity`
+   for the default<->hover color crossfade above — a 2nd `opacity` source
+   (this animation) on the SAME element/property would fight it and break
+   the crossfade; nested opacities compose visually instead when kept on
+   separate elements, so animating the OUTER wrapper's opacity to 0 hides
+   both inner images together regardless of their own current crossfade
+   ratio, with zero interaction between the two.
+   Retriggers on every fresh hover because the `animation` property only
+   becomes active the instant its :hover selector starts matching —
+   restarting it from 0% each time, same as any CSS animation gated
+   behind a state that just began applying.
+
+   3 variants, all sharing the same timing/percentages/distances, because
+   the SLIDE itself needs 3 different implementations depending on what
+   .arrow-glyph already has going on:
+   - Plain (`arrow-glyph-pizzazz`): text-paired instances ("Learn more",
+     "Check us out!") where .arrow-glyph has no rotation of its own — a
+     plain `left` offset slides it horizontally with nothing to fight.
+   - `--rotated`: icon-only diamonds (.diamond-cta > .arrow-glyph below)
+     already carry their own `transform: rotate(-45deg)` to cancel the
+     diamond's own +45deg. `left` was tried here first and is a genuine
+     dead end, not just simpler-but-imperfect: `left` is a LAYOUT offset,
+     resolved in .arrow-glyph's own local box BEFORE any ancestor's
+     transform renders the whole subtree — so .diamond-cta's rotation
+     bends that offset into a diagonal on screen regardless of whether
+     the -45deg correction lives on .arrow-glyph or one of its own
+     children (confirmed live both ways: still diagonal either way,
+     since the ROTATING ancestor is .diamond-cta, 2 levels up, not
+     .arrow-glyph itself). The actual fix: `transform: rotate(-45deg)
+     translateX(d)`, THIS exact function order, on .arrow-glyph itself.
+     translateX listed AFTER rotate(-45deg) means it's applied to the
+     point FIRST (CSS composes right-to-left) — so the full chain is
+     rotate(45)[.diamond-cta] * rotate(-45)[.arrow-glyph] *
+     translateX(d), and the 2 rotations cancel around the translate,
+     leaving a clean screen-space translateX(d) with the artwork still
+     rendering upright. Same translate/rotate-ordering trick
+     .split-cta__diamond uses elsewhere in this file (see its own
+     comment) for a related reason (repositioning a self-rotated shape
+     in screen space, rather than canceling an ANCESTOR's rotation like
+     here) — same underlying CSS transform-composition principle either
+     way.
+   - `--rotated-flipped`: the ONE icon-only instance that ALSO has a
+     static scaleX(-1) (.featured-carousel__nav--prev, arrow flipped for
+     "previous") — same fix, with scaleX(-1) kept between rotate and
+     translateX so the artwork's flip is preserved too. */
+@keyframes arrow-glyph-pizzazz {
+  0% { opacity: 1; left: 0; }
+  22% { opacity: 0; left: 10px; }
+  /* Instant jump while fully invisible (both this and the previous stop
+     have opacity:0) — reads as the arrow reappearing FROM the left, not
+     a visible teleport, since there's nothing on screen at this instant.
+     -16px (was -8px) per explicit follow-up ("start from a farther
+     distance, so it travels more"). */
+  23% { opacity: 0; left: -16px; }
+  /* Held here, still invisible, before the reappear starts — per
+     explicit follow-up ("delay the arrow movement a tiny bit more, so
+     it's more obvious when it animates in"). Without this hold, the jump
+     at 23% and the start of the slide-in at the same instant left no
+     visible gap between "gone" and "coming back," so the reappear didn't
+     read as its own distinct beat. */
+  42% { opacity: 0; left: -16px; }
+  100% { opacity: 1; left: 0; }
+}
+@keyframes arrow-glyph-pizzazz--rotated {
+  0% { opacity: 1; transform: rotate(-45deg) translateX(0); }
+  22% { opacity: 0; transform: rotate(-45deg) translateX(10px); }
+  23% { opacity: 0; transform: rotate(-45deg) translateX(-16px); }
+  42% { opacity: 0; transform: rotate(-45deg) translateX(-16px); }
+  100% { opacity: 1; transform: rotate(-45deg) translateX(0); }
+}
+@keyframes arrow-glyph-pizzazz--rotated-flipped {
+  0% { opacity: 1; transform: rotate(-45deg) scaleX(-1) translateX(0); }
+  22% { opacity: 0; transform: rotate(-45deg) scaleX(-1) translateX(10px); }
+  23% { opacity: 0; transform: rotate(-45deg) scaleX(-1) translateX(-16px); }
+  42% { opacity: 0; transform: rotate(-45deg) scaleX(-1) translateX(-16px); }
+  100% { opacity: 1; transform: rotate(-45deg) scaleX(-1) translateX(0); }
+}
+.diamond-cta--fill-on-hover:hover .arrow-glyph,
+.image-mosaic__caption--headline:hover .arrow-glyph {
+  /* 0.6s, up from 0.5s — gives the added hold + longer travel distance
+     above enough room to actually read, rather than compressing them
+     into the same total time. */
+  animation: arrow-glyph-pizzazz 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+}
+/* Overrides the plain variant above for icon-only diamonds specifically
+   — same specificity (0,3,0) either way (child vs. descendant combinator
+   doesn't affect specificity), so source order is what makes this win
+   for elements matching both; .featured-carousel__nav--prev's own
+   override below is a genuinely higher specificity (an extra class), so
+   it wins regardless of order. */
+.diamond-cta--fill-on-hover:hover > .arrow-glyph {
+  animation: arrow-glyph-pizzazz--rotated 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.featured-carousel__nav--prev.diamond-cta--fill-on-hover:hover > .arrow-glyph {
+  animation: arrow-glyph-pizzazz--rotated-flipped 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .diamond-cta--fill-on-hover:hover .arrow-glyph,
+  .image-mosaic__caption--headline:hover .arrow-glyph,
+  .diamond-cta--fill-on-hover:hover > .arrow-glyph,
+  .featured-carousel__nav--prev.diamond-cta--fill-on-hover:hover > .arrow-glyph {
+    animation: none;
+  }
+}
 /* :not(.arrow-glyph) — .arrow-glyph is ALSO a <span>, so a bare
    ".diamond-cta span" selector matches it too whenever it's nested
    inside THIS span (square 11's "Learn more"), double-counter-rotating
@@ -2973,8 +3605,11 @@ a.diamond-cta {
   font-style: italic;
   color: var(--color-tan);
   text-align: center;
-  /* Matches --text-body — "same size as body text", not the earlier
-     one-off 0.85rem. */
+  /* Briefly given its own scoped clamp here (wider than --text-body's
+     own band) so this text would shrink alongside its diamond — since
+     folded back into a plain var(--text-body) reference now that
+     --text-body itself got that exact same widening (see its own
+     comment in :root) for every consumer sitewide, not just this one. */
   font-size: var(--text-body);
   /* Tightened from 1.3 — read as too loose between "Learn"/"more"/the
      arrow. All 3 are lines of this same span (<br />-separated), so
@@ -2987,7 +3622,30 @@ a.diamond-cta {
    (square 7's icon-only diamond) — nothing else cancels the diamond's
    own +45deg rotation for it, unlike square 11's arrow (nested inside
    the span above, which already handles it). Does NOT match square
-   11's arrow, since there it's nested one level deeper. */
+   11's arrow, since there it's nested one level deeper.
+
+   A previous fix attempt moved this rotation down onto .arrow-glyph's
+   own images instead, reasoning that the pizzazz hover animation below
+   (which slides .arrow-glyph via `left`) would then be un-rotated. That
+   didn't fix it (confirmed still diagonal): .arrow-glyph is still
+   NESTED INSIDE .diamond-cta's own +45deg rotation regardless of what
+   .arrow-glyph's OWN transform is — `left` is a layout offset, resolved
+   in .arrow-glyph's local box BEFORE .diamond-cta's ancestor rotation
+   renders the whole subtree, so the ancestor's rotation bends that
+   offset into a diagonal on screen either way. The actual fix (see
+   .arrow-glyph's pizzazz keyframes further below) keeps the rotation
+   HERE, on .arrow-glyph itself, and drives the slide via `transform:
+   rotate(-45deg) translateX(...)` in that exact function order instead
+   of `left` — with translateX listed AFTER rotate(-45deg), the CSS
+   transform math becomes rotate(45)[ancestor] * rotate(-45)[this] *
+   translateX(d) = translateX(d) net, a clean screen-space slide, because
+   translateX is applied to the point BEFORE this element's own rotation
+   (which the ancestor's rotation then exactly cancels) — same
+   translate-inside/rotate-outside composition trick .split-cta__diamond
+   already uses elsewhere in this file (see its own comment), just with
+   the translate on the INNER side here instead of the outer one, since
+   here it's canceling an ANCESTOR's rotation rather than repositioning a
+   self-rotated shape. */
 .diamond-cta > .arrow-glyph {
   transform: rotate(-45deg);
 }
@@ -3051,6 +3709,13 @@ a.diamond-cta {
 }
 .diamond-cta--fill-on-hover--red:hover span {
   color: var(--color-red);
+}
+/* Section 4's new "Browse some more!" tile sits on --color-dark (brown)
+   — per explicit follow-up, its hover text should match that tile's own
+   color (the established convention every other instance already
+   follows — see this rule block's own opening comment), not red. */
+.diamond-cta--fill-on-hover--dark:hover span {
+  color: var(--color-dark);
 }
 /* Section 4 square 3's own Instagram diamond sits directly on a TAN
    tile, so the shared tan hover-fill above and the shared beige default
@@ -3149,6 +3814,103 @@ a.diamond-cta {
    (dark at the TOP, fading down) since the caption sits at the top
    here instead of the bottom.
 =================================================================== */
+/* ===================================================================
+   Scroll-pin-grow prototype — EXPERIMENTAL, see the HTML comment above
+   .pin-grow-spacer in index.html for the full reasoning/scope.
+=================================================================== */
+/* Height = 100vh (however tall .pin-grow-sticky itself always is, an
+   unavoidable minimum — see initPinGrowDemo() in main.js for why) +
+   however much EXTRA scroll room past that should hold .pin-grow-box at
+   its fully-grown size before releasing. Was 180vh (80vh of hold) — per
+   explicit follow-up request ("get rid of" the lingering pause at full
+   size), that extra is gone: exactly 100vh now, so .pin-grow-sticky
+   starts releasing the SAME instant it finishes growing, no hold in
+   between. The GROW pacing itself was never tied to this height at all
+   (a previous version of this comment described it that way, before
+   initPinGrowDemo() moved to growing throughout the element's natural
+   pre-stick scroll-in instead of only after — see that function's own
+   comment) — growth always spans exactly one viewport height of
+   scrolling regardless of this value; this number only ever controlled
+   the (now-removed) hold. position:relative (not static) so .pin-grow-
+   sticky's own position:sticky has this as its nearest block-level
+   ancestor to stick within, same as any sticky setup needs. */
+.pin-grow-spacer {
+  position: relative;
+  height: 100vh;
+}
+/* Sticks to the top of the viewport for as long as .pin-grow-spacer's
+   own extra height (above) still has scroll room left, then releases
+   naturally (plain browser behavior, no JS position-toggling needed)
+   once the spacer's bottom edge is reached — this is what gives the
+   "locked in place, then lets you scroll past it" behavior with zero
+   risk of a visual jump at the handoff, unlike a manually-toggled
+   position:fixed approach would have. pointer-events:none — purely a
+   visual prototype, not interactive. */
+.pin-grow-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  pointer-events: none;
+}
+/* Sized/positioned entirely via JS (initPinGrowDemo() in main.js),
+   interpolating FROM the real section 3 black bg's own current on-
+   screen rect (.split-cta__illustration-wrap, measured live — not an
+   invented proportion, per explicit follow-up request that this match
+   its "predecessor" exactly) TO .featured-carousel's own real, measured
+   footprint, as you scroll through .pin-grow-spacer's runway.
+   position:absolute within .pin-grow-sticky specifically because that
+   parent's own top-left IS the viewport's top-left for the entire
+   duration it's actually stuck (top:0) — meaning plain px left/top
+   values set here behave exactly like viewport-fixed coordinates
+   during the pin phase, without needing position:fixed (and the manual
+   pin/release bookkeeping that would otherwise require) at all. */
+.pin-grow-box {
+  position: absolute;
+  background: var(--color-illustration-bg);
+  border-radius: 24px;
+  overflow: hidden;
+}
+/* Carousel-preview content — per explicit follow-up request, this
+   reuses the REAL .featured-carousel__* classes directly (photo, scrim,
+   title/edition/number caption, nav diamonds) rather than a custom-
+   styled lookalike, so it renders identically to the real carousel: one
+   photo filling the whole box (not several side-by-side cards), the
+   same caption position/typography, the same diamond nav buttons. None
+   of those classes are scoped to require a .featured-carousel__track/
+   __slide ancestor specifically (each is already position:absolute,
+   either inset:0 or positioned against its own nearest positioned
+   ancestor) — so they drop straight into .pin-grow-box here with zero
+   extra markup. Caption + nav both start hidden and fade in via the 2
+   rules below, toggled by initPinGrowDemo() off the SAME grow progress
+   that sizes .pin-grow-box itself (see that function's own comment for
+   the exact thresholds) — scoped to .pin-grow-box specifically so this
+   doesn't touch the real carousel's own title/edition/number/nav
+   elsewhere on the page. */
+.pin-grow-box .featured-carousel__title,
+.pin-grow-box .featured-carousel__edition,
+.pin-grow-box .featured-carousel__number {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.pin-grow-box.is-content-visible .featured-carousel__title,
+.pin-grow-box.is-content-visible .featured-carousel__edition,
+.pin-grow-box.is-content-visible .featured-carousel__number {
+  opacity: 1;
+}
+.pin-grow-box .featured-carousel__nav {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  /* .pin-grow-sticky (2 levels up) is pointer-events:none — this
+     re-enables just these 2 buttons so the real .diamond-cta--fill-on-
+     hover hover-fill still works, per explicit follow-up report that
+     the carousel UI "doesn't seem to be functioning/clickable." Nothing
+     else in the prototype needs this (the photo/scrim/caption stay
+     inert on purpose — this is still not a real, wired-up carousel). */
+  pointer-events: auto;
+}
+.pin-grow-box.is-nav-visible .featured-carousel__nav {
+  opacity: 1;
+}
 .featured-carousel {
   position: relative;
   overflow: hidden;
@@ -3226,22 +3988,36 @@ a.diamond-cta {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 45%);
   pointer-events: none;
 }
-/* Same font/size as section 1's "Read our latest issue!"
-   (.image-mosaic__caption--headline) — where each carousel image's own
-   title will go once these are real photos, not placeholders. */
+/* Was clamp(26px, 8vw, 40px) — capped down to 30px per explicit follow-up
+   that the 2-line title (see the 2 spans below) read too big at 40. Own
+   font-family/style moved off this rule onto the 2 spans below (an
+   italic "kicker" line + a regular headline line, per explicit request)
+   — this element itself just supplies position/color/size, shared by
+   both. line-height set explicitly (was the browser default) so
+   .featured-carousel__edition's own fixed `top` below can be computed
+   against a known 2-line height instead of guessing. */
 .featured-carousel__title {
   position: absolute;
-  top: 24px;
-  left: 24px;
+  /* Was 24px/24px — per explicit follow-up that the caption/nav sat too
+     close to the carousel's own edges; bumped in to 40px, along with
+     every other 24px inset on this caption/the nav buttons below, to
+     move all of it a bit closer to center together. */
+  top: 40px;
+  left: 40px;
   /* Higher than .featured-carousel__hover-tiles (z-index:2, below) — same
      reasoning as .image-mosaic__caption: without this, the hover-tiles
      layer sits on top and silently swallows the white-wash flash right
      over the text with nothing visible to show for it there. */
   z-index: 3;
   color: var(--color-tan);
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: clamp(26px, 8vw, 40px);
+  /* Was clamp(26px, 8vw, 30px) — same narrow-band problem as --text-body
+     (ceiling reached by ~375px, essentially flat above that despite the
+     carousel continuing to shrink with the viewport) — widened to the
+     same ~1400px ceiling crossover as every other text size on the
+     page, per explicit follow-up that carousel text should scale too.
+     Same 26-30px span either way. */
+  font-size: clamp(26px, 2.14vw, 30px);
+  line-height: 1.1;
   max-width: 70%;
   /* Both a real link now (see index.html) — same red-on-hover affordance
      as .image-mosaic__caption--headline. Deliberately NO base-rule
@@ -3251,20 +4027,45 @@ a.diamond-cta {
      here (equal specificity, later source) would fully replace it rather
      than add color to it, silently killing the opacity transition this
      element's own scroll-reveal AND the JS-driven caption crossfade (see
-     .is-caption-fading below) both depend on. The :hover rule below
-     handles the color transition instead — its extra specificity (a
-     pseudo-class) wins safely without touching transition-property for
-     anything else. */
+     .is-caption-fading below) both depend on. See the shared :has() rule
+     further below (not a plain :hover here anymore) for the color
+     transition itself — its extra specificity (a pseudo-class) wins
+     safely without touching transition-property for anything else. */
   cursor: pointer;
+}
+/* Kicker line (e.g. "The Consumptive's Kiss:") — italic, per explicit
+   request, in Newsreader (--font-body) rather than the title's own old
+   --font-display. Populated from the active slide's own data-title-
+   intro (see applyCaption() in main.js); slides with none (the still-
+   placeholder ones) get this hidden entirely via display:none rather
+   than left empty, so they don't show a blank line above the headline. */
+.featured-carousel__title-intro {
+  display: block;
+  font-family: var(--font-body);
+  font-style: italic;
+}
+/* Headline line — regular weight/style, same Newsreader family as the
+   kicker above it. Populated from data-title. */
+.featured-carousel__title-main {
+  display: block;
+  font-family: var(--font-body);
+  font-style: normal;
 }
 /* Sits directly beneath the title — same "plain body text/size" freight
    treatment as .image-mosaic__caption--right ("Volume 2"), just left-
    aligned under the title instead of pinned to the opposite corner. */
 .featured-carousel__edition {
   position: absolute;
-  /* 24px (top) + the title's own 40px line + a small gap. */
-  top: 74px;
-  left: 24px;
+  /* Title's own top (40px) + the title's 2 lines (line-height 1.1 * 30px
+     max font-size ≈ 33px each ≈ 66px) + a small gap. Was 74px (single-
+     line title, 24px inset), then 124px (2-line title at the old 40px
+     font-size), then 100px (2-line title at 30px) — bumped by the same
+     +16px as the title's own inset below, to move together with it. The
+     still-placeholder slides (no data-title-intro, so only 1 visible
+     line) sit with extra breathing room under this now, rather than the
+     reverse (crowding a 2-line title). */
+  top: 116px;
+  left: 40px;
   z-index: 3;
   color: var(--color-tan);
   font-family: var(--font-body);
@@ -3273,19 +4074,30 @@ a.diamond-cta {
      transition here either. */
   cursor: pointer;
 }
-.featured-carousel__title:hover,
-.featured-carousel__edition:hover {
+/* Was a plain .featured-carousel__title:hover, .featured-carousel__
+   edition:hover pair — each only reddened ITSELF, so hovering the title
+   left the edition line tan and vice versa. Per explicit follow-up,
+   hovering either one should redden BOTH together, as if they're one
+   linked caption: :has() on the shared .featured-carousel ancestor (see
+   .nav__links li:has(...) elsewhere in this file for the same technique)
+   checks either element for :hover and applies color to both,
+   regardless of which one the cursor is actually over. .featured-
+   carousel__title's own child spans (-intro/-main) have no color of
+   their own, so they still just inherit whichever color this resolves
+   to, same as before. */
+.featured-carousel:has(.featured-carousel__title:hover, .featured-carousel__edition:hover) .featured-carousel__title,
+.featured-carousel:has(.featured-carousel__title:hover, .featured-carousel__edition:hover) .featured-carousel__edition {
   color: var(--color-red);
   transition: color 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 /* Bottom-right per-slide number, same "(0N)" format as the intro
    splash's own screen numbers (see .intro-splash__caption-line2) — same
-   24px inset convention as title/edition above, just the opposite
+   40px inset convention as title/edition above, just the opposite
    corner. */
 .featured-carousel__number {
   position: absolute;
-  bottom: 24px;
-  right: 24px;
+  bottom: 40px;
+  right: 40px;
   z-index: 3;
   color: var(--color-tan);
   font-family: var(--font-display);
@@ -3376,16 +4188,19 @@ a.diamond-cta {
 }
 /* .diamond-cta > .arrow-glyph (see above) already provides the
    counter-rotation every icon-only diamond needs — nothing extra here
-   except this one flip for "previous". */
+   except this one flip for "previous". Back on .arrow-glyph itself, not
+   its images — see that rule's own comment for why. */
 .featured-carousel__nav--prev {
-  left: 24px;
+  /* Was 24px — moved in alongside the caption/number's own insets above. */
+  left: 40px;
 }
 .featured-carousel__nav--prev > .arrow-glyph {
   /* Arrow artwork points right by default — flip for "previous". */
   transform: rotate(-45deg) scaleX(-1);
 }
 .featured-carousel__nav--next {
-  right: 24px;
+  /* Was 24px — moved in alongside the caption/number's own insets above. */
+  right: 40px;
 }
 
 /* Bottom-center slide-count indicators — same job a typical row of
@@ -3398,11 +4213,11 @@ a.diamond-cta {
    container. */
 .featured-carousel__indicators {
   position: absolute;
-  /* Same 24px inset every other persistent carousel element (title,
+  /* Same 40px inset every other persistent carousel element (title,
      edition, nav buttons, the "(0N)" number) already uses, so this
      lines up with the slide-count caption along the same bottom
      line instead of sitting at its own arbitrary offset. */
-  bottom: 24px;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;
@@ -4043,6 +4858,27 @@ span.split-cta__text-line {
    repeatedly elsewhere in this file. The hidden state adds the reveal
    slide's +20px on top (-90 + 20 = -70px) so the slide-up-on-reveal
    motion still arrives at the same -90px resting position. */
+/* Pure transform layer for the scroll-linked parallax drift
+   (initSplitCtaParallax() in main.js) — shared base rule for the 2
+   separate instances, --image and --asterisks (see the HTML comment
+   above them for why this is 2 wrappers, not 1, and why either needs to
+   be a wrapper at all rather than applying translateY directly to
+   .split-cta__illustration or the asterisk wraps). That same function
+   also drives each instance's own opacity (fading it out once it's
+   drifted down past center, scrolling further down — per explicit
+   request), for the same reason: an inline opacity here can't collide
+   with anything, since none of either instance's own children's reveal/
+   pop-in/spin treatments touch THIS element's opacity, only their own.
+   The background tile mosaic underneath is a sibling, not a child, of
+   either layer, so it's unaffected and stays fully opaque throughout.
+   pointer-events:none so neither layer ever blocks hover on the tile
+   mosaic underneath (same reasoning as .split-cta__illustration's own
+   pointer-events:none, just one layer up). */
+.split-cta__parallax {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 .split-cta__illustration {
   position: absolute;
   top: 5%;
@@ -4097,14 +4933,17 @@ span.split-cta__text-line {
 .split-cta__illustration-asterisk-wrap.is-visible {
   animation: hero-asterisk-intro 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-/* Bigger per explicit request — roughly 1.5x each (22->34, 36->56). */
+/* Was 22/36, bumped to 34/56 ("bigger" per an earlier request), now
+   brought back down a bit to 26/42 per explicit follow-up ("both too
+   big") — large still noticeably bigger than small, just smaller
+   overall than the 34/56 pair. */
 .split-cta__illustration-asterisk-wrap--small {
-  width: 34px;
+  width: 26px;
   bottom: 6%;
   right: 8%;
 }
 .split-cta__illustration-asterisk-wrap--large {
-  width: 56px;
+  width: 42px;
   top: 8%;
   left: 8%;
 }
@@ -5052,10 +5891,11 @@ body.edition-lightbox-open {
 .team-bio__body:last-child {
   margin-bottom: 0;
 }
-/* About page's exploratory swap-in for .quote-block right above (see
-   the HTML comment there) — a plain, roomy section instead of the
-   photo + mosaic-reveal treatment: no image, just centered body text
-   with generous top/bottom breathing room. */
+/* Replaces .quote-block's photo + mosaic-reveal treatment on both the
+   homepage and About page, per explicit request (this had been tried
+   before, reverted back to the photo, then brought back again) — a
+   plain, roomy section instead: no image, just centered body text with
+   generous top/bottom breathing room. */
 .slogan-preview {
   padding: 160px 0;
   display: flex;
@@ -5065,22 +5905,26 @@ body.edition-lightbox-open {
 .slogan-preview__text {
   margin: 0;
 }
-/* Same size as .hero__eyebrow (20px) per explicit request — overrides
-   span.split-cta__text-line's own font-size (var(--text-body)) at equal
-   specificity via the extra .slogan-preview ancestor, so this doesn't
-   need to fight that shared rule's own tag+class selector. Each line is
-   its own .split-cta__text-line span (same class index.html's section 3
-   uses for its own line-by-line reveal) purely for the reveal mechanics
-   — fade+slide-up, staggered via that class's own nth-child rules (0ms/
-   90ms) — not for its size, which this overrides. Registered in
-   initRevealOnScroll()'s staggeredTargets (main.js) so checkAll() adds
-   is-visible to these like any other scroll-tracked element; --reveal-
-   delay still gets set on them by that generic per-sibling loop but goes
-   unused here since .split-cta__text-line's own transition-delay is a
-   flat 0s overridden only by its nth-child rules, not var(--reveal-
-   delay). */
+/* Font-size: same as .hero__eyebrow (20px) per explicit request — briefly
+   bumped way up (clamp ceiling ~100px) per a later follow-up, then
+   reverted back per a further explicit follow-up after seeing it live.
+   Overrides span.split-cta__text-line's own font-size (var(--text-body))
+   at equal specificity via the extra .slogan-preview ancestor, so this
+   doesn't need to fight that shared rule's own tag+class selector.
+   opacity/transform/transition: was left to the shared .split-cta__
+   text-line reveal (opacity:0 -> is-visible on scroll, staggered via
+   that class's own nth-child rules) via initRevealOnScroll()'s
+   staggeredTargets — per further explicit follow-up ("get rid of the
+   intro animation... doesn't need it"), unregistered from that system
+   in main.js and forced permanently visible here instead, at higher
+   specificity (2 classes) than the shared rule's own bare
+   .split-cta__text-line (1 class) so this wins outright regardless of
+   source order. */
 .slogan-preview .split-cta__text-line {
   font-size: 20px;
+  opacity: 1;
+  transform: none;
+  transition: none;
 }
 .quote-block {
   position: relative;
@@ -5724,8 +6568,11 @@ body.edition-lightbox-open {
      instead of adding to it — same class of bug hit repeatedly
      elsewhere in this file — leaving hover with NO filter transition
      applicable at all outside of :hover itself, so brightness snapped
-     back instantly instead of easing out. */
-  transition: opacity 0.7s ease-out, filter 0.3s ease-out;
+     back instantly instead of easing out.
+     Opacity was 0.7s — slightly shortened per explicit request to speed
+     up the overall scroll-reveal fade-in across every tile that shares
+     this rule. */
+  transition: opacity 0.55s ease-out, filter 0.3s ease-out;
   /* Always instant when LEAVING .is-visible (whichever direction that
      represents — see .image-mosaic__mask's inverted case below); the
      staggered --reveal-delay only applies while ENTERING it (see the
@@ -5796,7 +6643,10 @@ body.edition-lightbox-open {
      shorthand-clobbering warning) so leaving hover has a transition to
      animate through at all. */
   filter: brightness(1);
-  transition: opacity 0.7s ease-out, transform 0.7s ease-out, filter 0.3s ease-out;
+  /* opacity/transform were 0.7s — shortened to match the shared reveal
+     rule's own speed-up above, so cards fade in at the same pace as
+     every other reveal on the page. */
+  transition: opacity 0.55s ease-out, transform 0.55s ease-out, filter 0.3s ease-out;
   transition-delay: 0s, 0s, 0s;
 }
 .publication-card.is-visible {
@@ -7214,6 +8064,7 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-splash__asterisk-wrap { animation: none; opacity: 0; visibility: hidden; }
   .hero__wordmark-asterisk-wrap { animation: none; opacity: 1; transform: none; }
   .hero__wordmark-asterisk { animation: none; }
+  .nav__dropdown-visual-asterisk { animation: none; }
   .custom-cursor-wrap { display: none; }
   .square__down-arrow { animation: none; opacity: 1; }
 }

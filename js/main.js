@@ -105,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initViewportFrameSync();
   initPageFlashReady();
   initNavHighlight();
+  initDropdownIndent();
   initLuxuryScroll();
   initHeroAsteriskPosition();
   initAboutHeroTitlePosition();
@@ -191,6 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
     initMosaicReveal();
     initQuoteBlockReveal();
     initSplitCtaReveal();
+    initSplitCtaParallax();
+    initSloganScale();
+    initPinGrowDemo();
     initBeyondPageTextReveal();
     // initBeyondPageMagneticImages(); // temporarily disabled per explicit request
     initHeroEyebrowExit();
@@ -1227,16 +1231,40 @@ function initPublicationsDropdown() {
     }, CLOSE_GRACE_MS);
   };
 
-  // .nav__dropdown itself (the real, clickable links) doesn't need its
-  // own listeners — it's a DOM descendant of `trigger`, and
-  // mouseenter/mouseleave (unlike mouseover/mouseout) only fire when the
-  // cursor truly enters/exits an element INCLUDING all its descendants,
-  // so moving into the dropdown's own links never fires trigger's
-  // mouseleave in the first place.
-  for (const el of [trigger, hoverZone]) {
-    el.addEventListener("mouseenter", open);
-    el.addEventListener("mouseleave", scheduleClose);
-  }
+  // Driven by a single delegated mousemove check (below), not per-element
+  // mouseenter/mouseleave — 2 earlier versions tried variations of the
+  // latter and both broke on the same underlying issue: mouseenter/leave
+  // on an ANCESTOR only fires when the cursor truly enters/exits that
+  // WHOLE subtree, not every time it moves between one of that
+  // ancestor's own descendants and the ancestor's own "background" area
+  // that no descendant covers. .nav__dropdown's own empty space (the
+  // margin gutters beside each row, the bottom padding, the
+  // illustration's own area) is exactly that case: once the cursor is
+  // already somewhere inside .nav__dropdown (e.g. over a row), moving to
+  // that empty background does NOT re-fire .nav__dropdown's own
+  // mouseenter (already "entered"), but DOES fire the row's own
+  // mouseleave — with nothing left to cancel the close it schedules.
+  // Adding .nav__dropdown itself to an enter/leave listener list (the
+  // 2nd attempt) didn't fix this for exactly that reason; confirmed live
+  // both times, first as "closes while moving the cursor around inside
+  // it," then as the identical bug surviving that attempted fix too.
+  // Checking on every mousemove instead sidesteps the whole enter/leave
+  // ancestry question — it doesn't matter which element the cursor was
+  // JUST over, only which one it's over THIS instant. open()/
+  // scheduleClose() are cheap to call redundantly (open() no-ops once
+  // the class is already there; scheduleClose() just resets the same
+  // timer), so calling one or the other on every move needs no extra
+  // de-duplication.
+  const isOverDropdownArea = (target) =>
+    !!(target && target.closest && target.closest(".nav__item--publications, .nav__dropdown, .nav__dropdown-hover-zone"));
+  document.addEventListener(
+    "mousemove",
+    (e) => {
+      if (isOverDropdownArea(e.target)) open();
+      else scheduleClose();
+    },
+    { passive: true }
+  );
 }
 
 // Unadvertised entry point to the Decap CMS admin panel for club members —
@@ -1428,21 +1456,6 @@ function initPublicationFamilyTransitions(scope) {
     } catch {
       return;
     }
-    // The nav dropdown's "Volumes" link (href="/#publications") points
-    // at the HOMEPAGE's own publications preview, not at one of the 5
-    // family pages — normally correct (it's a genuinely different
-    // destination when you're NOT already in this family), but per
-    // explicit follow-up, from WITHIN the family it should feel like
-    // just another sub-page instead of bouncing out to a real homepage
-    // load. /publications/ has that exact same #publications section
-    // (the real, full editions grid the homepage's is only a preview
-    // of), so from in here specifically, treat this one link as if it
-    // pointed there instead — everything below (interception, fetch,
-    // stripes) then treats it exactly like any other family link.
-    if (destPath === "/" && url.hash === "#publications") {
-      destPath = "/publications/";
-      destHref = "/publications/#publications";
-    }
     // Not a family destination at all — leave it as a completely
     // normal link.
     if (!isPublicationFamilyPath(destPath)) return;
@@ -1453,48 +1466,23 @@ function initPublicationFamilyTransitions(scope) {
       // completely normal link — only a plain left-click gets
       // intercepted.
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      // Same page (e.g. an in-page "#" anchor, or — far more commonly —
-      // the "Volumes" redirect above resolving to the page you're
-      // already ON) — checked HERE, live, at click time, rather than by
-      // simply never attaching a listener when destPath === currentPath
-      // above. Header/nav links persist across every AJAX swap and are
-      // never re-scanned (see this function's own comment below), so
-      // deciding "same page, skip" once, at setup time, freezes that
-      // decision to whichever page was current at the very first real
-      // page LOAD — going stale the moment history.pushState (in
-      // applyPublicationFamilySwap) moves the real URL elsewhere without
-      // a matching reload. Confirmed live: landing on /interviews/
-      // first, then swapping to /essays/ via the dropdown, left the
-      // "Interviews" nav link with no listener at all (it matched
-      // currentPath back at that first, now-stale check) — clicking it
-      // from /essays/ fell through to a real navigation instead of ever
-      // reaching navigateWithinPublicationFamily(), which is why its
-      // splash showed the plain page-flash instead of the stripe cover.
-      if (destPath === normalizePubFamilyPath(location.pathname)) {
-        // Falling all the way through here does a REAL navigation on
-        // the link's own, un-redirected href — for "Volumes" specifically
-        // that's "/#publications" (the HOMEPAGE's own preview section),
-        // since the redirect above only ever touched local destPath/
-        // destHref variables, never the link's actual href attribute.
-        // Confirmed live: clicking "Volumes" while already on
-        // /publications/ bounced out to Overview instead of just
-        // scrolling to the #publications section already right there on
-        // the current page. Scrolling locally (through Lenis, matching
-        // every other in-page anchor's smoothing — see
-        // initLuxuryScroll()'s own handling, which doesn't cover this
-        // link since its real href isn't a bare "#..." fragment) is what
-        // clicking it here should actually do.
-        if (url.hash) {
-          const localTarget = document.querySelector(url.hash);
-          if (localTarget) {
-            e.preventDefault();
-            const lenis = window.__wfwLenis;
-            if (lenis) lenis.scrollTo(localTarget, { duration: 1, easing: (t) => 1 - (1 - t) ** 3 });
-            else localTarget.scrollIntoView({ behavior: "smooth" });
-          }
-        }
-        return;
-      }
+      // Same page (e.g. an in-page "#" anchor) — checked HERE, live, at
+      // click time, rather than by simply never attaching a listener
+      // when destPath === currentPath above. Header/nav links persist
+      // across every AJAX swap and are never re-scanned (see this
+      // function's own comment below), so deciding "same page, skip"
+      // once, at setup time, freezes that decision to whichever page was
+      // current at the very first real page LOAD — going stale the
+      // moment history.pushState (in applyPublicationFamilySwap) moves
+      // the real URL elsewhere without a matching reload. Confirmed
+      // live: landing on /interviews/ first, then swapping to /essays/
+      // via the dropdown, left the "Interviews" nav link with no
+      // listener at all (it matched currentPath back at that first,
+      // now-stale check) — clicking it from /essays/ fell through to a
+      // real navigation instead of ever reaching
+      // navigateWithinPublicationFamily(), which is why its splash
+      // showed the plain page-flash instead of the stripe cover.
+      if (destPath === normalizePubFamilyPath(location.pathname)) return;
       e.preventDefault();
       navigateWithinPublicationFamily(destHref);
     });
@@ -3259,6 +3247,44 @@ function initNavHighlight() {
   window.addEventListener("resize", placeIndicator);
 }
 
+// Aligns .nav__dropdown's rows with 2 different nav links at once, per
+// explicit follow-up request: each row's leading "(0N)" number lines up
+// with "Overview" (the leftmost link), while the asterisk+text after it
+// lines up with "Publications" itself — 2 separate reference points, not
+// 1. getBoundingClientRect() rather than offsetLeft — same reasoning
+// initNavHighlight()'s placeIndicator() above already relies on: it's
+// real rendered geometry, immune to whichever element happens to be the
+// offsetParent. No subtraction against a container rect needed for
+// --nav-dropdown-indent (unlike placeIndicator()) — .nav__dropdown itself
+// has no padding/border of its own, so its content box starts at the
+// same point getBoundingClientRect() already measures from (the
+// viewport's own left edge), and margin-left is resolved in that same
+// coordinate space.
+function initDropdownIndent() {
+  const overview = document.querySelector(".nav__links > li:first-child > a");
+  const trigger = document.querySelector(".nav__item--publications > a");
+  const dropdown = document.querySelector(".nav__dropdown");
+  if (!overview || !trigger || !dropdown) return;
+
+  const measure = () => {
+    const overviewLeft = overview.getBoundingClientRect().left;
+    const triggerLeft = trigger.getBoundingClientRect().left;
+    dropdown.style.setProperty("--nav-dropdown-indent", `${overviewLeft}px`);
+    // .nav__dropdown-number's own flex-basis (see style.css) — the gap
+    // between where the row itself starts (Overview's position, above)
+    // and where the number column ENDS, which is exactly where
+    // .nav__dropdown-asterisk/-text need to start (Publications' own
+    // position) for both alignments to hold at once.
+    dropdown.style.setProperty("--nav-dropdown-number-width", `${triggerLeft - overviewLeft}px`);
+  };
+
+  measure();
+  // Same font-swap-reflow reasoning as placeIndicator()'s own
+  // document.fonts.ready call above — both links are Newsreader too.
+  document.fonts.ready.then(measure);
+  window.addEventListener("resize", measure);
+}
+
 // Replaces native scroll with Lenis smoothing — a light per-frame lerp
 // that takes the edge off native scroll without the floaty, animate-to-
 // target feel that duration/easing-based smoothing gives on continuous
@@ -3402,8 +3428,12 @@ function initRevealOnScroll() {
   // comment above this same selector list) is what gives section 3's
   // illustration box its tile-by-tile cascade: 4 tiles sharing one
   // parent, same stagger math as any other square-grid.
+  // .slogan-preview .split-cta__text-line was here too — dropped per
+  // explicit request to remove the slogan's own scroll-reveal entirely;
+  // it now just sits permanently visible via a plain CSS override (see
+  // that selector in style.css) instead of waiting on this system.
   const staggeredTargets = document.querySelectorAll(
-    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block__mask, .publication-card, .marquee-banner--scrolling, .beyond-page__img, .slogan-preview .split-cta__text-line, .team-bio, #about-intro .square--cream .split-cta__text-line"
+    ".square, .split-cta__illustration-tile, .image-mosaic__mask, .featured-carousel__mask, .quote-block__mask, .publication-card, .marquee-banner--scrolling, .beyond-page__img, .team-bio, #about-intro .square--cream .split-cta__text-line"
   );
   // .partners used to be tracked separately here (a single-unit reveal
   // that must never get a --reveal-delay) — now that it shares
@@ -4157,6 +4187,321 @@ function initSplitCtaReveal() {
   observer.observe(triggerTile, { attributes: true, attributeFilter: ["class"] });
 }
 
+// Section 3's image + its 2 asterisks drift slightly against the page as
+// it scrolls by, per explicit request. Rides on 2 SEPARATE transform-only
+// wrappers, .split-cta__parallax--image (the artwork) and
+// .split-cta__parallax--asterisks (both asterisk wraps) — see the HTML
+// comment above them for why this needs its own wrapper(s) rather than
+// applying translateY directly to .split-cta__illustration or the
+// asterisk wraps themselves. 2 layers, not 1 shared one, specifically so
+// the asterisks can drift at their own slower rate than the image, per
+// explicit follow-up request ("have the asterisks move slightly slower
+// than the img... so they're staggered") — both are driven off the SAME
+// underlying scroll position (.split-cta__illustration-wrap's own rect,
+// which neither layer's own translateY ever moves, since that's the
+// wrap 2 levels up, not either parallax layer) so they stay in sync,
+// just scaled by a different strength constant each.
+//
+// 0.08 originally, bumped to 0.3 ("can't really see it at all"), brought
+// back down to 0.18 ("reduce how far down section 3's img travels"), and
+// down again to 0.1 per a further follow-up ("moves too much when
+// scrolling") — the asterisk layer stays at exactly half this (was, and
+// still is, half of whatever the image's own value is) so the staggered
+// feel is preserved at the new, smaller scale too.
+// Briefly bumped to 1 ("full, un-damped scroll speed") while tying this
+// to the pin-grow prototype, then reverted per explicit follow-up
+// report: at strength 1, translateY(rawOffset * 1) exactly CANCELS the
+// reference's own scroll-driven drift (rawOffset is itself
+// viewportCenter - referenceCenter), which pins the image dead-center
+// in the viewport forever instead of freeing it — the opposite of
+// "unconstrained," and why it read as "a completely pinned object that
+// always remains on screen." Reverting to a small strength is what lets
+// it keep moving (mostly) with normal scroll — arriving and scrolling
+// away like anything else, per the original "revert that" request —
+// while still keeping a little of its own drift.
+const SPLIT_CTA_IMAGE_PARALLAX_STRENGTH = 0.1;
+const SPLIT_CTA_ASTERISK_PARALLAX_STRENGTH = 0.05;
+// rawOffset (see update() below) is positive once the reference has
+// drifted DOWN from its resting position — i.e. past the viewport's own
+// center, still scrolling down — which is specifically when both layers
+// should start fading, per explicit request ("when scrolling down and
+// the img moves farther down, it begins fading"). Negative rawOffset
+// (approaching center from below) stays fully opaque. Both layers share
+// this SAME fade curve (not each layer's own, slower-moving-for-the-
+// asterisks offset) so the 2 fade in lockstep — only the translateY
+// itself is staggered, per the request above, not the fade timing, which
+// was never asked to be staggered too.
+// FADE_RANGE_PX is how much downward drift of the REFERENCE (past
+// FADE_START_PX below) it takes to go from fully opaque to MIN_OPACITY —
+// was 90, then 240 (tuned against the image's own 0.3-scaled offset) —
+// raised again to 500 per explicit follow-up ("fading to 0 way too
+// quickly"). Measured against the unscaled rawOffset rather than either
+// layer's own scaled offset, so this constant means the same thing
+// regardless of how the 2 strength constants above are tuned later.
+const SPLIT_CTA_FADE_RANGE_PX = 500;
+// How much downward drift happens BEFORE the fade even starts — per an
+// earlier follow-up ("triggers too early... only when I've scrolled down
+// a little further"). Below this, opacity stays pinned at 1 regardless
+// of rawOffset; past it, fading follows the FADE_RANGE_PX curve above.
+const SPLIT_CTA_FADE_START_PX = 100;
+// Floor — per explicit follow-up ("shouldn't ever fully fade away"), the
+// image + asterisks now bottom out here instead of continuing to 0, no
+// matter how far past FADE_START_PX + FADE_RANGE_PX the section scrolls.
+const SPLIT_CTA_MIN_OPACITY = 0.35;
+function initSplitCtaParallax() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const reference = document.querySelector(".split-cta__illustration-wrap");
+  const imageLayer = document.querySelector(".split-cta__parallax--image");
+  const asteriskLayer = document.querySelector(".split-cta__parallax--asterisks");
+  if (!reference || !imageLayer || !asteriskLayer) return;
+
+  const update = () => {
+    const rect = reference.getBoundingClientRect();
+    const referenceCenter = rect.top + rect.height / 2;
+    const viewportCenter = window.innerHeight / 2;
+    const rawOffset = viewportCenter - referenceCenter;
+
+    const fadeProgress = Math.max(0, Math.min(1, (rawOffset - SPLIT_CTA_FADE_START_PX) / SPLIT_CTA_FADE_RANGE_PX));
+    const opacity = String(1 - fadeProgress * (1 - SPLIT_CTA_MIN_OPACITY));
+
+    imageLayer.style.transform = `translateY(${rawOffset * SPLIT_CTA_IMAGE_PARALLAX_STRENGTH}px)`;
+    imageLayer.style.opacity = opacity;
+    asteriskLayer.style.transform = `translateY(${rawOffset * SPLIT_CTA_ASTERISK_PARALLAX_STRENGTH}px)`;
+    asteriskLayer.style.opacity = opacity;
+  };
+
+  let ticking = false;
+  const scheduleUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      update();
+      ticking = false;
+    });
+  };
+
+  update();
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", scheduleUpdate);
+}
+
+// The slogan text (.slogan-preview__text, both homepage and About page)
+// grows as it scrolls up toward the viewport's own center, then LOCKS at
+// its max size rather than shrinking back down as it continues scrolling
+// past — per explicit request ("what is it called when... something
+// grows bigger until it hits a maximum and lets you scroll past it,"
+// i.e. a scroll-linked scale, the same idea behind Apple's own product-
+// page scroll-zooms). Deliberately targets .slogan-preview__text itself
+// (the <p>), not its own children (.split-cta__text-line spans) — those
+// already own their OWN transform (translateY, for the separate fade-
+// slide-up entrance reveal — see that class's own comment), so scaling
+// them too would fight that; the parent has no transform of its own to
+// collide with, and a parent's transform composes fine with whatever
+// its children are independently doing.
+const SLOGAN_MIN_SCALE = 0.85;
+const SLOGAN_MAX_SCALE = 1.15;
+// How much scroll distance the grow phase spans, as a fraction of the
+// viewport's own height — not a fixed px value, so this reads the same
+// relative "pace" regardless of viewport size.
+const SLOGAN_GROWTH_RANGE_VH = 0.6;
+function initSloganScale() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const targets = document.querySelectorAll(".slogan-preview__text");
+  if (!targets.length) return;
+
+  const update = () => {
+    const viewportCenter = window.innerHeight / 2;
+    const growthRange = window.innerHeight * SLOGAN_GROWTH_RANGE_VH;
+    for (const target of targets) {
+      const rect = target.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      // Positive while the text is still below center (approaching);
+      // clamped to 0 the instant it reaches/passes center, so `progress`
+      // below latches at 1 (max scale) from that point on regardless of
+      // how much further it scrolls — the "lets you scroll past it"
+      // part, not just a symmetric grow-then-shrink.
+      const distanceToCenter = Math.max(0, center - viewportCenter);
+      const progress = 1 - Math.min(1, distanceToCenter / growthRange);
+      const scale = SLOGAN_MIN_SCALE + (SLOGAN_MAX_SCALE - SLOGAN_MIN_SCALE) * progress;
+      target.style.transform = `scale(${scale})`;
+    }
+  };
+
+  let ticking = false;
+  const scheduleUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      update();
+      ticking = false;
+    });
+  };
+
+  update();
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", scheduleUpdate);
+}
+
+// EXPERIMENTAL scroll-pin-and-grow prototype — see the HTML comment
+// above .pin-grow-spacer in index.html for the full reasoning/scope
+// (a standalone element, not the real section 3 black tile box, per
+// explicit request to try this effect without risking that element's
+// own carefully-tuned setup).
+//
+// The PIN itself is plain CSS (.pin-grow-sticky's own position:sticky —
+// see that rule's comment); this only computes GROWTH progress and
+// sizes/positions .pin-grow-box accordingly, interpolating from the
+// real section 3 black bg's (.split-cta__illustration-wrap) own current
+// on-screen rect up to .featured-carousel's own real, measured
+// footprint.
+// Thresholds for the carousel-preview content (see the HTML comment
+// above .pin-grow-box in index.html) — the caption/photo fade in once
+// the box is already substantially grown (not from the very start, when
+// it's still small), and the 2 nav diamonds fade in later still, near
+// the very end of the grow — "while it's reaching its full size," per
+// the original request, not throughout the whole thing.
+const PIN_GROW_CONTENT_THRESHOLD = 0.5;
+const PIN_GROW_NAV_THRESHOLD = 0.85;
+function initPinGrowDemo() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const spacer = document.querySelector(".pin-grow-spacer");
+  const sticky = document.querySelector(".pin-grow-sticky");
+  const box = document.querySelector(".pin-grow-box");
+  const startRef = document.querySelector(".split-cta__illustration-wrap");
+  const targetRef = document.querySelector(".featured-carousel");
+  if (!spacer || !sticky || !box || !startRef || !targetRef) return;
+
+  let startRect = null;
+  let endRect = null;
+
+  // Re-measured on resize (viewport size, and wherever .featured-
+  // carousel itself currently renders, both change there) — NOT on
+  // scroll, since neither the start proportions nor the carousel's own
+  // rect depend on scroll position itself (only .pin-grow-box's OWN
+  // interpolated rect, computed in update() below, does).
+  const measure = () => {
+    const vh = window.innerHeight;
+    // position:sticky only pins the VERTICAL axis — .pin-grow-sticky's
+    // own horizontal position/width stay exactly whatever normal
+    // in-flow layout already gives it, same as any non-sticky block.
+    // That's already inset from the true viewport by body's own
+    // `padding: var(--page-margin)` (applies to every normal-flow
+    // element, this one included) — so .pin-grow-sticky's own box,
+    // measured here, is ALREADY the "safe" horizontal width; adding
+    // pageMargin again on top of it (an earlier version of this did)
+    // double-counted that inset, reported live as the box rendering
+    // measurably right-of-center. containerRect.left is what LOCAL x:0
+    // (where .pin-grow-box's own left:0 would land) corresponds to in
+    // TRUE viewport terms — needed below to convert .featured-carousel's
+    // own viewport-relative rect into this element's LOCAL coordinate
+    // space (position:absolute here resolves against .pin-grow-sticky's
+    // own padding box, not the viewport). Vertically there's no
+    // equivalent conversion needed: sticky's own `top:0` IS defined in
+    // true-viewport terms while genuinely stuck, so plain viewport-
+    // relative math (below, for safeTop/safeBottom) already lines up. */
+    const containerRect = spacer.getBoundingClientRect();
+    const containerLeft = containerRect.left;
+    const containerWidth = containerRect.width;
+
+    // The fixed nav bar (--nav-height) and .viewport-frame's own border
+    // (--page-margin, on all 4 sides — see that rule's own `border:
+    // var(--page-margin) solid` — including a SECOND one at the very
+    // top, on top of the nav bar itself) both eat into the visible area
+    // — centering this box against the FULL 0-vh viewport (as an even
+    // earlier version did) let it sit high enough to visibly poke
+    // through/behind both. Centering within this safe box instead —
+    // real content's own vertical bounds, not the raw viewport's —
+    // keeps it clear of both.
+    const rootStyle = getComputedStyle(document.documentElement);
+    const navHeight = parseFloat(rootStyle.getPropertyValue("--nav-height")) || 0;
+    const pageMargin = parseFloat(rootStyle.getPropertyValue("--page-margin")) || 0;
+    const safeTop = navHeight + pageMargin;
+    const safeBottom = vh - pageMargin;
+
+    // The real box's own width/left are scroll-independent (normal-flow
+    // layout inside a fixed 2-column split, not itself parallaxed) so
+    // measuring it live is accurate regardless of current scroll
+    // position — only its TOP moves as the page scrolls. "user starts
+    // with section 3 perfectly centered" is the reference frame the
+    // follow-up request describes this starting position against, so
+    // top is computed as where the real box WOULD sit if the viewport's
+    // vertical center were centered on it, rather than read live off
+    // whatever the current scroll position happens to be.
+    const sr = startRef.getBoundingClientRect();
+    startRect = {
+      width: sr.width,
+      height: sr.height,
+      left: sr.left - containerLeft,
+      top: (vh - sr.height) / 2,
+    };
+    const tr = targetRef.getBoundingClientRect();
+    endRect = {
+      width: tr.width,
+      height: tr.height,
+      left: tr.left - containerLeft,
+      top: safeTop + (safeBottom - safeTop - tr.height) / 2,
+    };
+  };
+
+  const update = () => {
+    if (!startRect || !endRect) return;
+    // Was based on .pin-grow-spacer's own rect (0 only once
+    // .pin-grow-sticky started sticking, i.e. once it had ALREADY
+    // scrolled all the way to the top of the viewport) — reported live
+    // as a real delay: the box sat fully visible, but frozen at its
+    // small starting size, for the entire ~100vh it took to scroll from
+    // first appearing at the bottom of the screen up to that point.
+    // Using .pin-grow-sticky's OWN rect instead fixes this at the root:
+    // BEFORE it's stuck, this element is a plain normal-flow block
+    // sitting at the very top of the tall .pin-grow-spacer, so its own
+    // getBoundingClientRect().top naturally decreases from
+    // window.innerHeight (the instant it first peeks into view at the
+    // bottom) down to 0 (the instant it becomes stuck) as part of
+    // perfectly ordinary scrolling — no separate "entry" spacer or
+    // extra math needed to expose that motion, it's already there for
+    // free. Growth now happens smoothly THROUGHOUT that natural
+    // scroll-in instead of only after it. Once genuinely stuck, this
+    // formula stays pinned at exactly 1 for the whole hold — position:
+    // sticky holds stickyRect.top at exactly 0 by definition for as
+    // long as it's stuck, and (vh - 0) / vh is exactly 1 — falling out
+    // of the same formula with no extra branch needed. After release
+    // (scrolled past, rect.top goes negative), it clamps back to 1
+    // rather than extrapolating past it.
+    const stickyRect = sticky.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+    box.style.width = `${startRect.width + (endRect.width - startRect.width) * progress}px`;
+    box.style.height = `${startRect.height + (endRect.height - startRect.height) * progress}px`;
+    box.style.left = `${startRect.left + (endRect.left - startRect.left) * progress}px`;
+    box.style.top = `${startRect.top + (endRect.top - startRect.top) * progress}px`;
+
+    // Threshold-based, not a separate progress mapping of their own —
+    // simple show/hide toggles rather than continuously scrubbing THEIR
+    // own opacity/transform in lockstep with scroll, so reversing
+    // direction (scrolling back up) cleanly un-reveals them via the same
+    // CSS transition rather than needing its own reverse-scrub logic.
+    box.classList.toggle("is-content-visible", progress >= PIN_GROW_CONTENT_THRESHOLD);
+    box.classList.toggle("is-nav-visible", progress >= PIN_GROW_NAV_THRESHOLD);
+  };
+
+  let ticking = false;
+  const scheduleUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      update();
+      ticking = false;
+    });
+  };
+  const remeasureAndUpdate = () => {
+    measure();
+    update();
+  };
+
+  remeasureAndUpdate();
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", remeasureAndUpdate);
+}
+
 // About page "Beyond the Page" — same reveal-CHAIN idea as
 // initSplitCtaReveal() above (text fades/slides in once the section's
 // own illustration is already underway, not immediately on page load),
@@ -4366,12 +4711,24 @@ function initCustomCursor() {
 
   // Real, actually-clickable elements only — not decorative hover targets
   // like .diamond-cta or .square, which already use cursor: default.
+  // .nav__item--publications is the one deliberate addition to that rule,
+  // per explicit request ("hovering on the publications should trigger
+  // cursor companion hover state") — the <li> itself isn't an <a>/
+  // <button>, but its whole box functions as one (it holds the real
+  // "Publications" link, is itself the dropdown's hover trigger, and its
+  // own padding/the dropdown-hover-zone gap around the literal link text
+  // are all still meant to read as "hovering the nav item"), so it's
+  // named explicitly rather than trying to widen the a[href]/button
+  // check itself.
   function isClickablePoint(x, y) {
     const node = document.elementFromPoint(x, y);
-    return !!node?.closest("a[href], button");
+    return !!node?.closest("a[href], button, .nav__item--publications");
   }
 
-  const HOVER_SCALE = 1.5;
+  // 1.5 originally, bumped to 2.2 ("enlarge even more" on hover), then
+  // brought back down per a further follow-up asking for a smaller
+  // hover size.
+  const HOVER_SCALE = 1.7;
   const SCALE_LERP = 0.25;
 
   // Spin speed reacts to how fast the REAL mouse is moving (not the
@@ -4420,6 +4777,20 @@ function initCustomCursor() {
   let clickBoost = 0;
   let rotationDeg = 0;
   let lastFrameTime = null;
+  // Per explicit request: the spin should come to a smooth stop while
+  // hovering a clickable element, then smoothly pick back up once the
+  // pointer leaves it — reusing the SAME per-frame lerp (SPIN_LERP,
+  // below) already used for flick-boost/decay, just toward a target of
+  // 0 instead of the mouse-speed-derived one, rather than a separate
+  // instant on/off. isHoveringClickable is deliberately its own flag
+  // (not derived from targetScale === HOVER_SCALE) so it stays correct
+  // even if these 2 concerns are tuned independently later.
+  let isHoveringClickable = false;
+
+  const updateHoverState = (x, y) => {
+    isHoveringClickable = isClickablePoint(x, y);
+    targetScale = isHoveringClickable ? HOVER_SCALE : 1;
+  };
 
   window.addEventListener(
     "mousemove",
@@ -4431,7 +4802,28 @@ function initCustomCursor() {
         curY = mouseY;
         started = true;
       }
-      targetScale = isClickablePoint(e.clientX, e.clientY) ? HOVER_SCALE : 1;
+      updateHoverState(e.clientX, e.clientY);
+    },
+    { passive: true }
+  );
+
+  // Per explicit follow-up: hovering a clickable element, then scrolling
+  // WITHOUT moving the mouse, left the companion stuck in its hover
+  // state — the page moves under a stationary cursor, so the real
+  // element at that same (mouseX, mouseY) screen point can change (or
+  // stop being clickable) without a single mousemove event ever firing
+  // to notice. Scroll itself doesn't move the pointer, so mouseX/mouseY
+  // stay exactly what the last real mousemove left them at — re-running
+  // the same elementFromPoint check against that same, still-accurate
+  // screen position is what needs to happen here, not a position update.
+  // Unthrottled (no rAF/ticking gate), matching this file's own
+  // revealFillersIfInView() precedent for a per-scroll check this cheap
+  // (a single elementFromPoint + closest call).
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!started) return;
+      updateHoverState(mouseX, mouseY);
     },
     { passive: true }
   );
@@ -4456,11 +4848,24 @@ function initCustomCursor() {
     const mouseSpeed = dt > 0 ? Math.hypot(mouseX - prevMouseX, mouseY - prevMouseY) / dt : 0;
     prevMouseX = mouseX;
     prevMouseY = mouseY;
-    const targetAngularSpeed = BASE_DEG_PER_SEC + Math.min(mouseSpeed * SPEED_TO_BOOST, MAX_BOOST_DEG_PER_SEC);
+    // 0 while hovering a clickable element — same lerp below eases the
+    // spin down to a stop instead of cutting it off, and eases it back
+    // up again the instant isHoveringClickable clears (see that flag's
+    // own comment above).
+    const targetAngularSpeed = isHoveringClickable
+      ? 0
+      : BASE_DEG_PER_SEC + Math.min(mouseSpeed * SPEED_TO_BOOST, MAX_BOOST_DEG_PER_SEC);
     angularSpeed += (targetAngularSpeed - angularSpeed) * SPIN_LERP;
     clickBoost += (0 - clickBoost) * CLICK_BOOST_LERP;
     rotationDeg = (rotationDeg + (angularSpeed + clickBoost) * dt) % 360;
-    const speedScale = 1 + ((angularSpeed - BASE_DEG_PER_SEC) / MAX_BOOST_DEG_PER_SEC) * SPEED_SCALE_BOOST;
+    // Clamped to 0 at the low end — without this, angularSpeed dipping
+    // below BASE_DEG_PER_SEC while hovering/stopping would make this
+    // negative, silently SHRINKING the glyph via speedScale at exactly
+    // the moment HOVER_SCALE (above, on the wrap) is trying to enlarge
+    // it. This was never reachable before hovering could drive
+    // angularSpeed below BASE_DEG_PER_SEC at all, so the original
+    // formula never needed the clamp.
+    const speedScale = 1 + (Math.max(0, angularSpeed - BASE_DEG_PER_SEC) / MAX_BOOST_DEG_PER_SEC) * SPEED_SCALE_BOOST;
     glyph.style.transform = `rotate(${rotationDeg}deg) scale(${speedScale})`;
 
     curX += (mouseX - curX) * LERP;
@@ -4507,13 +4912,14 @@ function initRoleTapReveal() {
 // so this just mirrors that same plain shape regardless of which slide
 // it's standing in for. No title/edition/number here — those live on
 // the one shared caption outside the track now (see initFeaturedCarousel()),
-// carried forward via the source slide's own data-title/data-edition/
-// data-number attributes instead of a cloned element.
+// carried forward via the source slide's own data-title/data-title-intro/
+// data-edition/data-number attributes instead of a cloned element.
 function buildCarouselLoopClone(sourceSlide) {
   const clone = document.createElement("div");
   clone.className = "featured-carousel__slide";
   clone.setAttribute("aria-hidden", "true");
   clone.dataset.title = sourceSlide.dataset.title ?? "";
+  clone.dataset.titleIntro = sourceSlide.dataset.titleIntro ?? "";
   clone.dataset.edition = sourceSlide.dataset.edition ?? "";
   clone.dataset.number = sourceSlide.dataset.number ?? "";
   clone.dataset.articleUrl = sourceSlide.dataset.articleUrl ?? "#";
@@ -4570,6 +4976,8 @@ function initFeaturedCarousel() {
 
   const carousel = document.querySelector(".featured-carousel");
   const captionTitle = document.querySelector(".featured-carousel__title");
+  const captionTitleIntro = document.querySelector(".featured-carousel__title-intro");
+  const captionTitleMain = document.querySelector(".featured-carousel__title-main");
   const captionEdition = document.querySelector(".featured-carousel__edition");
   const captionNumber = document.querySelector(".featured-carousel__number");
 
@@ -4620,11 +5028,19 @@ function initFeaturedCarousel() {
   const CAPTION_FADE_MS = 500;
   const applyCaption = (slide) => {
     if (captionTitle) {
-      captionTitle.textContent = slide.dataset.title ?? "";
       // Edition's own href (-> publications.html) is static and set once
       // in the HTML — only the title's target changes per-slide.
       captionTitle.href = slide.dataset.articleUrl || "#";
     }
+    if (captionTitleIntro) {
+      const intro = slide.dataset.titleIntro ?? "";
+      captionTitleIntro.textContent = intro;
+      // Hidden entirely (not left empty) for slides with no intro — the
+      // still-placeholder ones today — so they read as a single headline
+      // line instead of a blank line sitting above it.
+      captionTitleIntro.style.display = intro ? "" : "none";
+    }
+    if (captionTitleMain) captionTitleMain.textContent = slide.dataset.title ?? "";
     if (captionEdition) captionEdition.textContent = slide.dataset.edition ?? "";
     if (captionNumber) captionNumber.textContent = slide.dataset.number ?? "";
   };

@@ -18,10 +18,7 @@
   <meta name="twitter:image" content="https://pennwordforword.org/assets/images/Slogan.jpg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/Favicon.png" />
   <link rel="icon" type="image/png" sizes="304x304" href="/assets/images/Logo.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=287" />
+  <link rel="stylesheet" href="/css/style.css?v=341" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -132,19 +129,42 @@
             <li><a href="/">Overview</a></li>
             <li class="nav__item--publications">
               <a href="/publications/">Publications<span class="nav__link-asterisk">*</span></a>
-              <div class="nav__dropdown">
-                <a href="/#publications"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span></a>
-                <a href="/interviews/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span></a>
-                <a href="/essays/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span></a>
-                <a href="/narratives/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Narratives</span></a>
-                <a href="/outreach/"><span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Outreach</span></a>
-              </div>
             </li>
             <li><a href="/about/">About Us</a></li>
             <li><a href="/get-involved/">Get Involved</a></li>
             <li class="nav__indicator-slot" aria-hidden="true"><span class="nav__indicator"></span></li>
           </ul>
         </nav>
+        <!-- See index.html's own comment above <header> for why this lives
+             here now instead of nested inside .nav__item--publications. -->
+        <div class="nav__dropdown">
+          <a href="/#publications">
+            <span class="nav__dropdown-number">(01)</span>
+            <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Volumes</span>
+          </a>
+          <a href="/interviews/">
+            <span class="nav__dropdown-number">(02)</span>
+            <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Interviews</span>
+          </a>
+          <a href="/essays/">
+            <span class="nav__dropdown-number">(03)</span>
+            <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Essays</span>
+          </a>
+          <a href="/narratives/">
+            <span class="nav__dropdown-number">(04)</span>
+            <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Narratives</span>
+          </a>
+          <a href="/outreach/">
+            <span class="nav__dropdown-number">(05)</span>
+            <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Outreach</span>
+          </a>
+          <div class="nav__dropdown-visual" aria-hidden="true">
+            <img class="nav__dropdown-visual-img" src="/assets/images/Dropdown Visual.png" alt="" />
+            <div class="nav__dropdown-visual-asterisk-wrap">
+              <img class="nav__dropdown-visual-asterisk" src="/assets/images/Asterisk - Default, Cream.png" alt="" />
+            </div>
+          </div>
+        </div>
       </div>
     </header>
     <div class="nav-dim-overlay" aria-hidden="true"></div>
@@ -390,16 +410,16 @@
   </section>
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Exact copy of index.html's own .quote-block (photo + mosaic-reveal
-       overlay) — swapped back in per explicit request, replacing the
-       text-only .slogan-preview that had been tried here instead. -->
-  <section class="quote-block">
-    <div class="quote-block__image">
-      <img class="quote-block__photo" src="/assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
-    </div>
-    <div class="quote-block__overlay mosaic-reveal">
-      <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
-    </div>
+  <!-- Plain text version again, per explicit request (reverting the
+       Slogan.jpg photo + mosaic-reveal treatment) — exact copy of
+       index.html's own .slogan-preview markup. See that file's own
+       comment above it, and .slogan-preview in style.css, for the reveal
+       mechanics. -->
+  <section class="slogan-preview">
+    <p class="slogan-preview__text">
+      <span class="split-cta__text-line"><em>Empowering</em> voices</span>
+      <span class="split-cta__text-line">previously <em>unheard</em></span>
+    </p>
   </section>
 
   <!-- ============ PARTNER LOGOS ============ -->
@@ -480,6 +500,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=173" defer></script>
+    <script src="/js/main.js?v=199" defer></script>
 </body>
 </html>
