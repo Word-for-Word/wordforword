@@ -597,20 +597,42 @@ def build_instagram_card_html(post):
     permalink = html.escape(post.get("permalink", "https://www.instagram.com/pennword4word/"), quote=True)
     image_src = "/" + html.escape(post["image"], quote=True)
     # First line only — real Instagram captions are often many lines/
-    # hashtags long, and .instagram-card__caption's own CSS already
-    # clamps display to 2 lines with an ellipsis, so shipping the whole
-    # (possibly huge) caption into the page's HTML would just be dead
-    # weight never fully shown anyway.
+    # hashtags long; the rest would just be dead weight in a data
+    # attribute nobody scrolls through anyway.
     caption = post.get("caption", "").strip()
     first_line = caption.splitlines()[0] if caption else "View this post on Instagram."
-    caption_html = html.escape(first_line)
+    caption_attr = html.escape(first_line, quote=True)
+    # No caption markup on the card itself — hovering shows it in the
+    # STICKY TEXT PANEL instead (see .instagram-feed__hover-caption in
+    # style.css and initInstagramHoverCaption() in main.js), per
+    # explicit request/reference mockup, so the card only needs to carry
+    # the text as a plain data attribute for that JS to read.
     return (
-        f'        <a class="instagram-card" href="{permalink}" target="_blank" rel="noopener">\n'
-        f'          <div class="instagram-card__cover">\n'
-        f'            <img src="{image_src}" alt="" loading="lazy" />\n'
-        f'          </div>\n'
-        f'          <p class="instagram-card__caption">{caption_html}</p>\n'
-        f'        </a>'
+        f'          <a class="instagram-card" href="{permalink}" target="_blank" rel="noopener" data-caption="{caption_attr}">\n'
+        f'            <div class="instagram-card__cover">\n'
+        f'              <img src="{image_src}" alt="" loading="lazy" />\n'
+        f'            </div>\n'
+        f'          </a>'
+    )
+
+
+def build_instagram_columns_html(posts):
+    """Splits posts alternately into 2 columns (even index -> left, odd
+    -> right) for the staggered/masonry layout in the reference mockup —
+    the right column's own vertical offset is pure CSS
+    (.instagram-feed__col--offset), so this only needs to get the
+    ALTERNATION right, not the actual stagger amount."""
+    col_a = [p for i, p in enumerate(posts) if i % 2 == 0]
+    col_b = [p for i, p in enumerate(posts) if i % 2 == 1]
+    col_a_html = "\n".join(build_instagram_card_html(p) for p in col_a)
+    col_b_html = "\n".join(build_instagram_card_html(p) for p in col_b)
+    return (
+        '        <div class="instagram-feed__col">\n'
+        f'{col_a_html}\n'
+        '        </div>\n'
+        '        <div class="instagram-feed__col instagram-feed__col--offset">\n'
+        f'{col_b_html}\n'
+        '        </div>'
     )
 
 
@@ -618,7 +640,7 @@ def update_instagram_feed():
     """Mirrors update_homepage_carousel() above: reads
     content/instagram_feed.json (kept current by scripts/fetch_instagram.py
     on a schedule — see that script's own docstring) and injects the
-    actual card HTML into index.html's "On Instagram" section. Same
+    actual card HTML into index.html's "What's the word?" section. Same
     "leave the placeholders alone until there's real data" fallback as
     the carousel — this file doesn't exist at all until
     fetch_instagram.py has successfully run at least once.
@@ -654,7 +676,7 @@ def update_instagram_feed():
         print("Instagram feed: content/instagram_feed.json has no posts — leaving today's placeholder cards in place.")
         return
 
-    cards_html = "\n".join(build_instagram_card_html(p) for p in posts)
+    cards_html = build_instagram_columns_html(posts)
     index_path = ROOT / "index.html"
     text = index_path.read_text(encoding="utf-8")
     text = replace_between_sentinels(text, "<!-- INSTAGRAM_FEED:START -->", "<!-- INSTAGRAM_FEED:END -->", cards_html, "index.html")

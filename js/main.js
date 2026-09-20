@@ -208,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initNavPageFlash();
     initPublicationsDropdown();
     initEditionLightbox();
+    initInstagramHoverCaption();
     initPublicationFamilyTransitions();
     initDevPanel();
     // Last on purpose — see this function's own comment on why it needs
@@ -370,6 +371,50 @@ function initHeaderReady() {
   const pageFlashEnd = hasPageFlash ? 2250 : 0; // 1.8s delay + 0.45s duration, see page-flash-header-drop
   const SAFETY_BUFFER_MS = 500;
   setTimeout(markReady, Math.max(introDelay + 450, pageFlashEnd) + SAFETY_BUFFER_MS);
+}
+
+// The Instagram feed's caption doesn't render on the card itself (see
+// that section's own HTML comment) — hovering (or focusing, for
+// keyboard users) a .instagram-card shows ITS OWN data-caption text
+// inside the sticky text panel instead, per the reference mockup.
+// Event-delegated on the whole section (one pair of listeners, not one
+// per card) — same convention as initEditionLightbox()'s own click
+// handling below. mouseover/mouseout (not mouseenter/mouseleave,
+// neither of which bubble) is what makes delegation possible at all;
+// the relatedTarget checks are what stop them firing again on every
+// move between a card's own children (the cover div, the image) even
+// though the cursor never actually left the card.
+function initInstagramHoverCaption() {
+  const feed = document.querySelector(".instagram-feed");
+  const captionEl = document.querySelector(".instagram-feed__hover-caption");
+  if (!feed || !captionEl) return;
+
+  const show = (card) => {
+    captionEl.textContent = card.dataset.caption || "";
+    feed.classList.add("instagram-feed--hovering");
+  };
+  const hide = () => {
+    feed.classList.remove("instagram-feed--hovering");
+  };
+
+  feed.addEventListener("mouseover", (e) => {
+    const card = e.target.closest(".instagram-card");
+    if (card) show(card);
+  });
+  feed.addEventListener("mouseout", (e) => {
+    const card = e.target.closest(".instagram-card");
+    if (card && !card.contains(e.relatedTarget)) hide();
+  });
+  // focusin/focusout (unlike focus/blur) DO bubble, so these can be
+  // delegated here the same way as the mouse pair above.
+  feed.addEventListener("focusin", (e) => {
+    const card = e.target.closest(".instagram-card");
+    if (card) show(card);
+  });
+  feed.addEventListener("focusout", (e) => {
+    const card = e.target.closest(".instagram-card");
+    if (card && !card.contains(e.relatedTarget)) hide();
+  });
 }
 
 // Lets a finished edition's publication-card (see the data-pdf attribute
