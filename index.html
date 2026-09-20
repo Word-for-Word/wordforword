@@ -1135,8 +1135,19 @@
              My first attempt added text-align:center directly, which is
              NOT what that reference tile does. -->
         <div class="square square--red square--pad-lg square--text-gap-30">
-          <!-- Copy replaced per explicit follow-up — shortened further. -->
-          <p class="square__body">Start exploring our digital library with one of our spotlight picks below.</p>
+          <!-- Copy replaced per explicit follow-up — shortened further.
+               square__body--natural-height matters here: .square__body's
+               own shared flex:1 (see that rule's comment) stretches a
+               LONE paragraph to fill the tile's entire height, so its
+               text then flows from the top of that stretched box —
+               .square's own justify-content:center has nothing left to
+               center against once the child already fills 100% of the
+               available space. flex:none (what --natural-height sets)
+               sizes this paragraph to its own real content height
+               instead, which is what actually lets justify-content:center
+               center it — reported live as "only centered horizontally"
+               without this. -->
+          <p class="square__body square__body--natural-height">Start exploring our digital library with one of our spotlight picks below.</p>
         </div>
         <!-- Links to /publications/ instead of Instagram — base
              .diamond-cta's own DEFAULT (unmodified) coloring is already
