@@ -18,7 +18,7 @@
   <meta name="twitter:image" content="https://pennwordforword.org/assets/images/Slogan.jpg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/Favicon.png" />
   <link rel="icon" type="image/png" sizes="304x304" href="/assets/images/Logo.png" />
-  <link rel="stylesheet" href="/css/style.css?v=341" />
+  <link rel="stylesheet" href="/css/style.css?v=343" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -172,14 +172,18 @@
     <!-- Fixed viewport frame — same markup as index.html's own (see that
          file's HTML comment for the full reasoning); was missing on this
          page, which is why it lacked the rounded-corner frame every other
-         page has. -->
-    <div class="viewport-frame" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
-    <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
-    <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
+         page has. Wrapped in .viewport-frame-zoom-lock (see that class's
+         own CSS comment) so trackpad/pinch zoom can't drag it out of
+         position — initViewportFrameSync() in main.js keeps it pinned. -->
+    <div class="viewport-frame-zoom-lock">
+      <div class="viewport-frame" aria-hidden="true"></div>
+      <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
+      <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
+      <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
+      <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
+      <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
+      <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
+    </div>
 
   <!-- ============ HERO ============ -->
   <!-- Was copied verbatim from publications.html's own hero — now this
@@ -500,6 +504,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=199" defer></script>
+    <script src="/js/main.js?v=201" defer></script>
 </body>
 </html>
