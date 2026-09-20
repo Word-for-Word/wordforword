@@ -6365,6 +6365,16 @@ body.edition-lightbox-open {
   inset: 0;
   mix-blend-mode: color;
   pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+/* Per explicit follow-up: hovering (or keyboard-focusing) a post fades
+   the tint out entirely, revealing the photo's own true color — same
+   hover/focus-visible pairing initInstagramHoverCaption() (main.js)
+   already uses for showing that card's caption, so both happen
+   together. */
+.instagram-card:hover .instagram-card__cover::after,
+.instagram-card:focus-visible .instagram-card__cover::after {
+  opacity: 0;
 }
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) .instagram-card__cover::after {
   background: var(--color-grey); /* this project's informal "blue" */
