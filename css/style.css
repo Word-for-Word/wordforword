@@ -6202,9 +6202,20 @@ body.edition-lightbox-open {
 }
 .instagram-feed__sticky {
   position: sticky;
-  /* Clears the fixed header with real breathing room, same idea as
-     .article-page's own top-clearance convention (see that rule). */
-  top: calc(var(--nav-height) + 40px);
+  /* Sticks near the vertical CENTER of the viewport, not just below the
+     header, per explicit request. top must be in a viewport-relative
+     unit (vh), not a percentage — percentages on a sticky element's own
+     `top` resolve against its CONTAINING BLOCK's height
+     (.instagram-feed__sticky-col, which stretches to match the posts
+     column's own much-taller height), not the viewport's, so a plain
+     50% here would land the stick point somewhere deep in the
+     scrollable area instead of mid-screen. 50vh gets the TOP edge of
+     this element to the viewport's own vertical center; translateY
+     (a percentage of THIS element's own height, not the containing
+     block's) then shifts it up by half its own height, landing its
+     actual visual CENTER there instead of just its top edge. */
+  top: 50vh;
+  transform: translateY(-50%);
 }
 .instagram-feed__title {
   margin-bottom: 16px;
