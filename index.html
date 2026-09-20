@@ -1126,10 +1126,16 @@
     <section>
       <div class="square-grid square-grid--4col square-grid--rows-1 square-grid--flush-bottom">
         <div class="square square--checker" style="--checker-a: var(--color-grey); --checker-b: var(--color-tan);" aria-hidden="true"></div>
-        <div class="square square--red square--pad-lg square--text-gap-30 square--align-left">
-          <!-- Copy replaced per explicit follow-up — merged back down to
-               one line (was 2 separate paragraphs). -->
-          <p class="square__body">Start exploring our digital library of interviews, essays, and more with one of our spotlight picks below.</p>
+        <!-- square--align-left dropped per explicit follow-up — this
+             tile's text should center like every other plain-text tile
+             here (.square's own base align-items/justify-content:center
+             already does the vertical+block centering; text-align:center
+             is added inline since base .square doesn't set that itself,
+             only .square--align-left/--content-left/--deco do, none of
+             which this tile wants the REST of). -->
+        <div class="square square--red square--pad-lg square--text-gap-30" style="text-align: center;">
+          <!-- Copy replaced per explicit follow-up — shortened further. -->
+          <p class="square__body">Start exploring our digital library with one of our spotlight picks below.</p>
         </div>
         <!-- Links to /publications/ instead of Instagram — base
              .diamond-cta's own DEFAULT (unmodified) coloring is already
