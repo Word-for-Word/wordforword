@@ -6348,22 +6348,27 @@ body.edition-lightbox-open {
   height: auto;
 }
 /* Duotone-style color tint, per explicit request to use the 4 main
-   design-system colors on the posts. mix-blend-mode:color (not
-   multiply/overlay/etc.) keeps each photo's own actual brightness and
-   detail intact — it only replaces hue/saturation with the overlay's,
-   so this reads as a genuinely tinted photo, not a flat color block
-   pasted over it. Cycles through all 4 colors across the current 6
-   posts (3 per column) via explicit nth-child rules below, rather than
-   a single :nth-child(4n+N) pattern — the 2 columns are separate
-   flex-parents, so :nth-child counts independently within EACH one
-   (card 1 of the 2nd column is still its own "1st child"), which is
-   also exactly why the color sequence below continues from color 4 at
-   the top of the 2nd column instead of restarting at color 1. */
+   design-system colors on the posts. mix-blend-mode:multiply — was
+   :color, switched per explicit follow-up that --color-red specifically
+   looked "too bright": :color fully REPLACES hue/saturation with the
+   overlay's, which on bright/light parts of a photo can push a
+   saturated color like red into a near-neon intensity no actual photo
+   pigment reaches. multiply can only ever DARKEN toward the overlay
+   color (never brighten), so bright areas take the tint as a muted
+   wash instead of a vivid replacement — a much more classic "tinted
+   photo" look, and applies evenly across all 4 colors, not just red.
+   Cycles through all 4 colors across the current 6 posts (3 per
+   column) via explicit nth-child rules below, rather than a single
+   :nth-child(4n+N) pattern — the 2 columns are separate flex-parents,
+   so :nth-child counts independently within EACH one (card 1 of the
+   2nd column is still its own "1st child"), which is also exactly why
+   the color sequence below continues from color 4 at the top of the
+   2nd column instead of restarting at color 1. */
 .instagram-card__cover::after {
   content: "";
   position: absolute;
   inset: 0;
-  mix-blend-mode: color;
+  mix-blend-mode: multiply;
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
