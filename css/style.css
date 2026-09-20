@@ -6186,9 +6186,12 @@ body.edition-lightbox-open {
      swapped back to match (see the HTML comment above this section). */
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  /* Flat 40px on both sides — no longer tied to matching section 3's
-     own text padding (that alignment requirement was dropped). */
-  padding: 0 40px;
+  /* Left matches .split-cta__text's own flat 120px exactly (see that
+     rule) — per explicit follow-up that the text should still align
+     with section 3's, not the plain 40px tried in between. Right side
+     keeps the flat 40px — nothing on the right needs to line up with
+     anything. */
+  padding: 0 40px 0 120px;
   /* margin-top 160px, margin-bottom 300px — bumped from a flat 60px
      both, per a sequence of explicit follow-ups: the gap to section 3
      (above) needed to read as noticeably bigger, then the gap to
