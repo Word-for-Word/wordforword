@@ -6235,13 +6235,12 @@ body.edition-lightbox-open {
    the reference mockup shows; a shared grid with only row/column gaps
    can't offset just one column like that without also disturbing the
    other's own row alignment.
-   max-width here is a middle ground between 2 earlier, both-rejected
-   attempts: uncapped (stretching to fill the outer grid's own 1fr
-   track) read as "too big," while an earlier, much smaller 420px cap
-   read as posts "floating in the middle" of the section instead of
-   sticking to the right edge like the reference mockup — that was
-   justify-self:start (flush against the text column instead), the
-   WRONG side; justify-self:end is what actually pins this capped-width
+   max-width here is a middle ground between rejected extremes: uncapped
+   (stretching to fill the outer grid's own 1fr track) read as "too
+   big," an earlier 420px cap read as posts "floating in the middle"
+   instead of sticking to the right edge, and 620px (fixed via
+   justify-self:end, below) still read as "a little too small." 760px
+   is the current landing point. justify-self:end pins this capped-width
    block against the section's own right edge, leaving any leftover gap
    between it and the text instead of between it and the right edge. */
 .instagram-feed__grid {
@@ -6249,7 +6248,7 @@ body.edition-lightbox-open {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
-  max-width: 620px;
+  max-width: 760px;
   justify-self: end;
 }
 .instagram-feed__col {
