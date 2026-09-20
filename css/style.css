@@ -6161,11 +6161,21 @@ body.edition-lightbox-open {
    have been scrolled past, the entire section scrolls past, text
    included," with zero scroll-linked JS needed for the pin itself.
 =================================================================== */
+/* main's own flex gap (see that rule) is a FLAT 60px between every
+   section on this page — section 2 -> section 3 doesn't actually get
+   its own bigger CSS gap value; that transition just FEELS more
+   spacious because section 3 (.split-cta) is min-height:100vh with its
+   content centered inside that tall box, on top of the same 60px.
+   Since this section directly follows section 3 now (moved per
+   explicit request), it gets its own extra margin-top here to match
+   that same generous pause instead of dropping straight back to the
+   bare 60px gap every other section pair gets. */
 .instagram-feed {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
   padding: 0 40px;
+  margin-top: 60px;
 }
 .instagram-feed__sticky {
   position: sticky;
