@@ -6332,6 +6332,12 @@ body.edition-lightbox-open {
    1fr track — see .instagram-feed__grid), unique height driven purely
    by each <img>'s own natural ratio (width:100%, height:auto below). */
 .instagram-card__cover {
+  /* Containing block for the ::after tint overlay below; isolation
+     creates a new stacking context so that overlay's mix-blend-mode
+     only ever blends with THIS card's own photo, not anything else on
+     the page behind/around it. */
+  position: relative;
+  isolation: isolate;
   border-radius: 15px;
   overflow: hidden;
   background: var(--color-tan);
@@ -6340,6 +6346,43 @@ body.edition-lightbox-open {
   display: block;
   width: 100%;
   height: auto;
+}
+/* Duotone-style color tint, per explicit request to use the 4 main
+   design-system colors on the posts. mix-blend-mode:color (not
+   multiply/overlay/etc.) keeps each photo's own actual brightness and
+   detail intact — it only replaces hue/saturation with the overlay's,
+   so this reads as a genuinely tinted photo, not a flat color block
+   pasted over it. Cycles through all 4 colors across the current 6
+   posts (3 per column) via explicit nth-child rules below, rather than
+   a single :nth-child(4n+N) pattern — the 2 columns are separate
+   flex-parents, so :nth-child counts independently within EACH one
+   (card 1 of the 2nd column is still its own "1st child"), which is
+   also exactly why the color sequence below continues from color 4 at
+   the top of the 2nd column instead of restarting at color 1. */
+.instagram-card__cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: color;
+  pointer-events: none;
+}
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) .instagram-card__cover::after {
+  background: var(--color-grey); /* this project's informal "blue" */
+}
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
+  background: var(--color-red);
+}
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) .instagram-card__cover::after {
+  background: var(--color-dark); /* brown */
+}
+.instagram-feed__col--offset > .instagram-card:nth-child(1) .instagram-card__cover::after {
+  background: var(--color-tan); /* beige */
+}
+.instagram-feed__col--offset > .instagram-card:nth-child(2) .instagram-card__cover::after {
+  background: var(--color-grey);
+}
+.instagram-feed__col--offset > .instagram-card:nth-child(3) .instagram-card__cover::after {
+  background: var(--color-red);
 }
 @media (max-width: 900px) {
   .instagram-feed {
