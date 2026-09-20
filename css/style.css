@@ -6238,19 +6238,19 @@ body.edition-lightbox-open {
    max-width here is a middle ground between 2 earlier, both-rejected
    attempts: uncapped (stretching to fill the outer grid's own 1fr
    track) read as "too big," while an earlier, much smaller 420px cap
-   read as posts detached from the right edge with an ugly dead gap
-   ("should stick to the right side of the screen"). 620px lands
-   between the two — noticeably smaller than uncapped, but wide enough
-   that the leftover gap to the right edge stays modest rather than
-   glaring. justify-self:start keeps it flush against the sticky text
-   column instead of centering/stretching within the wider 1fr track. */
+   read as posts "floating in the middle" of the section instead of
+   sticking to the right edge like the reference mockup — that was
+   justify-self:start (flush against the text column instead), the
+   WRONG side; justify-self:end is what actually pins this capped-width
+   block against the section's own right edge, leaving any leftover gap
+   between it and the text instead of between it and the right edge. */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
   max-width: 620px;
-  justify-self: start;
+  justify-self: end;
 }
 .instagram-feed__col {
   display: flex;
