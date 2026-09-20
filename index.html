@@ -130,7 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="stylesheet" href="/css/style.css?v=350" />
+  <link rel="stylesheet" href="/css/style.css?v=348" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -432,29 +432,23 @@
        the bar itself — camouflaged, not actually a fix). The middle is
        genuinely empty (no fill at all) — only the inset box-shadow ring
        is painted, like a shape with its center cut out, not a
-       see-through overlay. Wrapped in .viewport-frame-zoom-lock (see
-       that class's own CSS comment) so trackpad/pinch zoom can't drag it
-       out of position — initViewportFrameSync() in main.js keeps it
-       pinned to the real, currently-visible window regardless of
-       zoom/pan. -->
-  <div class="viewport-frame-zoom-lock">
-    <div class="viewport-frame" aria-hidden="true"></div>
-    <!-- Fills the sliver each of the frame's 4 rounded corners leaves
-         unpainted near its own true corner (see the CSS for the actual
-         geometry these are built from). -->
-    <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
-    <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
-    <!-- A last, tiny sliver remained specifically at the bottom two
-         corners even after sizing their circle patches up — right along
-         the bottom edge, a little in from the corner. Rather than grow
-         those circles further (which starts reading as its own shape,
-         per earlier feedback), a small flat rectangle just for that
-         leftover speck. -->
-    <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
-    <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
-  </div>
+       see-through overlay. -->
+  <div class="viewport-frame" aria-hidden="true"></div>
+  <!-- Fills the sliver each of the frame's 4 rounded corners leaves
+       unpainted near its own true corner (see the CSS for the actual
+       geometry these are built from). -->
+  <div class="viewport-frame-patch viewport-frame-patch--top-left" aria-hidden="true"></div>
+  <div class="viewport-frame-patch viewport-frame-patch--top-right" aria-hidden="true"></div>
+  <div class="viewport-frame-patch viewport-frame-patch--bottom-left" aria-hidden="true"></div>
+  <div class="viewport-frame-patch viewport-frame-patch--bottom-right" aria-hidden="true"></div>
+  <!-- A last, tiny sliver remained specifically at the bottom two
+       corners even after sizing their circle patches up — right along
+       the bottom edge, a little in from the corner. Rather than grow
+       those circles further (which starts reading as its own shape,
+       per earlier feedback), a small flat rectangle just for that
+       leftover speck. -->
+  <div class="viewport-frame-speck viewport-frame-speck--bottom-left" aria-hidden="true"></div>
+  <div class="viewport-frame-speck viewport-frame-speck--bottom-right" aria-hidden="true"></div>
 
   <!-- ============ HERO ============ -->
   <section class="hero">
@@ -1541,6 +1535,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=206" defer></script>
+  <script src="/js/main.js?v=204" defer></script>
 </body>
 </html>

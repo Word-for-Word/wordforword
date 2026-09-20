@@ -1750,41 +1750,8 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    completely unpainted (clipped away) — see .viewport-frame-patch below
    for the exact fill that closes it, worked out with real geometry
    this time rather than eyeballed. */
-/* Wraps .viewport-frame + its corner patches/specks so
-   initViewportFrameSync() (main.js) can counter trackpad/pinch zoom as
-   ONE unit — position:fixed is anchored to the LAYOUT viewport, which
-   pinch-zoom pans/magnifies independently of the VISUAL viewport (the
-   part actually on screen), so without this the frame visibly drifts as
-   the user pans while zoomed in. This wrapper alone stays position:fixed,
-   spanning the layout viewport's own true, un-offset (0,0) origin
-   (inset:0) — every decoration inside keeps its ORIGINAL fixed-style
-   offset (nav-height, -15px, etc.) unchanged, just via position:absolute
-   against this wrapper instead of position:fixed against the viewport
-   directly — pixel-identical to before at normal (1x) zoom.
-   scale(vv.scale) — NOT its inverse — is the JS's own correction here:
-   an earlier attempt used scale(1/vv.scale) on the (wrong) assumption
-   that the browser ALSO scales fixed elements up along with pinch zoom,
-   needing to be canceled back down; live testing showed the opposite —
-   fixed elements here do NOT scale with the content at all by default,
-   so zooming in with no correction leaves the frame comparatively
-   shrinking relative to the magnified page (confirmed live: "shrinks
-   disproportionately, gap to the screen edge grows the more I zoom
-   in"). Scaling UP by vv.scale directly is what actually keeps it
-   matching the zoomed content's own visible proportions instead. z-
-   index:90 matches .viewport-frame's own former value (see
-   .nav-dim-overlay's comment for why that number matters) — the
-   frame/patches keep their OWN z-index (89 vs 90 below) for order
-   relative to EACH OTHER, now resolved inside this wrapper's own
-   stacking context instead of the page's. */
-.viewport-frame-zoom-lock {
-  position: fixed;
-  inset: 0;
-  transform-origin: 0 0;
-  pointer-events: none;
-  z-index: 90;
-}
 .viewport-frame {
-  position: absolute;
+  position: fixed;
   top: calc(var(--nav-height) - 2px);
   left: 0;
   right: 0;
@@ -1831,7 +1798,7 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    possible sliver of residual gap for not looking like a separate
    shape stuck onto the corner. */
 .viewport-frame-patch {
-  position: absolute;
+  position: fixed;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -1877,7 +1844,7 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
    — sits right along the bottom edge, starting a little past where the
    circle patch's own edge ends, extending a bit further in. */
 .viewport-frame-speck {
-  position: absolute;
+  position: fixed;
   /* Same --real-vh switch as .viewport-frame-patch--bottom-* just
      above, same reasoning — top = viewport bottom - own height
      reproduces the original bottom:0. */
