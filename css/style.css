@@ -6174,20 +6174,20 @@ body.edition-lightbox-open {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  /* Left padding matches .square--pad-lg's own clamp() exactly (see
-     that rule) — NOT the plain .square base clamp, which was the wrong
-     reference the first time around: section 2's role tiles all carry
-     square--pad-lg (a bigger, separate padding value for that specific
-     grid, not the shared default), so THAT'S the clamp() that actually
-     governs where "Interviewer"/etc.'s text starts, and the one this
-     needs to match. Right side keeps the flat 40px — nothing on the
-     right needs to line up with anything. */
-  padding: 0 40px 0 clamp(20px, 4.83vw, 70px);
-  /* Same extra 60px on both edges, per explicit follow-up — the section
-     right after this one (Newsletter/Featured Carousel) gets the same
-     matching pause leaving this section as section 3 gets entering it. */
-  margin-top: 60px;
-  margin-bottom: 60px;
+  /* Left padding matches .split-cta__text's own flat 120px exactly (see
+     that rule) — per explicit follow-up comparing against SECTION 3's
+     text specifically (the section this one now directly follows), not
+     section 2's .square--pad-lg clamp() tried before. .split-cta__text
+     is a flat, unscaled 120px (not a clamp), so this matches it flat
+     too rather than reintroducing a responsive value that would drift
+     apart from it at different viewport widths. Right side keeps the
+     flat 40px — nothing on the right needs to line up with anything. */
+  padding: 0 40px 0 120px;
+  /* 160px, not the original 60px — bumped per explicit follow-up that
+     the gap on both sides needed to read as noticeably bigger, on top
+     of main's own flat 60px between every section. */
+  margin-top: 160px;
+  margin-bottom: 160px;
 }
 .instagram-feed__sticky {
   position: sticky;
@@ -6235,20 +6235,22 @@ body.edition-lightbox-open {
    the reference mockup shows; a shared grid with only row/column gaps
    can't offset just one column like that without also disturbing the
    other's own row alignment.
-   Stretches to fill the outer grid's own 1fr track (no max-width/
-   justify-self override) — an earlier attempt capped this to shrink
-   the posts, but that was the wrong lever: it shrank posts by
-   SQUEEZING the whole grid into a small block next to the text instead
-   of letting it reach the right edge of the screen like the reference
-   mockup shows, reported live as "the posts should stick to the right
-   side of the screen." Posts are sized by the outer .instagram-feed's
-   own grid-template-columns split instead (that first column's own
-   minmax() width is what actually controls how much room this gets). */
+   max-width here is a middle ground between 2 earlier, both-rejected
+   attempts: uncapped (stretching to fill the outer grid's own 1fr
+   track) read as "too big," while an earlier, much smaller 420px cap
+   read as posts detached from the right edge with an ugly dead gap
+   ("should stick to the right side of the screen"). 620px lands
+   between the two — noticeably smaller than uncapped, but wide enough
+   that the leftover gap to the right edge stays modest rather than
+   glaring. justify-self:start keeps it flush against the sticky text
+   column instead of centering/stretching within the wider 1fr track. */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
+  max-width: 620px;
+  justify-self: start;
 }
 .instagram-feed__col {
   display: flex;
@@ -6296,9 +6298,9 @@ body.edition-lightbox-open {
   }
 }
 @media (max-width: 720px) {
-  /* Left matches .square--pad-lg's own mobile override (20px) — same
-     reasoning as the desktop clamp() above, just its mobile value. */
-  .instagram-feed { padding: 0 24px 0 20px; }
+  /* Left matches .split-cta__text's own mobile override (32px) — same
+     reasoning as the desktop value above, just its mobile value. */
+  .instagram-feed { padding: 0 24px 0 32px; }
   .instagram-feed__col--offset { margin-top: -60px; }
 }
 
