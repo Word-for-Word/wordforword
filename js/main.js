@@ -296,12 +296,27 @@ document.addEventListener("DOMContentLoaded", () => {
 // browsers without visualViewport support.
 function initViewportFrameSync() {
   if (!window.visualViewport) return;
+  const vv = window.visualViewport;
   function sync() {
-    document.documentElement.style.setProperty("--real-vh", `${window.visualViewport.height}px`);
+    // vv.height reports the CURRENTLY VISIBLE height, which shrinks as
+    // the user pinch/trackpad-zooms in — a real, intentional part of
+    // the Visual Viewport API, but wrong for what --real-vh is actually
+    // for here: .viewport-frame's own height should track a genuine
+    // resize (mobile toolbar show/hide) but stay completely unaffected
+    // by zoom, which is otherwise just content magnification, not a
+    // change in how much real screen the frame has to cover. Without
+    // correcting for it, zooming in shrank this value, which shrank the
+    // frame, dragging its bottom edge upward — reported live as "I
+    // would just see the entire bottom of the border because it was
+    // drifting upwards." Multiplying back out by vv.scale (1 at rest,
+    // so a no-op then) recovers the real, zoom-invariant height: at 2x
+    // zoom vv.height has halved, and this un-halves it back to the true
+    // figure a genuine resize would have reported.
+    document.documentElement.style.setProperty("--real-vh", `${vv.height * vv.scale}px`);
   }
   sync();
-  window.visualViewport.addEventListener("resize", sync);
-  window.visualViewport.addEventListener("scroll", sync);
+  vv.addEventListener("resize", sync);
+  vv.addEventListener("scroll", sync);
 }
 
 function initPageFlashReady() {
