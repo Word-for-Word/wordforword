@@ -4481,8 +4481,15 @@ a.diamond-cta {
   grid-template-columns: 1fr 1.3fr;
   gap: 48px;
 }
-/* Bumped from 60px per explicit request to push the text further right. */
-.split-cta__text { padding-left: 120px; }
+/* Was 60px, bumped to 120px per an earlier request to push the text
+   further right, now brought back down per a follow-up request to move
+   it further left again — shared by both index.html's section 3 AND
+   about.html's "Beyond the Page" (.split-cta--beyond-page reuses this
+   same .split-cta__text class, just its own grid-template-columns/gap
+   above), so this one change moves both at once. .instagram-feed's own
+   left padding (style.css, further down) is kept matching this value
+   exactly, same as before. */
+.split-cta__text { padding-left: 60px; }
 /* <h3> is bold + has its own default margin in the browser's own UA
    stylesheet — reset both (same reason .square__role resets <h3>'s bold
    default). Face/size/weight now come from the shared .section-title
@@ -6174,20 +6181,22 @@ body.edition-lightbox-open {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  /* Left padding matches .split-cta__text's own flat 120px exactly (see
+  /* Left padding matches .split-cta__text's own flat value exactly (see
      that rule) — per explicit follow-up comparing against SECTION 3's
      text specifically (the section this one now directly follows), not
      section 2's .square--pad-lg clamp() tried before. .split-cta__text
-     is a flat, unscaled 120px (not a clamp), so this matches it flat
+     is a flat, unscaled value (not a clamp), so this matches it flat
      too rather than reintroducing a responsive value that would drift
      apart from it at different viewport widths. Right side keeps the
      flat 40px — nothing on the right needs to line up with anything. */
-  padding: 0 40px 0 120px;
-  /* 160px, not the original 60px — bumped per explicit follow-up that
-     the gap on both sides needed to read as noticeably bigger, on top
-     of main's own flat 60px between every section. */
+  padding: 0 40px 0 60px;
+  /* margin-top 160px, margin-bottom 220px (was 160px, both) — bumped
+     per explicit follow-up that the gap to section 3 (above) needed to
+     read as noticeably bigger first, then per a further follow-up that
+     the gap to section 5 (below) specifically needed to be even bigger
+     still, on top of main's own flat 60px between every section. */
   margin-top: 160px;
-  margin-bottom: 160px;
+  margin-bottom: 220px;
 }
 .instagram-feed__sticky {
   position: sticky;
