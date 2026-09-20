@@ -130,7 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="stylesheet" href="/css/style.css?v=361" />
+  <link rel="stylesheet" href="/css/style.css?v=362" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -962,9 +962,11 @@
          see HIDE_INSTAGRAM_FEED in update_instagram_feed()'s own
          comment in build_articles.py.
 
-         2-column layout: .instagram-feed__sticky-col (the text) and
-         .instagram-feed__grid (the posts) are siblings in ONE grid row,
-         so .instagram-feed__sticky-col stretches to match
+         2-column layout: .instagram-feed__grid (the posts) and
+         .instagram-feed__sticky-col (the text) are siblings in ONE grid
+         row — posts FIRST in the DOM/markup, per explicit request that
+         they sit on the LEFT with the text on the right (was the
+         reverse) — so .instagram-feed__sticky-col stretches to match
          .instagram-feed__grid's own (much taller) height — see
          .instagram-feed's own CSS comment for why that's what lets
          .instagram-feed__sticky hold in place via plain position:sticky
@@ -975,21 +977,6 @@
          card itself — see initInstagramHoverCaption() in main.js. -->
     <!-- INSTAGRAM_SECTION:START -->
     <section class="instagram-feed">
-      <div class="instagram-feed__sticky-col">
-        <div class="instagram-feed__sticky">
-          <h2 class="section-title instagram-feed__title">What&rsquo;s the word?</h2>
-          <p class="instagram-feed__desc">For the latest news &amp; events, follow <em>@pennwordforword</em> on Instagram.</p>
-          <a href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover split-cta__diamond instagram-feed__link">
-            <span class="arrow-glyph">
-              <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
-              <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
-            </span>
-          </a>
-          <!-- Filled in by initInstagramHoverCaption() (main.js) on hover
-               of any post to the right — empty/invisible at rest. -->
-          <p class="instagram-feed__hover-caption" aria-live="polite"></p>
-        </div>
-      </div>
       <div class="instagram-feed__grid">
         <!-- INSTAGRAM_FEED:START -->
         <div class="instagram-feed__col">
@@ -1027,6 +1014,24 @@
           </a>
         </div>
         <!-- INSTAGRAM_FEED:END -->
+      </div>
+      <div class="instagram-feed__sticky-col">
+        <div class="instagram-feed__sticky">
+          <h2 class="section-title instagram-feed__title">What&rsquo;s the word?</h2>
+          <p class="instagram-feed__desc">For the latest news &amp; events, follow <em>@pennwordforword</em> on Instagram.</p>
+          <a href="https://www.instagram.com/pennword4word/" target="_blank" rel="noopener" class="diamond-cta diamond-cta--fill-on-hover split-cta__diamond instagram-feed__link">
+            <span class="arrow-glyph">
+              <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
+              <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+            </span>
+          </a>
+          <!-- Filled in by initInstagramHoverCaption() (main.js) on hover
+               of any post to the left — position:absolute (see style.css)
+               so appearing/growing never shifts the static text above it
+               or the sticky block's own height (which its translateY
+               centering is based on). Empty/invisible at rest. -->
+          <p class="instagram-feed__hover-caption" aria-live="polite"></p>
+        </div>
       </div>
     </section>
     <!-- INSTAGRAM_SECTION:END -->

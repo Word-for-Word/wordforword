@@ -6180,17 +6180,22 @@ body.edition-lightbox-open {
    bare 60px gap every other section pair gets. */
 .instagram-feed {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) 1fr;
+  /* 1fr first, fixed-width text column second — per explicit request to
+     swap sides (posts now LEFT, text now RIGHT; was the reverse). DOM
+     order was swapped to match (see the HTML comment above this
+     section), not just this column order, so tab/reading order stays
+     sane. */
+  grid-template-columns: 1fr minmax(240px, 320px);
   gap: 60px;
-  /* Left padding matches .split-cta__text's own flat value exactly (see
-     that rule) — per explicit follow-up comparing against SECTION 3's
-     text specifically (the section this one now directly follows), not
-     section 2's .square--pad-lg clamp() tried before. .split-cta__text
-     is a flat, unscaled value (not a clamp), so this matches it flat
-     too rather than reintroducing a responsive value that would drift
-     apart from it at different viewport widths. Right side keeps the
-     flat 40px — nothing on the right needs to line up with anything. */
-  padding: 0 40px 0 120px;
+  /* Flat 40px on BOTH sides now — the text no longer needs to match
+     section 3's own 120px (per explicit follow-up: "the text can be
+     pushed further to the side instead of forcefully aligning with
+     section 3's text placement"), so this just goes back to the same
+     plain inset every other un-tied-to-anything edge on this page
+     uses. Posts keep the exact same 40px edge distance they always
+     had — they were already the side using this value; swapping sides
+     doesn't change it, per explicit request. */
+  padding: 0 40px;
   /* margin-top 160px, margin-bottom 300px — bumped from a flat 60px
      both, per a sequence of explicit follow-ups: the gap to section 3
      (above) needed to read as noticeably bigger, then the gap to
@@ -6199,6 +6204,18 @@ body.edition-lightbox-open {
      every section. */
   margin-top: 160px;
   margin-bottom: 300px;
+}
+/* Fallback containing block for .instagram-feed__hover-caption's own
+   position:absolute (see that rule) once .instagram-feed__sticky loses
+   its OWN positioned status on mobile (position:static, further down)
+   — without this, that caption would anchor to the next positioned
+   ancestor up the tree instead (likely the viewport itself), landing
+   it somewhere on the page unrelated to this section. Purely
+   structural — no top/left offset, so it has zero visual effect on
+   desktop, where .instagram-feed__sticky (closer, still positioned via
+   its own sticky) remains the actual containing block used. */
+.instagram-feed__sticky-col {
+  position: relative;
 }
 .instagram-feed__sticky {
   position: sticky;
@@ -6241,8 +6258,24 @@ body.edition-lightbox-open {
 }
 /* Holds whichever post's caption is currently hovered (see
    initInstagramHoverCaption() in main.js) — empty and invisible at
-   rest, so it takes up no space until there's something to show. */
+   rest. position:absolute (anchored to .instagram-feed__sticky, which
+   is already a valid containing block via its own position:sticky) —
+   per explicit request that the static text above it never move: while
+   this was a normal in-flow element, its own height (0 at rest, real
+   text height once a caption appears) changed .instagram-feed__sticky's
+   OWN total height, which fed directly into that element's
+   translateY(-50%) centering — meaning the whole block, title included,
+   visibly shifted position every time a caption appeared/disappeared.
+   Taking this out of flow entirely removes it from that height
+   calculation, so the sticky block's size (and so its centering) stays
+   fixed regardless of whether a caption is showing. top:100% sits it
+   right at the bottom edge of the (now hover-caption-EXCLUDED) sticky
+   box — i.e., right below the link, same visual spot as before. */
 .instagram-feed__hover-caption {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   margin-top: 24px;
   font-size: var(--text-small);
   opacity: 0;
@@ -6260,18 +6293,21 @@ body.edition-lightbox-open {
    max-width here is a middle ground between rejected extremes: uncapped
    (stretching to fill the outer grid's own 1fr track) read as "too
    big," an earlier 420px cap read as posts "floating in the middle"
-   instead of sticking to the right edge, and 620px (fixed via
-   justify-self:end, below) still read as "a little too small." 760px
-   is the current landing point. justify-self:end pins this capped-width
-   block against the section's own right edge, leaving any leftover gap
-   between it and the text instead of between it and the right edge. */
+   instead of sticking to the edge, and 620px still read as "a little
+   too small." 760px is the current landing point. justify-self:start
+   (was :end, back when posts were the SECOND/right track — see the
+   outer .instagram-feed's own grid-template-columns, now swapped) pins
+   this capped-width block against the section's own LEFT edge, leaving
+   any leftover gap between it and the text instead of between it and
+   the edge — posts keep the same actual edge distance either way,
+   only which edge changed. */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
   max-width: 760px;
-  justify-self: end;
+  justify-self: start;
 }
 .instagram-feed__col {
   display: flex;
