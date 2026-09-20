@@ -6174,16 +6174,15 @@ body.edition-lightbox-open {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 60px;
-  /* Left padding matches .square's own clamp() exactly (see that rule),
-     not a flat value — per explicit request that this section's own
-     text align with section 2's, whose text starts at body's page-
-     margin PLUS whichever padding .square currently has at the live
-     viewport width. A flat 40px here only happened to roughly match
-     .square's own clamp() at its wide-viewport ceiling; below ~1300px
-     .square's padding shrinks while a flat value here wouldn't, so the
-     2 would drift apart again below that width. Right side keeps the
-     flat 40px — nothing on the right needs to line up with anything. */
-  padding: 0 40px 0 clamp(16px, 2.76vw, 40px);
+  /* Left padding matches .square--pad-lg's own clamp() exactly (see
+     that rule) — NOT the plain .square base clamp, which was the wrong
+     reference the first time around: section 2's role tiles all carry
+     square--pad-lg (a bigger, separate padding value for that specific
+     grid, not the shared default), so THAT'S the clamp() that actually
+     governs where "Interviewer"/etc.'s text starts, and the one this
+     needs to match. Right side keeps the flat 40px — nothing on the
+     right needs to line up with anything. */
+  padding: 0 40px 0 clamp(20px, 4.83vw, 70px);
   /* Same extra 60px on both edges, per explicit follow-up — the section
      right after this one (Newsletter/Featured Carousel) gets the same
      matching pause leaving this section as section 3 gets entering it. */
@@ -6236,20 +6235,20 @@ body.edition-lightbox-open {
    the reference mockup shows; a shared grid with only row/column gaps
    can't offset just one column like that without also disturbing the
    other's own row alignment.
-   max-width + justify-self:start — per explicit request to shrink the
-   posts — caps how wide this grid (and so each column/post) gets,
-   instead of stretching to fill the OUTER grid's own 1fr track (which
-   can be most of the remaining page width on a wide screen). Sits
-   flush against the sticky text column (justify-self:start keeps it
-   pinned to the LEFT of its own, now-wider-than-it-needs 1fr track
-   rather than centering or stretching within it). */
+   Stretches to fill the outer grid's own 1fr track (no max-width/
+   justify-self override) — an earlier attempt capped this to shrink
+   the posts, but that was the wrong lever: it shrank posts by
+   SQUEEZING the whole grid into a small block next to the text instead
+   of letting it reach the right edge of the screen like the reference
+   mockup shows, reported live as "the posts should stick to the right
+   side of the screen." Posts are sized by the outer .instagram-feed's
+   own grid-template-columns split instead (that first column's own
+   minmax() width is what actually controls how much room this gets). */
 .instagram-feed__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
-  max-width: 420px;
-  justify-self: start;
 }
 .instagram-feed__col {
   display: flex;
@@ -6258,15 +6257,16 @@ body.edition-lightbox-open {
 }
 /* Negative — per explicit request that the 2nd (right) column actually
    starts HIGHER than the first, not lower (a reversal of the original
-   reference mockup's own down-offset). initInstagramColumnParallax()
-   in main.js adds a further scroll-linked drift on top of this same
-   element (its own transform, this element's OWN separate margin — the
-   2 don't fight over the same property), so the 2 add together: this
-   sets the STARTING stagger, that makes it drift slightly slower than
-   the left column as the page scrolls, deepening the offset over time
-   for the "almost parallax" feel that was asked for. */
+   reference mockup's own down-offset). -25%, not -15% — bumped per
+   explicit follow-up that the stagger read as too subtle.
+   initInstagramColumnParallax() in main.js adds a further scroll-linked
+   drift on top of this same element (its own transform, this element's
+   OWN separate margin — the 2 don't fight over the same property), so
+   the 2 add together: this sets the STARTING stagger, that makes it
+   drift slower than the left column as the page scrolls, deepening the
+   offset over time for the "almost parallax" feel that was asked for. */
 .instagram-feed__col--offset {
-  margin-top: -15%;
+  margin-top: -25%;
 }
 .instagram-card {
   display: block;
@@ -6296,8 +6296,10 @@ body.edition-lightbox-open {
   }
 }
 @media (max-width: 720px) {
-  .instagram-feed { padding: 0 24px; }
-  .instagram-feed__col--offset { margin-top: 60px; }
+  /* Left matches .square--pad-lg's own mobile override (20px) — same
+     reasoning as the desktop clamp() above, just its mobile value. */
+  .instagram-feed { padding: 0 24px 0 20px; }
+  .instagram-feed__col--offset { margin-top: -60px; }
 }
 
 /* ===================================================================

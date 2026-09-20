@@ -424,8 +424,9 @@ function initInstagramHoverCaption() {
 // the 1st as the page scrolls, for "a staggered almost parallax
 // sensation" — this is what adds that drift on top of the static CSS
 // offset (a separate property — a transform here, margin-top there —
-// so the two don't fight over the same one).
-const INSTAGRAM_COL_PARALLAX_STRENGTH = 0.1;
+// so the two don't fight over the same one). 0.25, not 0.1 — bumped
+// per explicit follow-up that the drift read as too subtle.
+const INSTAGRAM_COL_PARALLAX_STRENGTH = 0.25;
 function initInstagramColumnParallax() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const col = document.querySelector(".instagram-feed__col--offset");
