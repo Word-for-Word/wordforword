@@ -6215,19 +6215,20 @@ body.edition-lightbox-open {
 }
 .instagram-feed__sticky {
   position: sticky;
-  /* Sticks near the vertical CENTER of the viewport, not just below the
-     header, per explicit request. top must be in a viewport-relative
-     unit (vh), not a percentage — percentages on a sticky element's own
-     `top` resolve against its CONTAINING BLOCK's height
-     (.instagram-feed__sticky-col, which stretches to match the posts
-     column's own much-taller height), not the viewport's, so a plain
-     50% here would land the stick point somewhere deep in the
-     scrollable area instead of mid-screen. 50vh gets the TOP edge of
-     this element to the viewport's own vertical center; translateY
+  /* Sticks in the upper portion of the viewport — was 50vh (true
+     center), moved up to 35vh per explicit follow-up ("farther up, but
+     not all the way to the top" — i.e. not back to the original
+     just-below-the-header position either). top must be in a
+     viewport-relative unit (vh), not a percentage — percentages on a
+     sticky element's own `top` resolve against its CONTAINING BLOCK's
+     height (.instagram-feed__sticky-col, which stretches to match the
+     posts column's own much-taller height), not the viewport's, so a
+     plain % here would land the stick point somewhere deep in the
+     scrollable area instead of near the top of the screen. translateY
      (a percentage of THIS element's own height, not the containing
-     block's) then shifts it up by half its own height, landing its
-     actual visual CENTER there instead of just its top edge. */
-  top: 50vh;
+     block's) shifts it up by half its own height, landing its actual
+     visual CENTER at that point instead of just its top edge. */
+  top: 35vh;
   transform: translateY(-50%);
 }
 .instagram-feed__title {
@@ -6273,7 +6274,10 @@ body.edition-lightbox-open {
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 24px;
+  /* 80px, not 24px — bumped per explicit follow-up for a significant
+     gap below the static text (title/description/handle), not just a
+     normal paragraph-sized one. */
+  margin-top: 80px;
   font-size: var(--text-small);
   opacity: 0;
   max-width: 32ch;
@@ -6436,6 +6440,18 @@ body.edition-lightbox-open {
 }
 .instagram-feed__col--offset > .instagram-card:nth-child(3) {
   --instagram-tint: var(--color-tan);
+}
+/* Spans both post columns (the grid's only other 2 children, both in
+   row 1) so this lands in a NEW row underneath both — grid-column:1/-1
+   centers this within THAT span specifically (the 2 columns' own
+   width, via justify-content:center below), inheriting
+   .instagram-feed__grid's own max-width/justify-self placement rather
+   than needing its own separate centering against the whole section. */
+.instagram-feed__more {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 60px;
 }
 @media (max-width: 900px) {
   .instagram-feed {

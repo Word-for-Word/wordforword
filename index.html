@@ -130,7 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="stylesheet" href="/css/style.css?v=371" />
+  <link rel="stylesheet" href="/css/style.css?v=372" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -1031,6 +1031,22 @@
           </a>
         </div>
         <!-- INSTAGRAM_FEED:END -->
+        <!-- Spans BOTH columns (grid-column:1/-1 in style.css) so this
+             centers within the 2 columns' own width, not the section's —
+             per explicit request. Sits inside .instagram-feed__grid
+             itself (not a sibling after it) specifically so it inherits
+             that grid's own max-width/justify-self placement rather
+             than needing to duplicate it. -->
+        <div class="instagram-feed__more">
+          <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream instagram-feed__more-link">
+            <span>Browse<br />more<br />
+              <span class="arrow-glyph">
+                <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
+                <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+              </span>
+            </span>
+          </a>
+        </div>
       </div>
     </section>
     <!-- INSTAGRAM_SECTION:END -->
