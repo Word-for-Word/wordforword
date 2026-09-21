@@ -4637,6 +4637,16 @@ function initPinGrowDemo() {
 const GI_REVEAL_BORDER_RADIUS_END = 15;
 const GI_REVEAL_ROTATE_START_DEG = 45;
 const GI_REVEAL_BLUR_START_PX = 20;
+// Ease-in curve applied to the raw scroll progress before every
+// interpolation below, per explicit request ("sort of like a bezier
+// curve... initially transitions very slowly, then speeds up towards
+// the end"). A plain power curve (t^3, "easeInCubic") rather than a
+// true parametric cubic-bezier(x1,y1,x2,y2) solve — visually reads the
+// same way for this purpose (slow start, accelerating finish) without
+// needing a numeric solver just to map scroll-time to eased-progress.
+// Bump this up for an even more pronounced slow start/fast finish, or
+// down toward 1 for something closer to the original linear feel.
+const GI_REVEAL_EASE_POWER = 3;
 function initGetInvolvedPinGrow() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const spacer = document.querySelector(".gi-reveal-spacer");
@@ -4671,10 +4681,20 @@ function initGetInvolvedPinGrow() {
     // page to measure live the way initPinGrowDemo() measures a real
     // .split-cta__illustration-wrap.
     const diamondSize = Math.min(130, Math.max(70, window.innerWidth * 0.093));
+    // window.innerWidth/2, NOT containerWidth/2 — per explicit report
+    // that the diamond started "offset to the left." containerWidth is
+    // the CONTENT COLUMN's own width (inset by body's page-margin),
+    // and centering within THAT instead of the true viewport is only
+    // equivalent if the column itself happens to be perfectly
+    // viewport-centered — computing against the real viewport center
+    // (then converting into this element's local coordinate space by
+    // subtracting containerLeft, same as every other left value here)
+    // is what actually guarantees "dead-center in the page" regardless
+    // of the content column's own positioning.
     startRect = {
       width: diamondSize,
       height: diamondSize,
-      left: containerWidth / 2 - diamondSize / 2,
+      left: window.innerWidth / 2 - containerLeft - diamondSize / 2,
       top: (vh - diamondSize) / 2,
     };
 
@@ -4703,7 +4723,12 @@ function initGetInvolvedPinGrow() {
   const update = () => {
     if (!startRect || !endRect) return;
     const stickyRect = sticky.getBoundingClientRect();
-    const progress = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+    const rawProgress = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+    // Eased, not raw — see GI_REVEAL_EASE_POWER's own comment. Every
+    // interpolation below (size, position, rotation, border-radius,
+    // blur) reads this ONE eased value, so the whole effect speeds up
+    // together rather than some pieces staying linear.
+    const progress = Math.pow(rawProgress, GI_REVEAL_EASE_POWER);
 
     const width = startRect.width + (endRect.width - startRect.width) * progress;
     const height = startRect.height + (endRect.height - startRect.height) * progress;
