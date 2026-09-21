@@ -177,16 +177,20 @@
        --compact comment for the full reasoning behind this system. -->
   <section class="hero hero--compact">
     <p class="hero__eyebrow">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3220ms;">Join the team!</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Join the team!</span>
     </p>
     <div class="hero__wordmark-wrap hero__wordmark-wrap--compact">
-      <!-- Re-staggered to 300ms/step (was bunched into 3 groups 200-300ms
-           apart, with both eyebrows + the asterisk all firing together
-           at the very end) per "make it feel more like a sequential
-           cascade" — now every element gets its own step: eyebrow-left,
-           image, headline, asterisk, eyebrow-right. Same schedule as
-           publications.html's own hero, which this page's hero is
-           copied verbatim from. -->
+      <!-- Both eyebrows share ONE delay (4120ms, below) instead of
+           bookending the sequence — matches about.html/publications.html:
+           the homepage's own hero is the pattern this follows, both
+           eyebrow lines reveal together, AFTER the title, not straddling
+           it. This page previously had them individually staggered
+           (3220ms/4420ms, "make it feel more like a sequential cascade")
+           — that approach was reverted everywhere else already; this
+           page's own hero just never got the same fix applied until now.
+           Title pieces (headline "Involved" then the "for" image, then
+           the asterisk) keep their own existing timing — only the
+           eyebrows were out of sync. -->
       <div class="hero__wordmark-placeholder hero__wordmark-placeholder--compact hero__wordmark-placeholder--get-involved" aria-hidden="true">
         <span class="hero__wordmark-word hero__wordmark-word--2 hero__wordmark-word--compact hero__wordmark-word--outlined" style="--intro-delay: 3820ms;"><span class="hero__title-exit intro-reveal intro-reveal--slide-slow" style="--intro-delay: 3820ms;">Involve<span class="hero__wordmark-d-anchor">d</span></span></span>
       </div>
@@ -198,7 +202,7 @@
       </div>
     </div>
     <p class="hero__eyebrow hero__eyebrow--right">
-      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4420ms;">Submit your work.</span>
+      <span class="hero__eyebrow-line intro-reveal intro-reveal--slide-slow" style="--intro-delay: 4120ms;">Submit your work.</span>
     </p>
   </section>
 
@@ -213,19 +217,18 @@
   <main class="static-page">
 
   <!-- ============ QUOTE / SLOGAN ============ -->
-  <!-- Exact copy of index.html's own .quote-block (was missing its
-       .quote-block__overlay text entirely) — see that file's own comment
-       above .quote-block for why the class/mosaic-reveal is reused
-       verbatim (fade-in-on-scroll, tile-by-tile mask assembly, comes
-       free from the existing selector list/initQuoteBlockTiles() in
-       main.js). -->
-  <section class="quote-block">
-    <div class="quote-block__image">
-      <img class="quote-block__photo" src="/assets/images/Slogan.jpg" alt="Empowering voices previously unheard." />
-    </div>
-    <div class="quote-block__overlay mosaic-reveal">
-      <p class="quote-block__overlay-text"><em>Empowering</em> voices<br />previously <em>unheard</em></p>
-    </div>
+  <!-- Plain text version — was still the old Slogan.jpg photo +
+       mosaic-reveal treatment, which index.html/about.html both moved
+       off of a while ago (reverted per explicit request there); this
+       page's own copy just never got updated to match. Exact copy of
+       index.html's own .slogan-preview markup — see that file's own
+       comment above it, and .slogan-preview in style.css, for the
+       reveal mechanics. -->
+  <section class="slogan-preview">
+    <p class="slogan-preview__text">
+      <span class="split-cta__text-line"><em>Empowering</em> voices</span>
+      <span class="split-cta__text-line">previously <em>unheard</em></span>
+    </p>
   </section>
 
   <!-- ============ PARTNER LOGOS ============ -->
