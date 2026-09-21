@@ -195,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSplitCtaParallax();
     initSloganScale();
     initPinGrowDemo();
+    initGetInvolvedPinGrow();
     initBeyondPageTextReveal();
     // initBeyondPageMagneticImages(); // temporarily disabled per explicit request
     initHeroEyebrowExit();
@@ -4603,6 +4604,130 @@ function initPinGrowDemo() {
     // CSS transition rather than needing its own reverse-scrub logic.
     box.classList.toggle("is-content-visible", progress >= PIN_GROW_CONTENT_THRESHOLD);
     box.classList.toggle("is-nav-visible", progress >= PIN_GROW_NAV_THRESHOLD);
+  };
+
+  let ticking = false;
+  const scheduleUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      update();
+      ticking = false;
+    });
+  };
+  const remeasureAndUpdate = () => {
+    measure();
+    update();
+  };
+
+  remeasureAndUpdate();
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", remeasureAndUpdate);
+}
+
+// Get Involved's own scroll-pin-grow image reveal — see the HTML
+// comment above .gi-reveal-spacer (index.html... actually
+// get-involved/index.html) for the full concept. Same locking/growing
+// SHAPE of the math as initPinGrowDemo() above (a sticky box lerping
+// from a measured start rect to a measured end rect off the same
+// scroll-progress formula), but purpose-built: this also interpolates
+// rotation (45deg diamond -> 0deg rectangle), border-radius (sharp ->
+// rounded), and the image's own blur (blurred -> sharp), none of which
+// the carousel-preview prototype needed.
+const GI_REVEAL_BORDER_RADIUS_END = 15;
+const GI_REVEAL_ROTATE_START_DEG = 45;
+const GI_REVEAL_BLUR_START_PX = 20;
+function initGetInvolvedPinGrow() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const spacer = document.querySelector(".gi-reveal-spacer");
+  const sticky = document.querySelector(".gi-reveal-sticky");
+  const box = document.querySelector(".gi-reveal-box");
+  const image = document.querySelector(".gi-reveal-image");
+  if (!spacer || !sticky || !box || !image) return;
+
+  let startRect = null;
+  let endRect = null;
+
+  const measure = () => {
+    const vh = window.innerHeight;
+    // Same reasoning as initPinGrowDemo()'s own measure(): .gi-reveal-
+    // sticky's own rendered width/left (normal in-flow layout, already
+    // inset by body's own page-margin) is what LOCAL x:0 corresponds to
+    // in true-viewport terms, needed to convert the page's own content
+    // width into this element's local coordinate space.
+    const containerRect = spacer.getBoundingClientRect();
+    const containerLeft = containerRect.left;
+    const containerWidth = containerRect.width;
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const navHeight = parseFloat(rootStyle.getPropertyValue("--nav-height")) || 0;
+    const pageMargin = parseFloat(rootStyle.getPropertyValue("--page-margin")) || 0;
+    const safeTop = navHeight + pageMargin;
+    const safeBottom = vh - pageMargin;
+
+    // Diamond size matches a real .diamond-cta button's own clamp(70px,
+    // 9.3vw, 130px) exactly (see that rule in style.css) — replicated
+    // here in JS since no actual diamond-cta instance exists on this
+    // page to measure live the way initPinGrowDemo() measures a real
+    // .split-cta__illustration-wrap.
+    const diamondSize = Math.min(130, Math.max(70, window.innerWidth * 0.093));
+    startRect = {
+      width: diamondSize,
+      height: diamondSize,
+      left: containerWidth / 2 - diamondSize / 2,
+      top: (vh - diamondSize) / 2,
+    };
+
+    // End size matches .featured-carousel's own 4:2 aspect ratio (see
+    // that rule in style.css) at the page's full content width — no
+    // real featured-carousel exists on this page either, so this is
+    // computed the same way rather than measured live.
+    const endWidth = containerWidth;
+    const endHeight = endWidth / 2;
+    endRect = {
+      width: endWidth,
+      height: endHeight,
+      left: 0,
+      top: safeTop + (safeBottom - safeTop - endHeight) / 2,
+    };
+
+    // Fixed once here, never touched by update() — per explicit
+    // request that the image itself never changes size, only the box
+    // clipping it does. Sized to the END rect exactly (object-fit:
+    // cover, see style.css, handles any mismatch between this and the
+    // image's own real aspect ratio without distorting it).
+    image.style.width = `${endRect.width}px`;
+    image.style.height = `${endRect.height}px`;
+  };
+
+  const update = () => {
+    if (!startRect || !endRect) return;
+    const stickyRect = sticky.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+
+    const width = startRect.width + (endRect.width - startRect.width) * progress;
+    const height = startRect.height + (endRect.height - startRect.height) * progress;
+    box.style.width = `${width}px`;
+    box.style.height = `${height}px`;
+    box.style.left = `${startRect.left + (endRect.left - startRect.left) * progress}px`;
+    box.style.top = `${startRect.top + (endRect.top - startRect.top) * progress}px`;
+    box.style.borderRadius = `${GI_REVEAL_BORDER_RADIUS_END * progress}px`;
+
+    // angle drives BOTH the box's own rotation (diamond -> rectangle)
+    // and the image's exact opposite (see below) — one shared value,
+    // not 2 independently-tracked ones, so they can never drift out of
+    // sync with each other.
+    const angle = GI_REVEAL_ROTATE_START_DEG * (1 - progress);
+    box.style.transform = `rotate(${angle}deg)`;
+
+    // Counter-rotates against the box's own rotation (same composition
+    // as .diamond-cta > .arrow-glyph elsewhere on this page) so the
+    // photo itself stays upright throughout instead of visibly
+    // spinning along with the diamond. translate(-50%,-50%) keeps it
+    // centered on the box's own current center regardless of the
+    // image's fixed (unchanging) width/height set in measure() above.
+    image.style.transform = `translate(-50%, -50%) rotate(${-angle}deg)`;
+    image.style.filter = `blur(${GI_REVEAL_BLUR_START_PX * (1 - progress)}px)`;
   };
 
   let ticking = false;

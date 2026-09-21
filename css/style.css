@@ -3911,6 +3911,48 @@ a.diamond-cta {
 .pin-grow-box.is-nav-visible .featured-carousel__nav {
   opacity: 1;
 }
+/* ===================================================================
+   Get Involved — scroll-pin-grow image reveal. Same locking/growing
+   idea as the shelved .pin-grow-* prototype above (position:sticky
+   inside a 100vh spacer; see initGetInvolvedPinGrow() in main.js for
+   the interpolation math), purpose-built for this page's own diamond
+   -> rectangle + blur -> sharp effect rather than reusing those exact
+   classes — see the HTML comment above .gi-reveal-spacer for why.
+=================================================================== */
+.gi-reveal-spacer {
+  position: relative;
+  height: 100vh;
+}
+.gi-reveal-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  pointer-events: none;
+}
+/* width/height/left/top/border-radius/transform (rotation) are ALL set
+   live by initGetInvolvedPinGrow() — nothing here fixes this box's own
+   shape, only its behavior as a clipping "window". */
+.gi-reveal-box {
+  position: absolute;
+  overflow: hidden;
+  background: var(--color-illustration-bg);
+}
+/* Fixed size (set once, in px, by initGetInvolvedPinGrow() — matches
+   the END rect exactly, per explicit request that the image itself
+   never changes size) and always centered on its own parent's current
+   center via top/left:50% + the translate half of its own transform —
+   .gi-reveal-box growing/shrinking around that fixed center is what
+   reveals more or less of this same image, rather than the image
+   itself scaling. The rotate() half of transform is the image's own
+   per-frame COUNTER-rotation against the box's rotation (see that
+   function's own comment) — same composition as .diamond-cta's own
+   .arrow-glyph counter-rotating against its parent's 45deg spin. */
+.gi-reveal-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  object-fit: cover;
+}
 .featured-carousel {
   position: relative;
   overflow: hidden;

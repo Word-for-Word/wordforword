@@ -216,6 +216,39 @@
        index.html's own bottom. -->
   <main class="static-page">
 
+  <!-- ============ SCROLL-PIN-GROW IMAGE REVEAL ============ -->
+  <!-- Reuses the CONCEPT/mechanics of index.html's own shelved
+       SCROLL-PIN-GROW PROTOTYPE (.pin-grow-*/initPinGrowDemo() —
+       Apple-product-page style: locks in place as you scroll, grows to
+       fill more space, then releases) but as a purpose-built version
+       for this page, not a retrofit of those exact classes — the
+       content/behavior differs enough (a single rotating, unblurring
+       image instead of carousel-preview content) that sharing markup
+       would've meant awkwardly bending carousel-shaped CSS/JS to fit,
+       rather than genuinely reusing it. See
+       initGetInvolvedPinGrow() in main.js for the scroll mechanics.
+       Starts as a DIAMOND (rotated square, sized to match a real
+       .diamond-cta button with text — clamp(70px, 9.3vw, 130px), same
+       formula, replicated in JS since no actual diamond-cta instance
+       exists on this page to measure live), blurred; as you scroll it
+       un-rotates, grows, and its corners round into a plain full-width
+       rectangle (sized to match .featured-carousel's own 4:2 aspect
+       ratio, since this page has no real carousel to measure against
+       either), while unblurring to reveal "Get Involved illust.jpg" in
+       full. Per explicit request, the IMAGE itself never changes size —
+       only .gi-reveal-box (the "window" clipping it via overflow:
+       hidden) does; the image is fixed at the END rect's own size and
+       stays centered on the box's own (moving, growing) center the
+       whole time, counter-rotating against the box's own rotation so
+       it stays upright throughout instead of visibly spinning. -->
+  <div class="gi-reveal-spacer">
+    <div class="gi-reveal-sticky" aria-hidden="true">
+      <div class="gi-reveal-box">
+        <img class="gi-reveal-image" src="/assets/images/Get Involved illust.jpg" alt="" />
+      </div>
+    </div>
+  </div>
+
   <!-- ============ QUOTE / SLOGAN ============ -->
   <!-- Plain text version — was still the old Slogan.jpg photo +
        mosaic-reveal treatment, which index.html/about.html both moved

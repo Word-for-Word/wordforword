@@ -24,4 +24,8 @@
 # Same reasoning — 5768x2944, 18.8MB. assets/images/Slogan.jpg (3600px
 # wide, ~1.4MB) is the actual web-used copy, committed normally.
 /assets/images/Slogan.png
+# Same reasoning — 5880x3224, 20.7MB. assets/images/Get Involved
+# illust.jpg (2400px wide, ~1MB) is the actual web-used copy, committed
+# normally.
+/assets/images/Get Involved illust.png
 
