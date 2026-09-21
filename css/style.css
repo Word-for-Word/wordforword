@@ -3919,9 +3919,16 @@ a.diamond-cta {
    -> rectangle + blur -> sharp effect rather than reusing those exact
    classes — see the HTML comment above .gi-reveal-spacer for why.
 =================================================================== */
+/* 250vh = .gi-reveal-sticky's own 100vh baseline (the minimum needed
+   for it to ever stick at all) + GI_REVEAL_GROWTH_VH (150, main.js) —
+   that "stuck" scroll room is what the growth transition actually
+   plays out across; GI_REVEAL_DELAY_VH doesn't need its own extra
+   height budget since it's spent during the natural 1-viewport
+   scroll-in that already happens for free before the element can
+   stick. Keep this in sync with that constant if either changes. */
 .gi-reveal-spacer {
   position: relative;
-  height: 100vh;
+  height: 250vh;
 }
 .gi-reveal-sticky {
   position: sticky;
@@ -3947,11 +3954,23 @@ a.diamond-cta {
    per-frame COUNTER-rotation against the box's rotation (see that
    function's own comment) — same composition as .diamond-cta's own
    .arrow-glyph counter-rotating against its parent's 45deg spin. */
+/* object-position, not the outer position/transform above, is what
+   actually controls "which part of the image shows" here: the image's
+   own explicit width/height (set by initGetInvolvedPinGrow() to match
+   the END rect's 2:1 ratio exactly) don't match its real, much-taller
+   natural ratio, so object-fit:cover crops the excess height — default
+   50% 50% would crop it evenly top and bottom. 75% biases that crop
+   toward keeping more of the image's own BOTTOM in view (cropping more
+   from the top instead), per explicit request ("show more of its
+   bottom... the image needs to be moved up") — tune this percentage
+   directly (100% = show the full bottom edge, crop everything else
+   from the top; 50% = back to even/centered). */
 .gi-reveal-image {
   position: absolute;
   top: 50%;
   left: 50%;
   object-fit: cover;
+  object-position: 50% 75%;
 }
 .featured-carousel {
   position: relative;

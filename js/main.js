@@ -4649,17 +4649,31 @@ const GI_REVEAL_BLUR_START_PX = 20;
 // pronounced fast-start/slow-finish, or down toward 1 for something
 // closer to linear.
 const GI_REVEAL_EASE_POWER = 3;
-// Raw scroll "travel" (how far .gi-reveal-sticky's own top edge has
-// moved up the viewport, as a fraction of viewport height — see
-// rawTravel below) below this fraction does NOT count toward progress
-// at all — the box sits at its plain start state (small, blurred
-// diamond) for this entire first stretch. Per explicit request ("only
-// trigger its transition when it's 25% up the viewport, not 25%
-// visible") — lets more scroll happen, and so more of the initial
-// diamond stay visible, before anything starts actually growing. The
-// remaining (1 - this) of travel is what the eased 0->1 progress above
-// then maps onto.
-const GI_REVEAL_PROGRESS_START_THRESHOLD = 0.25;
+// How much scrolling (in viewport-heights) happens before the box
+// starts transitioning at all, and how much it takes once it does —
+// both measured off .gi-reveal-spacer's own CONTINUOUSLY-updating rect
+// in update() below, not .gi-reveal-sticky's — sticky's own top freezes
+// at 0 for the entire time it's genuinely stuck, so driving progress
+// off that (an earlier attempt did) caps how much total delay+growth
+// scroll distance is even possible at "at most 1 viewport height,"
+// no matter how these 2 constants are tuned. The spacer's rect keeps
+// changing for as long as the user keeps scrolling through it,
+// including while sticky is stuck, which is what actually lets these 2
+// phases run longer than a single viewport height — per repeated
+// explicit follow-up that the transition both started too early and
+// needed to be noticeably slower once it began.
+// DELAY: pure scroll-in, spent entirely at the small diamond's own
+// start state, nothing moving yet. 100 (a full extra viewport) lines
+// this up with roughly when the box finishes its natural scroll-in and
+// becomes genuinely stuck, so growth (below) starts right around when
+// it locks in place rather than partway through still scrolling in.
+const GI_REVEAL_DELAY_VH = 100;
+// GROWTH: how long the actual transition takes once it starts — see
+// .gi-reveal-spacer's own CSS height (100vh sticky baseline + this)
+// for why this number has to stay in sync with that value: growth
+// needs this much "stuck" scroll room to actually finish before
+// sticky naturally releases and lets the page scroll past.
+const GI_REVEAL_GROWTH_VH = 150;
 function initGetInvolvedPinGrow() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const spacer = document.querySelector(".gi-reveal-spacer");
@@ -4735,22 +4749,15 @@ function initGetInvolvedPinGrow() {
 
   const update = () => {
     if (!startRect || !endRect) return;
-    const stickyRect = sticky.getBoundingClientRect();
-    // How far .gi-reveal-sticky's own top edge has traveled up the
-    // viewport since first appearing at the very bottom (0) through to
-    // fully stuck at the top (1) — NOT how much of the element is
-    // currently visible, a different measure entirely (see
-    // GI_REVEAL_PROGRESS_START_THRESHOLD's own comment).
-    const rawTravel = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
-    // The first GI_REVEAL_PROGRESS_START_THRESHOLD of that travel is
-    // thrown away entirely (stays at 0) rather than counted — the
-    // remaining travel is rescaled back up to a full 0->1 range so the
-    // transition still finishes exactly when travel reaches 1 (fully
-    // stuck), just compressed into a shorter, LATER-starting window.
-    const rawProgress = Math.max(
-      0,
-      Math.min(1, (rawTravel - GI_REVEAL_PROGRESS_START_THRESHOLD) / (1 - GI_REVEAL_PROGRESS_START_THRESHOLD))
-    );
+    // spacer's rect, not sticky's — see GI_REVEAL_DELAY_VH's own
+    // comment for why: this keeps changing for the entire scroll
+    // through the spacer (delay AND growth both), where sticky's own
+    // top would freeze at 0 the moment it's genuinely stuck.
+    const spacerRect = spacer.getBoundingClientRect();
+    const scrolledPastEntry = window.innerHeight - spacerRect.top;
+    const delayPx = (GI_REVEAL_DELAY_VH / 100) * window.innerHeight;
+    const growthPx = (GI_REVEAL_GROWTH_VH / 100) * window.innerHeight;
+    const rawProgress = Math.max(0, Math.min(1, (scrolledPastEntry - delayPx) / growthPx));
     // Eased, not raw — see GI_REVEAL_EASE_POWER's own comment. Every
     // interpolation below (size, position, rotation, border-radius,
     // blur) reads this ONE eased value, so the whole effect eases
