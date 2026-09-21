@@ -3940,6 +3940,11 @@ a.diamond-cta {
   top: 0;
   height: 100vh;
   pointer-events: none;
+  /* Default resting level, below .site-header's z-index:100 — bumped
+     above it temporarily mid-transition by initGetInvolvedPinGrow()
+     (see GI_REVEAL_NAV_Z_INDEX's own comment), then reset back to this
+     via an empty inline style. */
+  z-index: 1;
 }
 /* width/height/left/top/border-radius/transform (rotation) are ALL set
    live by initGetInvolvedPinGrow() — nothing here fixes this box's own

@@ -4637,6 +4637,16 @@ function initPinGrowDemo() {
 const GI_REVEAL_BORDER_RADIUS_END = 15;
 const GI_REVEAL_ROTATE_START_DEG = 45;
 const GI_REVEAL_BLUR_START_PX = 20;
+// Rotation bulges the box's visual footprint beyond its own top/height
+// (see the |cos|+|sin| margin factor below) enough that, on tall
+// viewports, a corner can poke up into .site-header's own fixed band
+// mid-transition and get clipped by it (.site-header sits at
+// z-index:100, painted above .gi-reveal-sticky's default un-set
+// z-index). Bumping above 100 ONLY while actively mid-transition (see
+// midTransition below) and dropping back to the CSS default the rest
+// of the time keeps the reveal below the nav both before it starts and
+// once it's fully settled into its final rectangle.
+const GI_REVEAL_NAV_Z_INDEX = 101;
 // Ease-OUT curve applied to the raw scroll progress before every
 // interpolation below (size, position, rotation, border-radius, blur)
 // — was ease-IN (t^3), reversed per explicit follow-up request ("starts
@@ -4763,6 +4773,12 @@ function initGetInvolvedPinGrow() {
     // blur) reads this ONE eased value, so the whole effect eases
     // together rather than some pieces staying linear.
     const progress = 1 - Math.pow(1 - rawProgress, GI_REVEAL_EASE_POWER);
+
+    // See GI_REVEAL_NAV_Z_INDEX's own comment — only elevated while
+    // actively transitioning (strictly between start and end), back to
+    // the CSS default otherwise.
+    const midTransition = rawProgress > 0 && rawProgress < 1;
+    sticky.style.zIndex = midTransition ? String(GI_REVEAL_NAV_Z_INDEX) : "";
 
     // Reverted per explicit follow-up ("the delayed elongation looks
     // awful") — width and height both track the same plain progress
