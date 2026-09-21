@@ -6451,7 +6451,9 @@ body.edition-lightbox-open {
   grid-column: 1 / -1;
   display: flex;
   justify-content: center;
-  margin-top: 60px;
+  /* 120px, not 60px — bumped per explicit follow-up for a considerable
+     gap from the posts above, not just a normal section-internal one. */
+  margin-top: 120px;
 }
 @media (max-width: 900px) {
   .instagram-feed {
