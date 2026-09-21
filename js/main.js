@@ -4663,11 +4663,12 @@ const GI_REVEAL_EASE_POWER = 3;
 // explicit follow-up that the transition both started too early and
 // needed to be noticeably slower once it began.
 // DELAY: pure scroll-in, spent entirely at the small diamond's own
-// start state, nothing moving yet. 100 (a full extra viewport) lines
-// this up with roughly when the box finishes its natural scroll-in and
-// becomes genuinely stuck, so growth (below) starts right around when
-// it locks in place rather than partway through still scrolling in.
-const GI_REVEAL_DELAY_VH = 100;
+// start state, nothing moving yet. Was 100 (a full extra viewport,
+// lining up with roughly when the box finishes its natural scroll-in
+// and becomes genuinely stuck) — trimmed down per explicit follow-up,
+// so growth now starts a bit before it's fully locked in place rather
+// than exactly at that point.
+const GI_REVEAL_DELAY_VH = 70;
 // GROWTH: how long the actual transition takes once it starts — see
 // .gi-reveal-spacer's own CSS height (100vh sticky baseline + this)
 // for why this number has to stay in sync with that value: growth
@@ -4738,13 +4739,6 @@ function initGetInvolvedPinGrow() {
       top: safeTop + (safeBottom - safeTop - endHeight) / 2,
     };
 
-    // Fixed once here, never touched by update() — per explicit
-    // request that the image itself never changes size, only the box
-    // clipping it does. Sized to the END rect exactly (object-fit:
-    // cover, see style.css, handles any mismatch between this and the
-    // image's own real aspect ratio without distorting it).
-    image.style.width = `${endRect.width}px`;
-    image.style.height = `${endRect.height}px`;
   };
 
   const update = () => {
@@ -4779,12 +4773,34 @@ function initGetInvolvedPinGrow() {
     const angle = GI_REVEAL_ROTATE_START_DEG * (1 - progress);
     box.style.transform = `rotate(${angle}deg)`;
 
+    // Image now enlarges TOGETHER with the box, starting the instant
+    // the box does — per explicit follow-up (was fixed at a constant
+    // size throughout, per the original spec; that's since changed).
+    // Sized to the box's own current width/height (above) times a
+    // margin factor, NOT a plain 1:1 match — a box rotated by `angle`
+    // has a larger axis-aligned bounding box than its own un-rotated
+    // width/height (a 45deg square's diagonal is √2x its side), so
+    // without this the image would be too small to fully cover the
+    // rotated window during the diamond phase, exposing the box's own
+    // background color at the corners. |cos|+|sin| is the EXACT bulge
+    // factor for a box rotated by `angle` (1 at angle=0, √2 at
+    // angle=45) — using the real trig value here, not a linear guess,
+    // is what guarantees this holds at every point through the
+    // rotation, not just the 2 endpoints. At progress=1, angle=0, so
+    // this factor is exactly 1 and the image lands at exactly the
+    // box's own end size — "ends the transition at the correct size,"
+    // per explicit request.
+    const angleRad = (angle * Math.PI) / 180;
+    const marginFactor = Math.abs(Math.cos(angleRad)) + Math.abs(Math.sin(angleRad));
+    image.style.width = `${width * marginFactor}px`;
+    image.style.height = `${height * marginFactor}px`;
+
     // Counter-rotates against the box's own rotation (same composition
     // as .diamond-cta > .arrow-glyph elsewhere on this page) so the
     // photo itself stays upright throughout instead of visibly
     // spinning along with the diamond. translate(-50%,-50%) keeps it
     // centered on the box's own current center regardless of the
-    // image's fixed (unchanging) width/height set in measure() above.
+    // image's own current (now also changing) width/height above.
     image.style.transform = `translate(-50%, -50%) rotate(${-angle}deg)`;
     image.style.filter = `blur(${GI_REVEAL_BLUR_START_PX * (1 - progress)}px)`;
   };

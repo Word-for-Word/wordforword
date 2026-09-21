@@ -235,12 +235,18 @@
        rectangle (sized to match .featured-carousel's own 4:2 aspect
        ratio, since this page has no real carousel to measure against
        either), while unblurring to reveal "Get Involved illust.jpg" in
-       full. Per explicit request, the IMAGE itself never changes size —
-       only .gi-reveal-box (the "window" clipping it via overflow:
-       hidden) does; the image is fixed at the END rect's own size and
-       stays centered on the box's own (moving, growing) center the
-       whole time, counter-rotating against the box's own rotation so
-       it stays upright throughout instead of visibly spinning. -->
+       full. The image itself now enlarges together with .gi-reveal-box
+       (the "window" clipping it via overflow:hidden) — was fixed at a
+       constant size throughout per the original spec, changed per
+       explicit follow-up; see initGetInvolvedPinGrow()'s own comment
+       for the exact sizing formula (a margin over the box's own size,
+       accounting for the rotated bounding-box bulge, so it never
+       exposes the box's own background at the corners, and lands
+       exactly at the box's own end size once rotation reaches 0). The
+       image stays centered on the box's own (moving, growing) center
+       the whole time regardless of its own current size, counter-
+       rotating against the box's own rotation so it stays upright
+       throughout instead of visibly spinning. -->
   <div class="gi-reveal-spacer">
     <div class="gi-reveal-sticky" aria-hidden="true">
       <div class="gi-reveal-box">

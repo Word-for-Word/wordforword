@@ -3944,33 +3944,34 @@ a.diamond-cta {
   overflow: hidden;
   background: var(--color-illustration-bg);
 }
-/* Fixed size (set once, in px, by initGetInvolvedPinGrow() — matches
-   the END rect exactly, per explicit request that the image itself
-   never changes size) and always centered on its own parent's current
-   center via top/left:50% + the translate half of its own transform —
-   .gi-reveal-box growing/shrinking around that fixed center is what
-   reveals more or less of this same image, rather than the image
-   itself scaling. The rotate() half of transform is the image's own
-   per-frame COUNTER-rotation against the box's rotation (see that
-   function's own comment) — same composition as .diamond-cta's own
-   .arrow-glyph counter-rotating against its parent's 45deg spin. */
+/* Size set live, every frame, by initGetInvolvedPinGrow() — was fixed
+   at a constant size throughout per the original spec, changed per
+   explicit follow-up so the image now visibly enlarges together with
+   the box instead of staying still while just more of it gets
+   revealed (see that function's own comment for the exact formula,
+   and why it's not a plain 1:1 match to the box's own size). Always
+   centered on its own parent's current center via top/left:50% + the
+   translate half of its own transform, regardless of its own current
+   size. The rotate() half of transform is the image's own per-frame
+   COUNTER-rotation against the box's rotation (see that function's own
+   comment) — same composition as .diamond-cta's own .arrow-glyph
+   counter-rotating against its parent's 45deg spin. */
 /* object-position, not the outer position/transform above, is what
    actually controls "which part of the image shows" here: the image's
-   own explicit width/height (set by initGetInvolvedPinGrow() to match
-   the END rect's 2:1 ratio exactly) don't match its real, much-taller
-   natural ratio, so object-fit:cover crops the excess height — default
-   50% 50% would crop it evenly top and bottom. 75% biases that crop
-   toward keeping more of the image's own BOTTOM in view (cropping more
-   from the top instead), per explicit request ("show more of its
-   bottom... the image needs to be moved up") — tune this percentage
-   directly (100% = show the full bottom edge, crop everything else
-   from the top; 50% = back to even/centered). */
+   own width/height (set live by initGetInvolvedPinGrow(), matching a
+   2:1 ratio at rest) don't match its real, much-taller natural ratio,
+   so object-fit:cover crops the excess height — default 50% 50% would
+   crop it evenly top and bottom. 85% (was 75%, moved up further per
+   explicit follow-up) biases that crop toward keeping more of the
+   image's own BOTTOM in view (cropping more from the top instead) —
+   tune this percentage directly (100% = show the full bottom edge,
+   crop everything else from the top; 50% = back to even/centered). */
 .gi-reveal-image {
   position: absolute;
   top: 50%;
   left: 50%;
   object-fit: cover;
-  object-position: 50% 75%;
+  object-position: 50% 85%;
 }
 .featured-carousel {
   position: relative;
