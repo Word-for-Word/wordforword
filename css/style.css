@@ -6451,18 +6451,18 @@ body.edition-lightbox-open {
   grid-column: 1 / -1;
   display: flex;
   justify-content: center;
-  /* 270px — this margin is measured against the grid's own LAYOUT
+  /* 200px — this margin is measured against the grid's own LAYOUT
      height, which doesn't account for .instagram-feed__col--offset's
      scroll-linked transform (initInstagramColumnParallax() in main.js,
      now capped at 150px — see that constant's own comment for why it
      needed a cap in the first place). Without extra room here, that
      column's own posts can drift down via transform far enough to
      close most/all of a plainer margin, since transform never affects
-     layout/grid sizing the way a real margin does. 270px = the 120px
-     originally asked for PLUS the parallax's own 150px max drift, so
-     there's still a real 120px of clearance even in the worst case
-     (column fully drifted). */
-  margin-top: 270px;
+     layout/grid sizing the way a real margin does. 200px = a real 50px
+     of clearance PLUS the parallax's own 150px max drift — was 270px
+     (120px clearance), brought down per explicit follow-up that the
+     gap read as too big. */
+  margin-top: 200px;
 }
 @media (max-width: 900px) {
   .instagram-feed {
