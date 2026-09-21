@@ -6192,14 +6192,15 @@ body.edition-lightbox-open {
      keeps the flat 40px — nothing on the right needs to line up with
      anything. */
   padding: 0 40px 0 120px;
-  /* margin-top 220px, margin-bottom 300px — bumped from a flat 60px
-     both, per a sequence of explicit follow-ups: the gap to section 3
-     (above) needed to read as noticeably bigger, then the gap to
-     section 5 (below) specifically needed to be bigger still than
-     that, then bigger again, then the gap to section 3 needed to grow
-     again too — on top of main's own flat 60px between every section. */
-  margin-top: 220px;
-  margin-bottom: 300px;
+  /* margin-top 260px, margin-bottom 200px — bumped/trimmed from a flat
+     60px both across a sequence of explicit follow-ups (both directions
+     have moved multiple times since): most recently, the gap to
+     section 3 (above) needed to grow further still, while the gap to
+     section 5 (below, after the "Browse more" button) read as too much
+     and came back down — on top of main's own flat 60px between every
+     section. */
+  margin-top: 260px;
+  margin-bottom: 200px;
 }
 /* Fallback containing block for .instagram-feed__hover-caption's own
    position:absolute (see that rule) once .instagram-feed__sticky loses
