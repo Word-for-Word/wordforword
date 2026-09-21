@@ -6322,8 +6322,37 @@ body.edition-lightbox-open {
 .instagram-feed__col--offset {
   margin-top: -25%;
 }
+/* Containing block for ::before below (the lift-reveal shadow) — same
+   pattern as .publication-card/.publication-card::before (Volumes):
+   the colored shape has to live on the CARD, not the cover, since the
+   cover itself is what transforms/lifts on hover (below) — a
+   pseudo-element on the cover would lift away together with it and
+   never get left behind to be revealed. */
 .instagram-card {
   display: block;
+  position: relative;
+}
+/* Colored rectangle behind the cover, sized to match the cover's own
+   resting box exactly (inset:0, not a fixed aspect-ratio like
+   .publication-card::before uses — these posts have no single shared
+   ratio, so this just mirrors whatever size .instagram-card itself
+   naturally is, which already matches its cover's own size 1:1).
+   --instagram-tint (set per-post further down, shared with the ::after
+   tint below) keeps the reveal color matched to that same post's own
+   tint instead of introducing a separate color assignment. */
+.instagram-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  background: var(--instagram-tint);
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  pointer-events: none;
+}
+.instagram-card:hover::before,
+.instagram-card:focus-visible::before {
+  opacity: 1;
 }
 /* No fixed aspect-ratio/object-fit:cover here anymore — per explicit
    request, each post keeps its own real aspect ratio (a true masonry
@@ -6341,6 +6370,14 @@ body.edition-lightbox-open {
   border-radius: 15px;
   overflow: hidden;
   background: var(--color-tan);
+  /* Lifts on hover, same .publication-card__cover convention (Volumes)
+     — 0.2s ease-out both directions, per explicit request to reuse
+     that exact hover treatment here. */
+  transition: transform 0.2s ease-out;
+}
+.instagram-card:hover .instagram-card__cover,
+.instagram-card:focus-visible .instagram-card__cover {
+  transform: translateY(-12px);
 }
 .instagram-card__cover img {
   display: block;
@@ -6355,14 +6392,12 @@ body.edition-lightbox-open {
    replacing hue/saturation — a genuinely tinted photo, not a flat
    color block; no :multiply override needed now that red (the one
    color that looked "too bright" under :color) is out of the
-   rotation. Explicit nth-child rules below rather than a single
-   :nth-child(2n+N) pattern — the 2 columns are separate flex-parents,
-   so :nth-child counts independently within EACH one (card 1 of the
-   2nd column is still its own "1st child"). */
+   rotation. */
 .instagram-card__cover::after {
   content: "";
   position: absolute;
   inset: 0;
+  background: var(--instagram-tint);
   mix-blend-mode: color;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -6376,23 +6411,31 @@ body.edition-lightbox-open {
 .instagram-card:focus-visible .instagram-card__cover::after {
   opacity: 0;
 }
-.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) .instagram-card__cover::after {
-  background: var(--color-grey);
+/* --instagram-tint set per-post here — read by BOTH .instagram-card
+   ::before (the lift-reveal shadow) and .instagram-card__cover::after
+   (the resting-state tint) above, a plain custom property inherited
+   down to both rather than duplicating each color in 2 separate
+   selectors per post. Explicit nth-child rules rather than a single
+   :nth-child(2n+N) pattern — the 2 columns are separate flex-parents,
+   so :nth-child counts independently within EACH one (card 1 of the
+   2nd column is still its own "1st child"). */
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) {
+  --instagram-tint: var(--color-grey);
 }
-.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
-  background: var(--color-tan);
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) {
+  --instagram-tint: var(--color-tan);
 }
-.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) .instagram-card__cover::after {
-  background: var(--color-grey);
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) {
+  --instagram-tint: var(--color-grey);
 }
-.instagram-feed__col--offset > .instagram-card:nth-child(1) .instagram-card__cover::after {
-  background: var(--color-tan);
+.instagram-feed__col--offset > .instagram-card:nth-child(1) {
+  --instagram-tint: var(--color-tan);
 }
-.instagram-feed__col--offset > .instagram-card:nth-child(2) .instagram-card__cover::after {
-  background: var(--color-grey);
+.instagram-feed__col--offset > .instagram-card:nth-child(2) {
+  --instagram-tint: var(--color-grey);
 }
-.instagram-feed__col--offset > .instagram-card:nth-child(3) .instagram-card__cover::after {
-  background: var(--color-tan);
+.instagram-feed__col--offset > .instagram-card:nth-child(3) {
+  --instagram-tint: var(--color-tan);
 }
 @media (max-width: 900px) {
   .instagram-feed {
