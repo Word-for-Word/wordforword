@@ -4669,12 +4669,23 @@ const GI_REVEAL_EASE_POWER = 3;
 // so growth now starts a bit before it's fully locked in place rather
 // than exactly at that point.
 const GI_REVEAL_DELAY_VH = 70;
-// GROWTH: how long the actual transition takes once it starts — see
-// .gi-reveal-spacer's own CSS height (100vh sticky baseline + this)
-// for why this number has to stay in sync with that value: growth
-// needs this much "stuck" scroll room to actually finish before
-// sticky naturally releases and lets the page scroll past.
+// GROWTH: how long the actual transition takes once it starts. See
+// .gi-reveal-spacer's own CSS height for how this (together with
+// DELAY above) determines exactly how much "stuck" scroll runway that
+// spacer needs — sized to finish growth with ZERO leftover hold, so
+// there's no forced pause once the box reaches full size before the
+// page lets you keep scrolling normally.
 const GI_REVEAL_GROWTH_VH = 150;
+// The box grows as a plain SQUARE (both width and height rising
+// together, staying 1:1) for the first fraction of progress given
+// here, THEN — and only then — starts elongating sideways into the
+// final 2:1 rectangle for the remaining fraction. Per explicit
+// request ("only start elongating... at the 60-70% point"). Height
+// keeps growing on the SAME schedule as before (plain progress) the
+// whole time; width tracks height 1:1 up to this point, then switches
+// to stretching out toward the end rect's own width instead — see the
+// squareProgress/elongateProgress split in update() below.
+const GI_REVEAL_SHAPE_START = 0.65;
 function initGetInvolvedPinGrow() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const spacer = document.querySelector(".gi-reveal-spacer");
@@ -4758,8 +4769,20 @@ function initGetInvolvedPinGrow() {
     // together rather than some pieces staying linear.
     const progress = 1 - Math.pow(1 - rawProgress, GI_REVEAL_EASE_POWER);
 
-    const width = startRect.width + (endRect.width - startRect.width) * progress;
+    // Height grows on the plain progress schedule the whole time, same
+    // as before. Width does NOT — see GI_REVEAL_SHAPE_START's own
+    // comment: up to that point it tracks height 1:1 (squareProgress),
+    // keeping the box a true square (just growing, un-rotating,
+    // unblurring — no elongation yet); past it, height is already
+    // effectively done (squareProgress caps at 1) and width switches
+    // to elongateProgress, stretching out from that square width
+    // (== endRect.height, since it was tracking height) toward the
+    // end rect's own full width.
     const height = startRect.height + (endRect.height - startRect.height) * progress;
+    const squareProgress = Math.min(progress / GI_REVEAL_SHAPE_START, 1);
+    const elongateProgress = Math.max(0, (progress - GI_REVEAL_SHAPE_START) / (1 - GI_REVEAL_SHAPE_START));
+    const squareWidth = startRect.width + (endRect.height - startRect.width) * squareProgress;
+    const width = squareWidth + (endRect.width - squareWidth) * elongateProgress;
     box.style.width = `${width}px`;
     box.style.height = `${height}px`;
     box.style.left = `${startRect.left + (endRect.left - startRect.left) * progress}px`;

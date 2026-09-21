@@ -3919,16 +3919,21 @@ a.diamond-cta {
    -> rectangle + blur -> sharp effect rather than reusing those exact
    classes — see the HTML comment above .gi-reveal-spacer for why.
 =================================================================== */
-/* 250vh = .gi-reveal-sticky's own 100vh baseline (the minimum needed
-   for it to ever stick at all) + GI_REVEAL_GROWTH_VH (150, main.js) —
-   that "stuck" scroll room is what the growth transition actually
-   plays out across; GI_REVEAL_DELAY_VH doesn't need its own extra
-   height budget since it's spent during the natural 1-viewport
-   scroll-in that already happens for free before the element can
-   stick. Keep this in sync with that constant if either changes. */
+/* 220vh — sized to give .gi-reveal-sticky's own "stuck" phase EXACTLY
+   as much scroll runway as delay+growth actually still need once
+   they're past, at .gi-reveal-sticky's own 100vh baseline (the
+   minimum needed for it to ever stick at all): 100 + max(0,
+   GI_REVEAL_DELAY_VH + GI_REVEAL_GROWTH_VH - 100) (both in main.js) =
+   100 + max(0, 70+150-100) = 220. Too MUCH height here (an earlier
+   250vh did) leaves genuinely dead scroll room after growth finishes
+   — the box sits fully grown with nothing happening, but the page
+   still won't let you scroll past it until that excess is used up,
+   reported live as a "forced delay before being able to scroll on
+   from the full container." Keep this formula's result in sync if
+   either constant changes. */
 .gi-reveal-spacer {
   position: relative;
-  height: 250vh;
+  height: 220vh;
 }
 .gi-reveal-sticky {
   position: sticky;
