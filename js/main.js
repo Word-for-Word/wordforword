@@ -4637,16 +4637,29 @@ function initPinGrowDemo() {
 const GI_REVEAL_BORDER_RADIUS_END = 15;
 const GI_REVEAL_ROTATE_START_DEG = 45;
 const GI_REVEAL_BLUR_START_PX = 20;
-// Ease-in curve applied to the raw scroll progress before every
-// interpolation below, per explicit request ("sort of like a bezier
-// curve... initially transitions very slowly, then speeds up towards
-// the end"). A plain power curve (t^3, "easeInCubic") rather than a
-// true parametric cubic-bezier(x1,y1,x2,y2) solve — visually reads the
-// same way for this purpose (slow start, accelerating finish) without
-// needing a numeric solver just to map scroll-time to eased-progress.
-// Bump this up for an even more pronounced slow start/fast finish, or
-// down toward 1 for something closer to the original linear feel.
+// Ease-OUT curve applied to the raw scroll progress before every
+// interpolation below (size, position, rotation, border-radius, blur)
+// — was ease-IN (t^3), reversed per explicit follow-up request ("starts
+// fast, ends slow and smooth" instead of "starts slow, speeds up").
+// 1 - (1-t)^3 ("easeOutCubic") is the standard reverse of that same
+// power curve — fast initial change that decelerates into its resting
+// state, still a plain power curve rather than a true parametric
+// cubic-bezier(x1,y1,x2,y2) solve (visually reads the same for this
+// purpose without needing a numeric solver). Bump this up for a more
+// pronounced fast-start/slow-finish, or down toward 1 for something
+// closer to linear.
 const GI_REVEAL_EASE_POWER = 3;
+// Raw scroll "travel" (how far .gi-reveal-sticky's own top edge has
+// moved up the viewport, as a fraction of viewport height — see
+// rawTravel below) below this fraction does NOT count toward progress
+// at all — the box sits at its plain start state (small, blurred
+// diamond) for this entire first stretch. Per explicit request ("only
+// trigger its transition when it's 25% up the viewport, not 25%
+// visible") — lets more scroll happen, and so more of the initial
+// diamond stay visible, before anything starts actually growing. The
+// remaining (1 - this) of travel is what the eased 0->1 progress above
+// then maps onto.
+const GI_REVEAL_PROGRESS_START_THRESHOLD = 0.25;
 function initGetInvolvedPinGrow() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const spacer = document.querySelector(".gi-reveal-spacer");
@@ -4723,12 +4736,26 @@ function initGetInvolvedPinGrow() {
   const update = () => {
     if (!startRect || !endRect) return;
     const stickyRect = sticky.getBoundingClientRect();
-    const rawProgress = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+    // How far .gi-reveal-sticky's own top edge has traveled up the
+    // viewport since first appearing at the very bottom (0) through to
+    // fully stuck at the top (1) — NOT how much of the element is
+    // currently visible, a different measure entirely (see
+    // GI_REVEAL_PROGRESS_START_THRESHOLD's own comment).
+    const rawTravel = Math.max(0, Math.min(1, (window.innerHeight - stickyRect.top) / window.innerHeight));
+    // The first GI_REVEAL_PROGRESS_START_THRESHOLD of that travel is
+    // thrown away entirely (stays at 0) rather than counted — the
+    // remaining travel is rescaled back up to a full 0->1 range so the
+    // transition still finishes exactly when travel reaches 1 (fully
+    // stuck), just compressed into a shorter, LATER-starting window.
+    const rawProgress = Math.max(
+      0,
+      Math.min(1, (rawTravel - GI_REVEAL_PROGRESS_START_THRESHOLD) / (1 - GI_REVEAL_PROGRESS_START_THRESHOLD))
+    );
     // Eased, not raw — see GI_REVEAL_EASE_POWER's own comment. Every
     // interpolation below (size, position, rotation, border-radius,
-    // blur) reads this ONE eased value, so the whole effect speeds up
+    // blur) reads this ONE eased value, so the whole effect eases
     // together rather than some pieces staying linear.
-    const progress = Math.pow(rawProgress, GI_REVEAL_EASE_POWER);
+    const progress = 1 - Math.pow(1 - rawProgress, GI_REVEAL_EASE_POWER);
 
     const width = startRect.width + (endRect.width - startRect.width) * progress;
     const height = startRect.height + (endRect.height - startRect.height) * progress;
