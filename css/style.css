@@ -6192,13 +6192,13 @@ body.edition-lightbox-open {
      keeps the flat 40px — nothing on the right needs to line up with
      anything. */
   padding: 0 40px 0 120px;
-  /* margin-top 160px, margin-bottom 300px — bumped from a flat 60px
+  /* margin-top 220px, margin-bottom 300px — bumped from a flat 60px
      both, per a sequence of explicit follow-ups: the gap to section 3
      (above) needed to read as noticeably bigger, then the gap to
      section 5 (below) specifically needed to be bigger still than
-     that, then bigger again — on top of main's own flat 60px between
-     every section. */
-  margin-top: 160px;
+     that, then bigger again, then the gap to section 3 needed to grow
+     again too — on top of main's own flat 60px between every section. */
+  margin-top: 220px;
   margin-bottom: 300px;
 }
 /* Fallback containing block for .instagram-feed__hover-caption's own
@@ -6451,18 +6451,17 @@ body.edition-lightbox-open {
   grid-column: 1 / -1;
   display: flex;
   justify-content: center;
-  /* 200px — this margin is measured against the grid's own LAYOUT
+  /* 175px — this margin is measured against the grid's own LAYOUT
      height, which doesn't account for .instagram-feed__col--offset's
      scroll-linked transform (initInstagramColumnParallax() in main.js,
      now capped at 150px — see that constant's own comment for why it
      needed a cap in the first place). Without extra room here, that
      column's own posts can drift down via transform far enough to
      close most/all of a plainer margin, since transform never affects
-     layout/grid sizing the way a real margin does. 200px = a real 50px
-     of clearance PLUS the parallax's own 150px max drift — was 270px
-     (120px clearance), brought down per explicit follow-up that the
-     gap read as too big. */
-  margin-top: 200px;
+     layout/grid sizing the way a real margin does. 175px = a real 25px
+     of clearance PLUS the parallax's own 150px max drift — was 200px
+     (50px clearance), trimmed further per explicit follow-up. */
+  margin-top: 175px;
 }
 @media (max-width: 900px) {
   .instagram-feed {
