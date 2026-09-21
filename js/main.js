@@ -427,6 +427,20 @@ function initInstagramHoverCaption() {
 // so the two don't fight over the same one). 0.25, not 0.1 — bumped
 // per explicit follow-up that the drift read as too subtle.
 const INSTAGRAM_COL_PARALLAX_STRENGTH = 0.25;
+// Caps how far the drift can grow — without this, scrolledPast (below)
+// keeps growing for as long as the user keeps scrolling the REST OF THE
+// PAGE, not just this section (rect.top only ever gets more negative
+// the further down the page they go, with nothing to stop it once
+// they've scrolled past this section entirely). Reported live: this
+// let the column drift an unbounded amount, eventually dragging its
+// posts down past .instagram-feed__more's own margin-top clearance and
+// overlapping the "Browse more" button — widening that margin alone
+// couldn't fix it, since the drift just kept growing to match/exceed
+// whatever clearance was given. 150px is comfortably more than this
+// column's own -25% starting offset (see .instagram-feed__col--offset
+// in style.css) ever needs to visually catch up, so the effect still
+// reads as a real, if capped, parallax drift.
+const INSTAGRAM_COL_PARALLAX_MAX_PX = 150;
 function initInstagramColumnParallax() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const col = document.querySelector(".instagram-feed__col--offset");
@@ -439,7 +453,14 @@ function initInstagramColumnParallax() {
     // the column sits at its plain CSS starting offset (no added drift
     // yet) the whole time the section is still below the viewport,
     // rather than picking up a head start before it's even in view.
-    const scrolledPast = Math.max(0, -section.getBoundingClientRect().top);
+    // Also clamped at the top end (INSTAGRAM_COL_PARALLAX_MAX_PX *
+    // strength — see that constant's own comment) so the drift stops
+    // growing once it's reached its cap, instead of continuing forever
+    // as the user scrolls past this section into later ones.
+    const scrolledPast = Math.min(
+      INSTAGRAM_COL_PARALLAX_MAX_PX / INSTAGRAM_COL_PARALLAX_STRENGTH,
+      Math.max(0, -section.getBoundingClientRect().top)
+    );
     col.style.transform = `translateY(${scrolledPast * INSTAGRAM_COL_PARALLAX_STRENGTH}px)`;
   };
 
