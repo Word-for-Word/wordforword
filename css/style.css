@@ -6347,23 +6347,18 @@ body.edition-lightbox-open {
   width: 100%;
   height: auto;
 }
-/* Duotone-style color tint, per explicit request to use the 4 main
-   design-system colors on the posts. mix-blend-mode:color is the
-   default (keeps each photo's own actual brightness/detail intact,
-   only replacing hue/saturation — a genuinely tinted photo, not a flat
-   color block) EXCEPT for the --color-red instances specifically,
-   overridden to :multiply below — per explicit follow-up that red
-   alone looked "too bright" under :color (which fully replaces hue/
-   saturation, pushing a saturated color like red toward near-neon on
-   bright parts of a photo) while the other 3 colors "looked fine" as
-   :color and should stay that way, unchanged.
-   Cycles through all 4 colors across the current 6 posts (3 per
-   column) via explicit nth-child rules below, rather than a single
-   :nth-child(4n+N) pattern — the 2 columns are separate flex-parents,
+/* Duotone-style color tint, per explicit request to use the design-
+   system colors on the posts. Brown and red are EXCLUDED for now, per
+   explicit follow-up — just grey (this project's informal "blue") and
+   tan (beige), alternating across the 6 posts. mix-blend-mode:color
+   keeps each photo's own actual brightness/detail intact, only
+   replacing hue/saturation — a genuinely tinted photo, not a flat
+   color block; no :multiply override needed now that red (the one
+   color that looked "too bright" under :color) is out of the
+   rotation. Explicit nth-child rules below rather than a single
+   :nth-child(2n+N) pattern — the 2 columns are separate flex-parents,
    so :nth-child counts independently within EACH one (card 1 of the
-   2nd column is still its own "1st child"), which is also exactly why
-   the color sequence below continues from color 4 at the top of the
-   2nd column instead of restarting at color 1. */
+   2nd column is still its own "1st child"). */
 .instagram-card__cover::after {
   content: "";
   position: absolute;
@@ -6382,27 +6377,22 @@ body.edition-lightbox-open {
   opacity: 0;
 }
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) .instagram-card__cover::after {
-  background: var(--color-grey); /* this project's informal "blue" */
-}
-/* Grey, not red — swapped with the offset column's own nth-child(2)
-   below per explicit request ("Friday 4/24" <-> "You are invited..."). */
-.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
   background: var(--color-grey);
 }
+.instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
+  background: var(--color-tan);
+}
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) .instagram-card__cover::after {
-  background: var(--color-dark); /* brown */
+  background: var(--color-grey);
 }
 .instagram-feed__col--offset > .instagram-card:nth-child(1) .instagram-card__cover::after {
-  background: var(--color-tan); /* beige */
+  background: var(--color-tan);
 }
-/* Red, not grey — see the swap note above. */
 .instagram-feed__col--offset > .instagram-card:nth-child(2) .instagram-card__cover::after {
-  background: var(--color-red);
-  mix-blend-mode: multiply;
+  background: var(--color-grey);
 }
 .instagram-feed__col--offset > .instagram-card:nth-child(3) .instagram-card__cover::after {
-  mix-blend-mode: multiply;
-  background: var(--color-red);
+  background: var(--color-tan);
 }
 @media (max-width: 900px) {
   .instagram-feed {
