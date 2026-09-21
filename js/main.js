@@ -4647,8 +4647,13 @@ const GI_REVEAL_BLUR_START_PX = 20;
 // cubic-bezier(x1,y1,x2,y2) solve (visually reads the same for this
 // purpose without needing a numeric solver). Bump this up for a more
 // pronounced fast-start/slow-finish, or down toward 1 for something
-// closer to linear.
-const GI_REVEAL_EASE_POWER = 3;
+// closer to linear. Was 3 (cubic) — dropped to 2 (quadratic) because
+// cubic's tail is flat enough that ~30% of the fixed scroll runway
+// (see GI_REVEAL_DELAY_VH/GROWTH_VH below) produced under 3% of visible
+// change, reading as a dead hold even though progress was still
+// technically advancing. Quadratic keeps the same fast-start/slow-finish
+// shape with a shorter flat tail.
+const GI_REVEAL_EASE_POWER = 2;
 // How much scrolling (in viewport-heights) happens before the box
 // starts transitioning at all, and how much it takes once it does —
 // both measured off .gi-reveal-spacer's own CONTINUOUSLY-updating rect
