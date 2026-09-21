@@ -6348,15 +6348,15 @@ body.edition-lightbox-open {
   height: auto;
 }
 /* Duotone-style color tint, per explicit request to use the 4 main
-   design-system colors on the posts. mix-blend-mode:multiply — was
-   :color, switched per explicit follow-up that --color-red specifically
-   looked "too bright": :color fully REPLACES hue/saturation with the
-   overlay's, which on bright/light parts of a photo can push a
-   saturated color like red into a near-neon intensity no actual photo
-   pigment reaches. multiply can only ever DARKEN toward the overlay
-   color (never brighten), so bright areas take the tint as a muted
-   wash instead of a vivid replacement — a much more classic "tinted
-   photo" look, and applies evenly across all 4 colors, not just red.
+   design-system colors on the posts. mix-blend-mode:color is the
+   default (keeps each photo's own actual brightness/detail intact,
+   only replacing hue/saturation — a genuinely tinted photo, not a flat
+   color block) EXCEPT for the --color-red instances specifically,
+   overridden to :multiply below — per explicit follow-up that red
+   alone looked "too bright" under :color (which fully replaces hue/
+   saturation, pushing a saturated color like red toward near-neon on
+   bright parts of a photo) while the other 3 colors "looked fine" as
+   :color and should stay that way, unchanged.
    Cycles through all 4 colors across the current 6 posts (3 per
    column) via explicit nth-child rules below, rather than a single
    :nth-child(4n+N) pattern — the 2 columns are separate flex-parents,
@@ -6368,7 +6368,7 @@ body.edition-lightbox-open {
   content: "";
   position: absolute;
   inset: 0;
-  mix-blend-mode: multiply;
+  mix-blend-mode: color;
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
@@ -6386,6 +6386,7 @@ body.edition-lightbox-open {
 }
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
   background: var(--color-red);
+  mix-blend-mode: multiply;
 }
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) .instagram-card__cover::after {
   background: var(--color-dark); /* brown */
@@ -6397,6 +6398,7 @@ body.edition-lightbox-open {
   background: var(--color-grey);
 }
 .instagram-feed__col--offset > .instagram-card:nth-child(3) .instagram-card__cover::after {
+  mix-blend-mode: multiply;
   background: var(--color-red);
 }
 @media (max-width: 900px) {
