@@ -6384,9 +6384,10 @@ body.edition-lightbox-open {
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(1) .instagram-card__cover::after {
   background: var(--color-grey); /* this project's informal "blue" */
 }
+/* Grey, not red — swapped with the offset column's own nth-child(2)
+   below per explicit request ("Friday 4/24" <-> "You are invited..."). */
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(2) .instagram-card__cover::after {
-  background: var(--color-red);
-  mix-blend-mode: multiply;
+  background: var(--color-grey);
 }
 .instagram-feed__col:not(.instagram-feed__col--offset) > .instagram-card:nth-child(3) .instagram-card__cover::after {
   background: var(--color-dark); /* brown */
@@ -6394,8 +6395,10 @@ body.edition-lightbox-open {
 .instagram-feed__col--offset > .instagram-card:nth-child(1) .instagram-card__cover::after {
   background: var(--color-tan); /* beige */
 }
+/* Red, not grey — see the swap note above. */
 .instagram-feed__col--offset > .instagram-card:nth-child(2) .instagram-card__cover::after {
-  background: var(--color-grey);
+  background: var(--color-red);
+  mix-blend-mode: multiply;
 }
 .instagram-feed__col--offset > .instagram-card:nth-child(3) .instagram-card__cover::after {
   mix-blend-mode: multiply;
