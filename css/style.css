@@ -2750,19 +2750,15 @@ main {
   .square--pad-lg {
     padding: 16px;
   }
-  /* Was a 9px floor — read as illegibly small on mobile. 15px chosen
-     specifically against the tightest real case (section 1's
-     "Through interviews…" tile: .square--pad-lg + a ~114-character
-     paragraph) at a true square tile's own real mobile width (~185px
-     at a 390px viewport, 2-col grid, --page-margin edges) — still
-     leaves headroom before that paragraph's own line count reaches the
-     square's content-box height. Longer copy than that hasn't been
-     checked; if anything still clips, this is the value to bring back
-     down. */
-  .square__body,
-  .square__body--small {
-    font-size: 15px;
-  }
+  /* .square__body/--small's own mobile font-size override lives further
+     down (right where .square's own mobile aspect-ratio:1/1 is set),
+     NOT here — this rule and the unconditional .square__body {
+     font-size: clamp(9px, 1.5vw, 20px); } declared later in the file
+     are equal specificity (one class each), so source order decides,
+     and that later rule was silently winning even on mobile, making
+     this override a complete no-op (confirmed live: still rendering at
+     the 9px floor despite this). Moving the real override past that
+     point is what actually fixes it. */
 }
 /* Horizontal-only left-align — just align-items + text-align, NOT the
    rest of .square--content-left's bundle (justify-content:flex-start
@@ -6918,6 +6914,26 @@ body.edition-lightbox-open {
      those rules' own comments) rather than by allowing the tile itself
      to grow past a square. */
   .square { aspect-ratio: 1 / 1; }
+  /* Was a 9px floor (.square__body/--small's own clamp(9px, 1.5vw,
+     20px), decoupled from --text-body on purpose — see that rule's own
+     comment) — illegibly small, AND it read as visibly INCONSISTENT
+     with every other piece of tile text (.square__label/__script/
+     __footnote/__role-description), which all use var(--text-body)
+     directly and so already picked up that variable's own mobile floor
+     bump above (16px). A tile mixing both kinds of text (e.g. a label
+     next to a paragraph) showed 2 different sizes for what reads as
+     "the same body text," confirmed live. Matching --text-body exactly
+     here (not a separately-tuned number) is what actually standardizes
+     it — checked against the tightest real case (section 1's "Through
+     interviews…" tile: .square--pad-lg's own reduced 16px mobile
+     padding + a ~114-character paragraph) and it still fits, with less
+     headroom than a smaller number would have left; if it ever clips,
+     .square--pad-lg's own padding is the first thing to trim further,
+     not this. */
+  .square__body,
+  .square__body--small {
+    font-size: var(--text-body);
+  }
   /* #overview's 11 children carry inline grid-column/grid-row values
      written for the 4-column desktop grid (columns 3 and 4 included).
      Once the grid above drops to 2 explicit columns, those column-3/4
