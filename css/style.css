@@ -765,7 +765,7 @@ html.skip-intro-splash .intro-splash-layer--grey {
    everywhere) that weren't part of this request. */
 @media (max-width: 720px) {
   .intro-splash__asterisk-wrap {
-    width: 32px;
+    width: 24px;
   }
   .intro-splash__caption-line1,
   .intro-splash__caption-line2 {
@@ -3559,6 +3559,19 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
 }
 a.diamond-cta {
   cursor: pointer;
+}
+/* Section 1's "Still curious?" tile only (.square__deco-content is used
+   nowhere else on the site, so this can't leak anywhere) — .diamond-cta's
+   own shared margin-top:16px above is tuned against ITS 130px desktop
+   size; at mobile's much smaller clamped-down 70px floor, the diamond's
+   own rotate(45deg) bulge (see .square__deco-content's own comment for
+   the exact math) shrinks proportionally too, eating LESS of that fixed
+   16px than it does on desktop — so the same margin value reads as a
+   relatively bigger gap next to the now-smaller diamond. */
+@media (max-width: 720px) {
+  .square__deco-content .diamond-cta {
+    margin-top: 6px;
+  }
 }
 /* Now built from the uploaded arrow PNGs (assets/images/Arrow, *.png)
    instead of CSS pseudo-elements — the shaft+chevron pseudo-element
@@ -6745,6 +6758,17 @@ body.edition-lightbox-open {
      reasoning as the desktop value above, just its mobile value. */
   .instagram-feed { padding: 0 24px 0 32px; }
   .instagram-feed__col--offset { margin-top: -60px; }
+  /* Bigger than the shared .diamond-cta clamp's own 70px mobile floor —
+     per explicit request ("diamond should be bigger, more space around
+     the text/arrow"): 3 lines of content ("More to"/"scroll"/the arrow)
+     read cramped against a 70px diamond's own inscribed width. Scoped
+     to just this one instance (.instagram-feed__more-link), not the
+     shared class, so every other diamond-cta on the site keeps its own
+     70px floor. */
+  .instagram-feed__more-link {
+    width: 100px;
+    height: 100px;
+  }
 }
 
 /* ===================================================================

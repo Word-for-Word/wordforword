@@ -4426,9 +4426,13 @@ function initSplitCtaParallax() {
     const fadeProgress = Math.max(0, Math.min(1, (rawOffset - SPLIT_CTA_FADE_START_PX) / SPLIT_CTA_FADE_RANGE_PX));
     const opacity = String(1 - fadeProgress * (1 - SPLIT_CTA_MIN_OPACITY));
 
-    imageLayer.style.transform = `translateY(${rawOffset * SPLIT_CTA_IMAGE_PARALLAX_STRENGTH}px)`;
+    // Mobile: the drift itself removed per explicit request (read as
+    // unwanted "parallax scrolling motion" there) — the scroll-linked
+    // fade alone stays, on every viewport size.
+    const isMobile = window.innerWidth <= 720;
+    imageLayer.style.transform = isMobile ? "none" : `translateY(${rawOffset * SPLIT_CTA_IMAGE_PARALLAX_STRENGTH}px)`;
     imageLayer.style.opacity = opacity;
-    asteriskLayer.style.transform = `translateY(${rawOffset * SPLIT_CTA_ASTERISK_PARALLAX_STRENGTH}px)`;
+    asteriskLayer.style.transform = isMobile ? "none" : `translateY(${rawOffset * SPLIT_CTA_ASTERISK_PARALLAX_STRENGTH}px)`;
     asteriskLayer.style.opacity = opacity;
   };
 
