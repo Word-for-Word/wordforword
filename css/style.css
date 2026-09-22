@@ -259,6 +259,14 @@ body {
   body {
     font-weight: 360;
   }
+  /* --text-body's own 14px floor (see :root) read as way too small on
+     mobile — bumped just the floor here, ceiling/desktop untouched.
+     Tile body copy (.square__body) is a separate, more extreme case
+     (its own 9px floor) with its own overflow-aware fix — see that
+     rule's own mobile override. */
+  :root {
+    --text-body: clamp(16px, 1.43vw, 20px);
+  }
 }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
@@ -749,6 +757,22 @@ html.skip-intro-splash .intro-splash-layer--grey {
   visibility: hidden;
 }
 
+/* Mobile: the splash's asterisk/caption read too small — 33px (the
+   --hero-asterisk-size floor, times this wrap's own 0.65 multiplier =
+   ~21px) and 14px (the --text-body floor). Scoped overrides here rather
+   than touching either shared variable, since both drive plenty of
+   other things sitewide (hero's own asterisk, nav dropdown, body copy
+   everywhere) that weren't part of this request. */
+@media (max-width: 720px) {
+  .intro-splash__asterisk-wrap {
+    width: 32px;
+  }
+  .intro-splash__caption-line1,
+  .intro-splash__caption-line2 {
+    font-size: 17px;
+  }
+}
+
 /* ===================================================================
    Page flash — a quick, un-choreographed flash shown on arrival at a
    page reached via the main nav (Overview/Publications/About Us/Get
@@ -1207,18 +1231,15 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-/* Nothing here scales with viewport at all otherwise — 4 links at
-   32px gaps plus the logo's own fixed 32px/52px (see .nav__logo/
-   .nav__logo img) simply don't fit a narrow phone width, confirmed
-   live: "OVERVIEW" overlapping the logo at 600px, clipped off the left
-   edge entirely by 375px. Small enough to still read as the same nav,
-   not a hamburger-menu redesign. */
+/* Was just shrinking .nav__links' own text/gaps down to a still-cramped
+   10.5px, matching the file's own earlier note that this was
+   deliberately "not a hamburger-menu redesign" — per explicit follow-up
+   that WAS reversed: the nav bar reads too cramped at phone width
+   regardless, so mobile now hides the 4 top-level links entirely (and
+   the desktop-only Publications hover-dropdown along with them — no
+   real hover on touch anyway) behind a hamburger trigger instead. See
+   .nav__hamburger/.nav__mobile-dropdown below for the replacement. */
 @media (max-width: 720px) {
-  .nav__links {
-    gap: 6px;
-    font-size: 10.5px;
-    letter-spacing: 0.02em;
-  }
   .site-header__clip {
     padding: 0 16px;
   }
@@ -1228,15 +1249,128 @@ body.header-ready .site-header:not(.nav__dropdown-is-open) {
   .nav__logo img {
     height: 36px;
   }
-  /* .nav__links is centered within .nav's own FULL left:0/right:0 span
-     (see .nav's own comment on why it can't just be narrowed), so
-     "OVERVIEW" (the first, leftmost link) can still land under the
-     logo even after the sizing fixes above — confirmed live: 38px of
-     overlap remained at 375px. Reserving real space on the left (logo's
-     own 16px position + 36px width + a small gap) shifts the centered
-     group's available area to actually start clear of it. */
-  .nav {
-    padding-left: 60px;
+  .nav,
+  .nav__dropdown,
+  .nav__dropdown-hover-zone {
+    display: none;
+  }
+}
+/* Hamburger trigger + its own dropdown panel — mobile-only replacement
+   for the 4 top-level nav links (see the @media block above). Hidden by
+   default (desktop); shown only under the same max-width:720px this
+   whole redesign is scoped to, further down. */
+.nav__hamburger {
+  display: none;
+  position: absolute;
+  /* logo's own 16px left + 36px mobile width (see .nav__logo/.nav__logo
+     img's own mobile override above) + a small gap, same reasoning
+     .nav's own old padding-left used to use to clear the logo. */
+  left: 64px;
+  top: var(--nav-item-center);
+  transform: translateY(-50%);
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  appearance: none;
+  background: none;
+  border: none;
+  /* Bigger tap target than the visible glyph — same reasoning as
+     .applications-toast__close's own padding. */
+  padding: 10px 8px;
+  cursor: pointer;
+  /* .site-header__clip (its own parent) sets pointer-events:none across
+     its whole box — same re-enable .nav__logo/.nav__links a already do
+     for the same reason (see .nav__logo's own comment). */
+  pointer-events: auto;
+}
+.nav__hamburger-line {
+  display: block;
+  width: 20px;
+  height: 1.5px;
+  background: var(--color-dark);
+}
+/* Reuses the SAME row markup/classes as the desktop Publications
+   dropdown (.nav__dropdown-number/-asterisk/-text/-visual*) for the 4
+   top-level nav items instead — per explicit request, this should look
+   "identical to publication dropdown." That shared styling covers every
+   row's own typography/spacing and the bottom-left visual illustration
+   for free; only this wrapper's own positioning/open-close mechanics
+   are new, kept deliberately separate from .nav__dropdown's own (hover-
+   driven, grace-period-timed, tied to growing .site-header's own
+   height) machinery — that system is tuned specifically for a
+   mouseenter/mouseleave trigger and a fixed 5-row count, neither of
+   which apply to a tapped hamburger showing 4 different rows. */
+.nav__mobile-dropdown {
+  display: none;
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: var(--color-cream);
+  /* grid-template-rows 0fr -> 1fr, not max-height, so this animates to
+     however tall the 4 rows + visual actually render at (a guessed
+     max-height either clips real content or leaves a jump) — the child
+     below needs overflow:hidden + min-height:0 for a 0fr row to
+     actually collapse it, min-height:auto (the grid default) would
+     otherwise still show its own intrinsic content height. */
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.nav__mobile-dropdown.is-open {
+  grid-template-rows: 1fr;
+}
+.nav__mobile-dropdown-inner {
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+  padding: 12px 24px 24px;
+}
+.nav__mobile-dropdown a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 58px;
+  color: var(--color-dark);
+  font-size: var(--text-small);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-dark);
+}
+.nav__mobile-dropdown a:first-child {
+  border-top: 1px solid var(--color-dark);
+}
+.nav__mobile-dropdown a:hover,
+.nav__mobile-dropdown a:active {
+  color: var(--color-red);
+}
+/* Same illustration as the desktop dropdown's own (.nav__dropdown-
+   visual/-visual-img/-visual-asterisk-wrap/-visual-asterisk — see those
+   rules' own comments/markup in index.html), but that base rule's own
+   position:absolute/z-index:-1/width:450px are all specifically tuned
+   for sitting UNDER the desktop dropdown's row text on a wide bar —
+   reused verbatim here they'd render far wider than a phone screen AND
+   paint behind this panel's own cream background (z-index:-1 on a
+   plain in-flow/relative element is still a real negative stacking
+   position). Reset to a normal, right-side-up, appropriately-sized
+   in-flow block instead. */
+.nav__mobile-dropdown .nav__dropdown-visual {
+  position: relative;
+  z-index: auto;
+  left: auto;
+  bottom: auto;
+  width: 100%;
+  max-width: 220px;
+  margin: 16px auto 0;
+}
+@media (max-width: 720px) {
+  .nav__hamburger {
+    display: flex;
+  }
+  .nav__mobile-dropdown {
+    display: grid;
   }
 }
 /* Solid palette color, no opacity dimming — hover swaps to the brand
@@ -2608,8 +2742,26 @@ main {
   .square {
     padding: 16px;
   }
+  /* Brought down to match the base .square padding above (was 20px) —
+     freeing up a bit more of the tile's own content box helps offset
+     the bigger .square__body font-size below, now that mobile tiles are
+     forced back to true squares (see .square's own aspect-ratio:1/1
+     override further down) instead of being allowed to grow taller. */
   .square--pad-lg {
-    padding: 20px;
+    padding: 16px;
+  }
+  /* Was a 9px floor — read as illegibly small on mobile. 15px chosen
+     specifically against the tightest real case (section 1's
+     "Through interviews…" tile: .square--pad-lg + a ~114-character
+     paragraph) at a true square tile's own real mobile width (~185px
+     at a 390px viewport, 2-col grid, --page-margin edges) — still
+     leaves headroom before that paragraph's own line count reaches the
+     square's content-box height. Longer copy than that hasn't been
+     checked; if anything still clips, this is the value to bring back
+     down. */
+  .square__body,
+  .square__body--small {
+    font-size: 15px;
   }
 }
 /* Horizontal-only left-align — just align-items + text-align, NOT the
@@ -4508,6 +4660,26 @@ a.diamond-cta {
   height: 14px;
   width: auto;
 }
+/* Mobile: --marquee-text-size's 21px floor (see :root), fed into the
+   script face's own 1.55x multiplier above, pushed the marquee's line-
+   box (and so its own effective vertical space, on top of the strip's
+   flat 14px padding) noticeably taller than the other 2 faces alone
+   would need — reads as "too much space above/below" even though the
+   declared padding never changed. Shrinking the shared size (both text
+   and .marquee-asterisk's own separately-flat-px'd height, not tied to
+   the variable) plus trimming the padding itself addresses both at
+   once. */
+@media (max-width: 720px) {
+  :root {
+    --marquee-text-size: clamp(17px, 2vw, 28px);
+  }
+  .marquee-banner {
+    padding: 8px 0;
+  }
+  .marquee-asterisk img {
+    height: 11px;
+  }
+}
 
 /* ===================================================================
    Split CTA
@@ -5887,10 +6059,36 @@ body.edition-lightbox-open {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   margin-top: 60px;
+  /* Now a real .publications__grid child (see index.html's own comment)
+     rather than a separate block after it — spans the full row by
+     default so it keeps reading as "centered below the cards," not as
+     one more grid cell, on desktop's 3-col grid (always exactly 3 cards
+     wide, no leftover cell) and on mobile's 2-col grid whenever the
+     card count is even (also no leftover cell). Only the mobile ODD-
+     count case below un-sets this, letting it fall into that one
+     leftover cell instead. */
+  grid-column: 1 / -1;
 }
 .publications__view-more {
   margin: 16px auto 0;
+}
+/* Mobile, odd card count only (currently 3: 2 real volumes + the
+   upcoming-volume placeholder) — .publications__grid drops to 2
+   columns here (see that rule's own mobile override), which leaves a
+   real trailing cell empty after an odd number of cards. Per explicit
+   request, the button fills that cell instead of sitting centered below
+   in its own row. :last-of-type matches on TAG (article), not class —
+   safe here since every .publication-card is an <article> and this wrap
+   is the only <div> among them, so "the last article is at an odd
+   position" reliably means "the total card count is odd," with no
+   dependence on how many cards there actually are. */
+@media (max-width: 720px) {
+  .publications__grid:has(.publication-card:last-of-type:nth-child(odd)) .publications__view-more-wrap {
+    grid-column: auto;
+    margin-top: 0;
+  }
 }
 
 /* ===================================================================
@@ -6709,28 +6907,17 @@ body.edition-lightbox-open {
      row independently, purely from what's actually in IT. */
   .square-grid--4col { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; aspect-ratio: auto; }
   .square-grid--rows-1, .square-grid--rows-2, .square-grid--rows-3, .square-grid--rows-4 { aspect-ratio: auto; }
+  /* Was aspect-ratio:auto + min-height:160px for text-heavy variants
+     (.square--pad-lg etc) — a strict square was too short to hold real
+     paragraph copy at this width, confirmed live via clipped text — but
+     per explicit follow-up, tiles must always render as true squares on
+     mobile regardless, no rectangle escape hatch. Reverted to a flat
+     1/1 for every variant; the actual overflow risk this was protecting
+     against is addressed instead via .square--pad-lg's own reduced
+     mobile padding and .square__body's own tuned mobile font-size (see
+     those rules' own comments) rather than by allowing the tile itself
+     to grow past a square. */
   .square { aspect-ratio: 1 / 1; }
-  /* A strict square is too short to hold real paragraph copy once its
-     own column narrows this far — confirmed live: "Through interviews…"
-     was getting its last line clipped by .square's own overflow:hidden
-     at 430px. These variants (all genuine content, not a repeating
-     pattern/photo) size to their content instead of a forced 1:1 —
-     listed by variant class rather than :has(.square__body) so
-     .square--deco's SVG arc text ("Still curious?") is included too.
-     min-height is just a floor so a short line (e.g. "Applications
-     open in the spring.") doesn't look like a thin sliver. Deliberately
-     does NOT include .square--checker or .square--inset: a checker's
-     pattern is mask-sized as a % of its OWN box, so a non-square box
-     visibly stretches the diamonds into ovals — those two need to stay
-     real squares, which is why the row remap right below pairs every
-     text square with ANOTHER text square (both flex to whatever height
-     their own copy needs, independent of the other) rather than with a
-     checker/inset (which would otherwise get stretched by the grid's
-     default row-fill behavior, or leave a gap if it didn't). */
-  .square--pad-lg, .square--text-gap-30, .square--content-left, .square--deco, .square--role-reveal {
-    aspect-ratio: auto;
-    min-height: 160px;
-  }
   /* #overview's 11 children carry inline grid-column/grid-row values
      written for the 4-column desktop grid (columns 3 and 4 included).
      Once the grid above drops to 2 explicit columns, those column-3/4
@@ -6742,18 +6929,16 @@ body.edition-lightbox-open {
      style attribute always wins over an external stylesheet rule of
      any specificity UNLESS that external rule is also !important.
 
-     Rows are grouped by content type, not strict source order: pairing
-     a content-driven square (auto height, above) with a checker/inset
-     (forced 1:1) left the fixed-height one stranded at the top of a
-     taller row with dead cream space below it — grid's default stretch
-     can't reconcile "fill the row" with "keep this a perfect square" at
-     the same time, so it just keeps the square and leaves the gap.
-     Pairing content-with-content and decorative-with-decorative avoids
-     that mismatch entirely: children 2+3 (the two text squares) share
-     row 1, child 1 (checker) moves down to pair with child 4 (inset
-     image) — both real squares, no mismatch — and 6+8 (text-gap +
-     deco, both flexible) share a row while 7+9 and 10+11 (all
-     decorative) keep their own matched pairs. */
+     Rows below are grouped by content type, not strict source order —
+     left over from when text tiles briefly weren't forced to 1/1 (see
+     .square's own comment above) and needed pairing with each other to
+     avoid a fixed-height/auto-height mismatch within a row. Now that
+     every tile is a true square again that mismatch can't happen
+     regardless of pairing, but the explicit placements below are still
+     needed for the unrelated implicit-column bug described above, so
+     they're unchanged: children 2+3 share row 1, child 1 moves down to
+     pair with child 4, 6+8 share a row, 7+9 and 10+11 keep their own
+     pairs. */
   #overview > *:nth-child(2) { grid-column: 1 !important; grid-row: 1 !important; }
   #overview > *:nth-child(3) { grid-column: 2 !important; grid-row: 1 !important; }
   #overview > *:nth-child(1) { grid-column: 1 !important; grid-row: 2 !important; }
@@ -6855,26 +7040,40 @@ body.edition-lightbox-open {
   /* Same reasoning as .square-grid--4col above — 4 narrow columns with
      side checkers squeezed thin doesn't hold up on mobile, so stack to
      a single column instead. */
-  .site-footer { aspect-ratio: auto; grid-template-columns: 1fr; grid-template-rows: auto; }
+  /* Was aspect-ratio:auto + a forced single column with all 8
+     decorative tiles display:none'd, leaving only .site-footer__center
+     — per explicit follow-up, the tiles should actually be visible
+     (and reveal-animate in, same as every other square-grid on the
+     page) on mobile too, not hidden outright. Same 2-col/auto-rows
+     treatment as every other .square-grid--4col on mobile (see that
+     rule's own shared mobile override above). */
+  .site-footer { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; aspect-ratio: auto; }
   /* grid-column/grid-row need !important — .site-footer__center carries
      an inline style="grid-column: 2 / span 2; grid-row: 1 / span 2;"
-     (authored for the desktop 4-column grid), and an inline style
-     always wins over an external rule of any specificity unless that
-     rule is ALSO !important — same bug/fix as #overview and
-     #about-intro's own mobile remaps elsewhere in this file. Currently
-     invisible in practice (nothing else occupies the phantom implicit
-     column this leaves behind, and the center content still renders
-     full-width regardless), but confirmed live via computed styles:
-     without this, .site-footer's own grid-template-columns:1fr above
-     is forced to invent 2 implicit columns to satisfy the stale
-     placement instead of the single real one, rather than a genuine
-     visual bug. padding needs no !important — nothing else sets it
-     inline. */
-  .site-footer__center { grid-column: 1 !important; grid-row: auto !important; padding: 48px 24px; }
-  /* All 4 decorative tile squares (checkers + the 2 plain dark ones),
-     not just the checkers — only .site-footer__center's own content
-     should show on mobile. */
-  .site-footer .square:not(.site-footer__center) { display: none; }
+     (authored for the desktop 4-column grid, where it deliberately
+     OVERLAPS the tiles underneath it — see the HTML comment above
+     .site-footer). That overlap only reads right when the tiles are
+     mostly-hidden background texture around it; now that they're real,
+     visible, individually-square tiles again, spans center to its own
+     full-width row instead — auto-placed AFTER the 8 tiles (its DOM
+     order is unchanged, last), so it lands in its own row below them,
+     keeping the same "tiles reveal first, content fades in after" feel
+     initRevealOnScroll's footerCenter override already times it to (a
+     JS-driven animation order, independent of this layout change). */
+  .site-footer__center { grid-column: 1 / -1 !important; grid-row: auto !important; padding: 48px 24px; }
+  /* Same !important necessity as above — each of the 8 tiles carries
+     its own inline grid-column (1-4) written for the desktop 4-column
+     grid; without resetting these, columns 3/4 would invent phantom
+     implicit columns instead of reflowing into the 2 real ones (same
+     bug/fix as #overview and #about-intro's own mobile remaps
+     elsewhere in this file). Resetting to auto lets the grid's own
+     normal auto-placement lay them out 2-per-row in DOM order instead —
+     genuinely square now (see .square's own mobile aspect-ratio:1/1),
+     not display:none. */
+  .site-footer .square:not(.site-footer__center) {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
 }
 
 /* ===================================================================
@@ -7591,6 +7790,15 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   transform: translateY(calc(-50% + -32px));
 }
 .site-header.is-visible .nav-entrance-item.nav__logo {
+  transform: translateY(-50%);
+}
+/* Same permanent-transform composition as .nav-entrance-item.nav__logo
+   directly above, for the exact same reason — .nav__hamburger also
+   carries its own permanent translateY(-50%) centering. */
+.nav-entrance-item.nav__hamburger {
+  transform: translateY(calc(-50% + -32px));
+}
+.site-header.is-visible .nav-entrance-item.nav__hamburger {
   transform: translateY(-50%);
 }
 
@@ -8369,6 +8577,16 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
     left: 16px;
     right: 16px;
     max-width: none;
+  }
+  /* Side padding (30px) was noticeably bigger than top/bottom (16px) —
+     equalized to the smaller value rather than inventing a new one, and
+     __close's own right offset (previously matching the old 30px)
+     brought down to match so it stays flush against this new padding. */
+  .applications-toast__surface {
+    padding: 16px 16px;
+  }
+  .applications-toast__close {
+    right: 16px;
   }
 }
 

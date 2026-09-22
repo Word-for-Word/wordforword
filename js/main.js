@@ -208,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initLogoSecretEntry();
     initNavPageFlash();
     initPublicationsDropdown();
+    initMobileNavDropdown();
     initEditionLightbox();
     initInstagramHoverCaption();
     initInstagramColumnParallax();
@@ -1388,6 +1389,44 @@ function initPublicationsDropdown() {
     },
     { passive: true }
   );
+}
+
+// Mobile hamburger trigger for .nav__mobile-dropdown (see that class's
+// own comment in style.css for why this is a separate, simpler system
+// from initPublicationsDropdown() above rather than reusing it — that
+// one is built entirely around hover/mouseleave timing, which a tap
+// target doesn't have. Plain toggle-on-click instead, closed by:
+// re-tapping the trigger, Escape, tapping any link inside (real
+// navigation follows anyway, but this keeps the panel from visibly
+// still being "open" during the brief moment before the new page
+// takes over), or the viewport growing back past the mobile
+// breakpoint (so resizing a window/rotating a tablet never strands it
+// open with no trigger visible to close it).
+function initMobileNavDropdown() {
+  const trigger = document.querySelector(".nav__hamburger");
+  const panel = document.querySelector(".nav__mobile-dropdown");
+  if (!trigger || !panel) return;
+
+  const MOBILE_BREAKPOINT_PX = 720;
+  const close = () => {
+    panel.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+  };
+  const toggle = () => {
+    const isOpen = panel.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+  };
+
+  trigger.addEventListener("click", toggle);
+  panel.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", close);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > MOBILE_BREAKPOINT_PX) close();
+  });
 }
 
 // Unadvertised entry point to the Decap CMS admin panel for club members —

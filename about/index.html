@@ -18,7 +18,7 @@
   <meta name="twitter:image" content="https://pennwordforword.org/assets/images/Slogan.jpg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/Favicon.png" />
   <link rel="icon" type="image/png" sizes="304x304" href="/assets/images/Logo.png" />
-  <link rel="stylesheet" href="/css/style.css?v=348" />
+  <link rel="stylesheet" href="/css/style.css?v=349" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -124,6 +124,15 @@
         <a href="/" class="nav__logo">
           <img src="/assets/images/Logo.png" alt="Word for Word logo" />
         </a>
+        <!-- Mobile-only (see .nav__hamburger in style.css) — replaces
+             .nav/.nav__dropdown below entirely under max-width:720px,
+             opening .nav__mobile-dropdown (a sibling of this whole
+             <header>, below) instead. -->
+        <button type="button" class="nav__hamburger" aria-label="Menu" aria-expanded="false" aria-controls="nav__mobile-dropdown">
+          <span class="nav__hamburger-line"></span>
+          <span class="nav__hamburger-line"></span>
+          <span class="nav__hamburger-line"></span>
+        </button>
         <nav class="nav">
           <ul class="nav__links">
             <li><a href="/">Overview</a></li>
@@ -167,6 +176,34 @@
         </div>
       </div>
     </header>
+    <!-- Mobile hamburger's own dropdown — see index.html's own comment
+         above .nav__mobile-dropdown for the full reasoning. -->
+    <div id="nav__mobile-dropdown" class="nav__mobile-dropdown" aria-hidden="true">
+      <div class="nav__mobile-dropdown-inner">
+        <a href="/">
+          <span class="nav__dropdown-number">(01)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Overview</span>
+        </a>
+        <a href="/publications/">
+          <span class="nav__dropdown-number">(02)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Publications</span>
+        </a>
+        <a href="/about/">
+          <span class="nav__dropdown-number">(03)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">About Us</span>
+        </a>
+        <a href="/get-involved/">
+          <span class="nav__dropdown-number">(04)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Get Involved</span>
+        </a>
+        <div class="nav__dropdown-visual" aria-hidden="true">
+          <img class="nav__dropdown-visual-img" src="/assets/images/Dropdown Visual.png" alt="" />
+          <div class="nav__dropdown-visual-asterisk-wrap">
+            <img class="nav__dropdown-visual-asterisk" src="/assets/images/Asterisk - Default, Cream.png" alt="" />
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="nav-dim-overlay" aria-hidden="true"></div>
 
     <!-- Fixed viewport frame — same markup as index.html's own (see that
@@ -500,6 +537,6 @@
   </footer>
 
     <script src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js" async onload="window.dispatchEvent(new Event('lenisready'))"></script>
-    <script src="/js/main.js?v=209" defer></script>
+    <script src="/js/main.js?v=210" defer></script>
 </body>
 </html>

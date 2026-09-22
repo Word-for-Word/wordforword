@@ -130,7 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="stylesheet" href="/css/style.css?v=386" />
+  <link rel="stylesheet" href="/css/style.css?v=387" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -365,6 +365,17 @@
       <a href="/" class="nav__logo nav-entrance-item" style="--entry-delay: 0ms">
         <img src="/assets/images/Logo.png" alt="Word for Word logo" />
       </a>
+      <!-- Mobile-only (see .nav__hamburger in style.css) — replaces
+           .nav/.nav__dropdown below entirely under max-width:720px,
+           opening .nav__mobile-dropdown (a sibling of this whole
+           <header>, below) instead. Same nav-entrance-item/--entry-delay
+           treatment as the logo right above (0ms) so it fades in
+           alongside it rather than popping in unstaggered. -->
+      <button type="button" class="nav__hamburger nav-entrance-item" style="--entry-delay: 0ms" aria-label="Menu" aria-expanded="false" aria-controls="nav__mobile-dropdown">
+        <span class="nav__hamburger-line"></span>
+        <span class="nav__hamburger-line"></span>
+        <span class="nav__hamburger-line"></span>
+      </button>
       <nav class="nav">
         <ul class="nav__links">
           <li class="nav-entrance-item" style="--entry-delay: 90ms"><a href="/">Overview</a></li>
@@ -414,6 +425,39 @@
       </div>
     </div>
   </header>
+  <!-- Mobile hamburger's own dropdown — see .nav__hamburger's own
+       comment above and .nav__mobile-dropdown in style.css. Reuses the
+       SAME row/visual classes as .nav__dropdown above (numbers/
+       asterisks/text/illustration) for visual parity, just the 4
+       top-level nav items instead of Publications' own 5 categories,
+       and its own simpler tap-toggle mechanics (initMobileNavDropdown()
+       in main.js) rather than that one's hover/grace-period system. -->
+  <div id="nav__mobile-dropdown" class="nav__mobile-dropdown" aria-hidden="true">
+    <div class="nav__mobile-dropdown-inner">
+      <a href="/">
+        <span class="nav__dropdown-number">(01)</span>
+        <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Overview</span>
+      </a>
+      <a href="/publications/">
+        <span class="nav__dropdown-number">(02)</span>
+        <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Publications</span>
+      </a>
+      <a href="/about/">
+        <span class="nav__dropdown-number">(03)</span>
+        <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">About Us</span>
+      </a>
+      <a href="/get-involved/">
+        <span class="nav__dropdown-number">(04)</span>
+        <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Get Involved</span>
+      </a>
+      <div class="nav__dropdown-visual" aria-hidden="true">
+        <img class="nav__dropdown-visual-img" src="/assets/images/Dropdown Visual.png" alt="" />
+        <div class="nav__dropdown-visual-asterisk-wrap">
+          <img class="nav__dropdown-visual-asterisk" src="/assets/images/Asterisk - Default, Cream.png" alt="" />
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Dims the page behind the header while the Publications dropdown
        is open — a sibling of .site-header (not a child) so the general
        sibling combinator below can react to the SAME .site-header
@@ -1413,34 +1457,42 @@
           </div>
           <p class="publication-card__meta">Spring 2026 — Vol. 3</p>
         </article>
-      </div>
 
-      <!-- Large diamond button (same size/text-inside treatment as
-           section 1's "Learn more") replacing the old plain underlined
-           "View more" link — dark-on-cream since this sits directly on
-           the plain page background, not a colored tile (same problem
-           .split-cta__diamond already solves for its own tiny icon-only
-           diamond, just at the big size with real text here). -->
-      <div class="publications__view-more-wrap">
-        <!-- Same curved-arc treatment as section 1 square 11's "Still
-             curious?" (SVG textPath along a true circular arc), just
-             dark-on-cream here (--square__arc--dark) to match this
-             diamond's own dark-on-cream coloring instead of square 11's
-             tan-on-dark-tile default. -->
-        <svg class="square__arc square__arc--dark" viewBox="0 0 200 50" aria-hidden="true">
-          <path id="publications-view-more-arc-path" d="M 10,50 A 143,143 0 0,1 190,50" fill="none" />
-          <text text-anchor="middle">
-            <textPath href="#publications-view-more-arc-path" startOffset="50%">Loads to read!</textPath>
-          </text>
-        </svg>
-        <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream publications__view-more">
-          <span>View<br />more<br />
-            <span class="arrow-glyph">
-              <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
-              <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+        <!-- Large diamond button (same size/text-inside treatment as
+             section 1's "Learn more") replacing the old plain underlined
+             "View more" link — dark-on-cream since this sits directly on
+             the plain page background, not a colored tile (same problem
+             .split-cta__diamond already solves for its own tiny icon-only
+             diamond, just at the big size with real text here).
+             A real grid child now (was a separate block after the grid
+             closed) specifically so mobile's 2-col layout can drop it
+             into a trailing odd-count cell instead of always sitting
+             centered below — see .publications__view-more-wrap's own
+             comment in style.css for the grid-column logic (desktop's
+             3-col grid always has a leftover 4th slot free, same as
+             mobile's EVEN-count case, so both keep today's centered-
+             below look unchanged). -->
+        <div class="publications__view-more-wrap">
+          <!-- Same curved-arc treatment as section 1 square 11's "Still
+               curious?" (SVG textPath along a true circular arc), just
+               dark-on-cream here (--square__arc--dark) to match this
+               diamond's own dark-on-cream coloring instead of square 11's
+               tan-on-dark-tile default. -->
+          <svg class="square__arc square__arc--dark" viewBox="0 0 200 50" aria-hidden="true">
+            <path id="publications-view-more-arc-path" d="M 10,50 A 143,143 0 0,1 190,50" fill="none" />
+            <text text-anchor="middle">
+              <textPath href="#publications-view-more-arc-path" startOffset="50%">Loads to read!</textPath>
+            </text>
+          </svg>
+          <a href="/publications/" class="diamond-cta diamond-cta--fill-on-hover diamond-cta--dark-on-cream publications__view-more">
+            <span>View<br />more<br />
+              <span class="arrow-glyph">
+                <img class="arrow-glyph__default" src="/assets/images/Arrow, blue.png" alt="" />
+                <div class="arrow-glyph__hover split-cta__diamond-arrow-cream" aria-hidden="true"></div>
+              </span>
             </span>
-          </span>
-        </a>
+          </a>
+        </div>
       </div>
     </section>
 
@@ -1595,6 +1647,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=220" defer></script>
+  <script src="/js/main.js?v=221" defer></script>
 </body>
 </html>

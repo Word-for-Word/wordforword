@@ -18,6 +18,17 @@
         <a href="{{BASE}}" class="nav__logo">
           <img src="{{BASE}}assets/images/Logo.png" alt="Word for Word logo" />
         </a>
+        <!-- Mobile-only (see .nav__hamburger in style.css) — replaces
+             .nav/.nav__dropdown below entirely under max-width:720px,
+             opening .nav__mobile-dropdown (a sibling of this whole
+             <header>, below) instead. See that class's own comment for
+             why it's a separate system from the Publications dropdown
+             rather than a reuse of it. -->
+        <button type="button" class="nav__hamburger" aria-label="Menu" aria-expanded="false" aria-controls="nav__mobile-dropdown">
+          <span class="nav__hamburger-line"></span>
+          <span class="nav__hamburger-line"></span>
+          <span class="nav__hamburger-line"></span>
+        </button>
         <nav class="nav">
           <ul class="nav__links">
             <li><a href="{{BASE}}">Overview</a></li>
@@ -61,4 +72,37 @@
         </div>
       </div>
     </header>
+    <!-- Mobile hamburger's own dropdown — see .nav__hamburger's own
+         comment above and .nav__mobile-dropdown in style.css. Reuses
+         the SAME row/visual classes as .nav__dropdown above (numbers/
+         asterisks/text/illustration) for visual parity, just the 4
+         top-level nav items instead of Publications' own 5 categories,
+         and its own simpler tap-toggle mechanics (initMobileNavDropdown()
+         in main.js) rather than that one's hover/grace-period system. -->
+    <div id="nav__mobile-dropdown" class="nav__mobile-dropdown" aria-hidden="true">
+      <div class="nav__mobile-dropdown-inner">
+        <a href="{{BASE}}">
+          <span class="nav__dropdown-number">(01)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Overview</span>
+        </a>
+        <a href="{{BASE}}publications/">
+          <span class="nav__dropdown-number">(02)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Publications</span>
+        </a>
+        <a href="{{BASE}}about/">
+          <span class="nav__dropdown-number">(03)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">About Us</span>
+        </a>
+        <a href="{{BASE}}get-involved/">
+          <span class="nav__dropdown-number">(04)</span>
+          <span class="nav__dropdown-asterisk">*</span><span class="nav__dropdown-text">Get Involved</span>
+        </a>
+        <div class="nav__dropdown-visual" aria-hidden="true">
+          <img class="nav__dropdown-visual-img" src="{{BASE}}assets/images/Dropdown Visual.png" alt="" />
+          <div class="nav__dropdown-visual-asterisk-wrap">
+            <img class="nav__dropdown-visual-asterisk" src="{{BASE}}assets/images/Asterisk - Default, Cream.png" alt="" />
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="nav-dim-overlay" aria-hidden="true"></div>
