@@ -3472,6 +3472,7 @@ a.image-mosaic__caption--headline:hover .diamond-cta .arrow-glyph__default {
 .square__arc {
   display: block;
   width: 200px;
+  max-width: 100%;
   height: 50px;
 }
 /* Same face/size as ordinary body text — --font-body, --text-body size,
@@ -4149,6 +4150,17 @@ a.diamond-cta {
   overflow: hidden;
   border-radius: 0 0 15px 15px;
   aspect-ratio: 4 / 2;
+}
+/* Mobile: 4/2 (2:1, wide/short) reads badly on a narrow, tall-oriented
+   phone screen — per explicit request, much taller instead. object-fit:
+   cover on .featured-carousel__photo (below) already fills whatever
+   shape this resolves to with no gaps, cropping as needed — nothing
+   else needs to change to "enlarge the images," the container's own
+   aspect-ratio is the only lever. */
+@media (max-width: 720px) {
+  .featured-carousel {
+    aspect-ratio: 3 / 4;
+  }
 }
 .featured-carousel__track {
   display: flex;
@@ -6069,6 +6081,19 @@ body.edition-lightbox-open {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* Grid items default to min-width:auto, which resolves to their own
+     content's intrinsic minimum size — this wrap's own arc SVG
+     (.square__arc--dark, a fixed width:200px, not responsive) is wider
+     than a mobile 2-col grid's own ~150-170px column share, so without
+     this the whole COLUMN it lands in (in the odd-count leftover-cell
+     case below) was forced wider than the other to fit it, breaking the
+     2 columns' otherwise-equal 1fr/1fr split — and since columns apply
+     down the WHOLE grid, not just that one row, this visibly threw off
+     .publication-card's own width/size too, not just this wrap.
+     Confirmed as the actual cause of "the cards are inconsistent in
+     size" (same min-width trap several .square rules elsewhere in this
+     file already work around). */
+  min-width: 0;
   margin-top: 60px;
   /* Now a real .publications__grid child (see index.html's own comment)
      rather than a separate block after it — spans the full row by
@@ -6192,6 +6217,16 @@ body.edition-lightbox-open {
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+/* Mobile: a full 100vh dedicated to 1-2 short lines read as way too
+   much empty space above/below the text once actually scrolled through
+   on a phone — desktop's own full-viewport treatment (explicitly
+   requested separately) is untouched. */
+@media (max-width: 720px) {
+  .slogan-preview {
+    min-height: 0;
+    padding: 80px 0;
+  }
 }
 .slogan-preview__text {
   margin: 0;
@@ -6385,6 +6420,11 @@ body.edition-lightbox-open {
      same "thing" as the other marquees, just carrying logos instead of
      text. */
   padding: 0 24px;
+}
+@media (max-width: 720px) {
+  .partners__track {
+    gap: 24px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .partners__scroll {
@@ -7080,37 +7120,35 @@ body.edition-lightbox-open {
   /* Same reasoning as .square-grid--4col above — 4 narrow columns with
      side checkers squeezed thin doesn't hold up on mobile, so stack to
      a single column instead. */
-  /* Was aspect-ratio:auto + a forced single column with all 8
-     decorative tiles display:none'd, leaving only .site-footer__center
-     — per explicit follow-up, the tiles should actually be visible
-     (and reveal-animate in, same as every other square-grid on the
-     page) on mobile too, not hidden outright. Same 2-col/auto-rows
-     treatment as every other .square-grid--4col on mobile (see that
-     rule's own shared mobile override above). */
+  /* Was 8 visible tiles (4 checkers + 4 dark) in a 2-col/4-row stack
+     below .site-footer__center's own row — per explicit follow-up
+     ("severely mutilated"), simplified way down: just the 4 plain dark
+     tiles (checkers hidden entirely, not just visually thinned), laid
+     out as a real 2x2 block with the text content OVERLAPPING all 4 of
+     them dead-center — the same overlap idea desktop's own 4-col grid
+     already uses (center spanning over the tiles behind it), just
+     scaled to 4 tiles instead of 8. */
   .site-footer { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; aspect-ratio: auto; }
+  .site-footer .square--checker {
+    display: none;
+  }
   /* grid-column/grid-row need !important — .site-footer__center carries
      an inline style="grid-column: 2 / span 2; grid-row: 1 / span 2;"
-     (authored for the desktop 4-column grid, where it deliberately
-     OVERLAPS the tiles underneath it — see the HTML comment above
-     .site-footer). That overlap only reads right when the tiles are
-     mostly-hidden background texture around it; now that they're real,
-     visible, individually-square tiles again, spans center to its own
-     full-width row instead — auto-placed AFTER the 8 tiles (its DOM
-     order is unchanged, last), so it lands in its own row below them,
-     keeping the same "tiles reveal first, content fades in after" feel
-     initRevealOnScroll's footerCenter override already times it to (a
-     JS-driven animation order, independent of this layout change). */
-  .site-footer__center { grid-column: 1 / -1 !important; grid-row: auto !important; padding: 48px 24px; }
-  /* Same !important necessity as above — each of the 8 tiles carries
-     its own inline grid-column (1-4) written for the desktop 4-column
-     grid; without resetting these, columns 3/4 would invent phantom
-     implicit columns instead of reflowing into the 2 real ones (same
-     bug/fix as #overview and #about-intro's own mobile remaps
-     elsewhere in this file). Resetting to auto lets the grid's own
-     normal auto-placement lay them out 2-per-row in DOM order instead —
-     genuinely square now (see .square's own mobile aspect-ratio:1/1),
-     not display:none. */
-  .site-footer .square:not(.site-footer__center) {
+     (authored for the desktop 4-column grid). 1/-1 on both axes spans
+     the full 2x2 block the 4 remaining dark tiles below now form (auto-
+     placed, 2 per row) — grid-auto-rows:auto (base rule above) means
+     THIS spanning item's own content height is what actually drives how
+     tall those 2 rows end up, so the tiles behind it stretch to match
+     its real content exactly rather than guessing a fixed size. */
+  .site-footer__center { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; padding: 48px 24px; }
+  /* Same !important necessity as above — each dark tile carries its own
+     inline grid-column (1-4) written for the desktop 4-column grid;
+     without resetting these, columns 3/4 would invent phantom implicit
+     columns instead of reflowing into the 2 real ones (same bug/fix as
+     #overview and #about-intro's own mobile remaps elsewhere in this
+     file). Resetting to auto lets the grid's own normal auto-placement
+     lay the 4 remaining tiles out 2-per-row in DOM order instead. */
+  .site-footer .square--dark {
     grid-column: auto !important;
     grid-row: auto !important;
   }
