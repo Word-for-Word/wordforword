@@ -5430,6 +5430,7 @@ function buildCarouselLoopClone(sourceSlide) {
   clone.dataset.edition = sourceSlide.dataset.edition ?? "";
   clone.dataset.number = sourceSlide.dataset.number ?? "";
   clone.dataset.articleUrl = sourceSlide.dataset.articleUrl ?? "#";
+  if (sourceSlide.dataset.captionTone) clone.dataset.captionTone = sourceSlide.dataset.captionTone;
 
   const photo = sourceSlide.querySelector(".featured-carousel__photo");
   const placeholder = sourceSlide.querySelector(".featured-carousel__photo-placeholder");
@@ -5475,6 +5476,84 @@ function buildCarouselLoopClone(sourceSlide) {
 // only once that motion finishes does it snap (transition:none, no
 // visible jump) back to the real slide sitting in the same spot,
 // closing the loop invisibly.
+// Pale-illustration handling for the carousel: the caption/nav/indicators
+// are tan-on-a-dark-scrim by default, which washes out over a very light
+// image. Each slide's photo is sampled once (tiny canvas, same-origin so
+// getImageData is allowed) over just the areas the UI actually sits on —
+// the title block top-left, the 2 nav diamonds' strips, and the bottom
+// strip (number + indicators) — and anything brighter than this on a
+// 0-1 luminance scale flips that slide to brown UI + a light scrim.
+// Measured against the current illustrations: 0.96 for Philosophy of
+// Practice vs 0.2-0.6 for the rest, so 0.7 sits well clear of both.
+// A slide's data-caption-tone="light"/"dark" (from the article's
+// carousel_caption_color field — see build_articles.py) skips
+// detection entirely, for images the average gets wrong.
+const CAROUSEL_LIGHT_THRESHOLD = 0.7;
+let carouselToneCanvas = null;
+function measureCarouselPhotoLuminance(photo) {
+  const W = 64;
+  const H = 32;
+  if (!carouselToneCanvas) carouselToneCanvas = document.createElement("canvas");
+  carouselToneCanvas.width = W;
+  carouselToneCanvas.height = H;
+  const ctx = carouselToneCanvas.getContext("2d", { willReadFrequently: true });
+  // Same crop object-fit:cover shows on screen (centered), so the
+  // sampled areas line up with what's actually behind the text.
+  const iw = photo.naturalWidth;
+  const ih = photo.naturalHeight;
+  const boxRatio = photo.clientWidth && photo.clientHeight ? photo.clientWidth / photo.clientHeight : 2;
+  let sw = iw;
+  let sh = iw / boxRatio;
+  if (sh > ih) {
+    sh = ih;
+    sw = ih * boxRatio;
+  }
+  ctx.drawImage(photo, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const regionLuminance = (x0, x1, y0, y1) => {
+    let total = 0;
+    let count = 0;
+    for (let y = Math.floor(y0 * H); y < Math.ceil(y1 * H); y++) {
+      for (let x = Math.floor(x0 * W); x < Math.ceil(x1 * W); x++) {
+        const i = (y * W + x) * 4;
+        total += (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+        count++;
+      }
+    }
+    return count ? total / count : 0;
+  };
+  const title = regionLuminance(0, 0.55, 0, 0.35);
+  const rest =
+    (regionLuminance(0, 0.12, 0.4, 0.6) + regionLuminance(0.88, 1, 0.4, 0.6) + regionLuminance(0.3, 1, 0.82, 1)) / 3;
+  // Title weighted heavier — it's the most text, and the most important.
+  return 0.6 * title + 0.4 * rest;
+}
+function detectCarouselSlideTone(slide, onDone) {
+  const apply = (tone) => {
+    slide.dataset.tone = tone;
+    slide.classList.toggle("is-light", tone === "light");
+    onDone();
+  };
+  const override = slide.dataset.captionTone;
+  if (override === "light" || override === "dark") {
+    apply(override);
+    return;
+  }
+  const photo = slide.querySelector(".featured-carousel__photo");
+  if (!photo) return;
+  const measure = () => {
+    let tone = "dark";
+    try {
+      tone = measureCarouselPhotoLuminance(photo) > CAROUSEL_LIGHT_THRESHOLD ? "light" : "dark";
+    } catch (e) {
+      // Unreadable image (e.g. a cross-origin src) — keep the default tan UI.
+    }
+    apply(tone);
+  };
+  if (photo.complete && photo.naturalWidth) measure();
+  else photo.addEventListener("load", measure, { once: true });
+}
+
 function initFeaturedCarousel() {
   const track = document.querySelector(".featured-carousel__track");
   const prevBtn = document.querySelector(".featured-carousel__nav--prev");
@@ -5533,7 +5612,16 @@ function initFeaturedCarousel() {
   // duration means it happens mid-fade, at partial opacity, which reads
   // as a jarring flash-swap rather than a clean crossfade.
   const CAPTION_FADE_MS = 500;
+  // See detectCarouselSlideTone() above. Toggled from applyCaption, i.e.
+  // at the midpoint of the caption crossfade while the text is invisible,
+  // so the tan <-> brown swap never shows mid-fade.
+  let activeSlide = null;
+  const applyTone = () => {
+    if (carousel && activeSlide) carousel.classList.toggle("is-light-slide", activeSlide.dataset.tone === "light");
+  };
   const applyCaption = (slide) => {
+    activeSlide = slide;
+    applyTone();
     if (captionTitle) {
       // Edition's own href (-> publications.html) is static and set once
       // in the HTML — only the title's target changes per-slide.
@@ -5552,6 +5640,11 @@ function initFeaturedCarousel() {
     if (captionNumber) captionNumber.textContent = slide.dataset.number ?? "";
   };
   applyCaption(track.children[index]);
+  for (const slide of track.children) {
+    detectCarouselSlideTone(slide, () => {
+      if (slide === activeSlide) applyTone();
+    });
+  }
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const crossfadeCaptionTo = (slide) => {

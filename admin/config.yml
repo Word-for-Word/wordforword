@@ -56,6 +56,24 @@ collections:
         widget: "image"
         required: false
         hint: "Only used if 'Feature in homepage carousel?' is checked. Wide image, ideally around 1600×800px (a 2:1 ratio) — it fills a wide frame and crops to fit, so keep the main subject centered."
+      - label: "Carousel title"
+        name: "carousel_title"
+        widget: "string"
+        required: false
+        hint: "Optional shorter title for the homepage carousel. Split into 2 lines at the first colon or dash, e.g. 'The Consumptive’s Kiss: Tuberculosis & the Elegance of Death'. Leave blank to use the full title."
+      - label: "Carousel position"
+        name: "carousel_order"
+        widget: "select"
+        options: ["1", "2", "3", "4"]
+        required: false
+        hint: "Which carousel slide this is (1 = first). Articles without a position fill any leftover slots, newest first."
+      - label: "Carousel text color"
+        name: "carousel_caption_color"
+        widget: "select"
+        options: ["auto", "cream", "brown"]
+        default: "auto"
+        required: false
+        hint: "Auto picks brown text for pale images and cream text for everything else. Only change this if auto gets it wrong for this image."
       - label: "Volume #"
         name: "volume"
         widget: "string"

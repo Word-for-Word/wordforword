@@ -10,6 +10,7 @@ illustration_alt: "Illustration: Philosophy of Practice"
 illustration_caption: Illustration by Annette Seo
 show_in_carousel: true
 carousel_image: assets/images/articles/philosophy-of-practice.png
+carousel_order: 2
 volume: Volume 1
 ---
 Roland Barthes, in his hybrid monograph and mourning memoir, Camera Lucida, reflects:

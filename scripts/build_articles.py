@@ -334,6 +334,10 @@ def build_article(md_path, css_version, js_version, base_url):
         "date_display": date.strftime("%B %Y") if date else "",
         "show_in_carousel": show_in_carousel,
         "carousel_image": fields.get("carousel_image", ""),
+        "carousel_caption_color": fields.get("carousel_caption_color", "auto").strip().lower(),
+        "carousel_title": fields.get("carousel_title", "").strip() or fields["title"],
+        "carousel_order": fields.get("carousel_order", "").strip(),
+        "author": fields["author"],
         "volume": fields.get("volume", ""),
     }
 
@@ -500,11 +504,35 @@ def build_sitemap(all_articles):
 CAROUSEL_SLOTS = 4
 
 
+def split_carousel_title(title):
+    """Splits a title into the carousel's 2 caption lines — an italic
+    kicker (featured-carousel__title-intro) and the headline — at its
+    first ": " or " — ", keeping that punctuation on the kicker line
+    ("The Consumptive's Kiss:" / "Tuberculosis & ..."). A title with
+    neither comes back as ("", title): no kicker line."""
+    for sep, keep in ((": ", ":"), (" — ", " —")):
+        if sep in title:
+            intro, main = title.split(sep, 1)
+            return intro + keep, main
+    return "", title
+
+
+def carousel_edition_label(article):
+    """"Finn Ryan, Edition 2" — author plus the volume's number (the
+    carousel calls volumes "Editions")."""
+    match = re.search(r"(\d+)", article["volume"])
+    if match:
+        return f"{article['author']}, Edition {match.group(1)}"
+    return article["author"]
+
+
 def build_carousel_slide_html(article, index, is_first):
     number = f"({index + 1:02d})"
     article_url = f"/articles/{article['slug']}.html"
-    title_attr = html.escape(article["title"], quote=True)
-    volume_attr = html.escape(article["volume"], quote=True)
+    intro, main = split_carousel_title(article["carousel_title"])
+    intro_attr = f' data-title-intro="{html.escape(intro, quote=True)}"' if intro else ""
+    title_attr = html.escape(main, quote=True)
+    volume_attr = html.escape(carousel_edition_label(article), quote=True)
     image_src = "/" + html.escape(article["carousel_image"], quote=True)
     alt_attr = html.escape(article["illustration_alt"], quote=True)
     hover_tiles = "\n".join(
@@ -528,9 +556,13 @@ def build_carousel_slide_html(article, index, is_first):
         )
     else:
         extra = '            <div class="featured-carousel__scrim" aria-hidden="true"></div>\n'
+    # "Carousel text color" override — "auto" (default) leaves it to the
+    # brightness check in main.js (detectCarouselSlideTone()).
+    tone = {"brown": "light", "cream": "dark"}.get(article["carousel_caption_color"])
+    tone_attr = f' data-caption-tone="{tone}"' if tone else ""
     return (
-        f'          <div class="{slide_class}" data-title="{title_attr}" data-edition="{volume_attr}" '
-        f'data-number="{number}" data-article-url="{article_url}">\n'
+        f'          <div class="{slide_class}"{intro_attr} data-title="{title_attr}" data-edition="{volume_attr}" '
+        f'data-number="{number}" data-article-url="{article_url}"{tone_attr}>\n'
         f'            <img class="featured-carousel__photo" src="{image_src}" alt="{alt_attr}" />\n'
         f"{extra}"
         '            <div class="featured-carousel__hover-tiles">\n'
@@ -548,18 +580,26 @@ def build_carousel_html(all_articles):
     placeholders) would look like a bug, not a deliberate in-progress
     state, so this is all-or-nothing rather than a partial swap."""
     candidates = [a for a in all_articles if a["show_in_carousel"] and a["carousel_image"]]
+    # "Carousel position" (1-4) first, in that order; anything without one
+    # fills the remaining slots newest-first.
+    def position(a):
+        return int(a["carousel_order"]) if a["carousel_order"].isdigit() else None
     candidates.sort(key=lambda a: a["date"] or datetime.min, reverse=True)
+    candidates.sort(key=lambda a: (position(a) is None, position(a) or 0))
     chosen = candidates[:CAROUSEL_SLOTS]
     if len(chosen) < CAROUSEL_SLOTS:
         return None, len(chosen)
 
     slides_html = "\n".join(build_carousel_slide_html(a, i, i == 0) for i, a in enumerate(chosen))
     first = chosen[0]
+    first_intro, first_main = split_carousel_title(first["carousel_title"])
+    intro_style = "" if first_intro else ' style="display: none"'
     caption_html = (
         f'        <a href="/articles/{first["slug"]}.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">'
-        f'{html.escape(first["title"])}</a>\n'
+        f'<span class="featured-carousel__title-intro"{intro_style}>{html.escape(first_intro)}</span>'
+        f'<span class="featured-carousel__title-main">{html.escape(first_main)}</span></a>\n'
         f'        <a href="/publications/" class="featured-carousel__edition mosaic-reveal mosaic-reveal--slide">'
-        f'{html.escape(first["volume"])}</a>\n'
+        f'{html.escape(carousel_edition_label(first))}</a>\n'
         '        <p class="featured-carousel__number mosaic-reveal mosaic-reveal--slide">(01)</p>'
     )
     return (slides_html, caption_html), len(chosen)

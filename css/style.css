@@ -4529,6 +4529,44 @@ a.diamond-cta {
 .featured-carousel.is-caption-fading .featured-carousel__number {
   opacity: 0;
 }
+/* Pale-illustration variant — .is-light (per slide) and .is-light-slide
+   (on .featured-carousel, whichever slide is active) are set by
+   detectCarouselSlideTone()/initFeaturedCarousel() in main.js when the
+   image behind the UI is too bright for tan text. The dark scrim becomes
+   a white one (stronger than the dark one's 0.55 — over an already-pale
+   image a lighter wash barely registers), and everything tan turns
+   brown (--color-dark). Title/
+   edition hover red is unaffected: the :has() hover rule above is more
+   specific than these. */
+.featured-carousel__slide.is-light .featured-carousel__scrim {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.85), transparent 45%);
+}
+.featured-carousel.is-light-slide .featured-carousel__title,
+.featured-carousel.is-light-slide .featured-carousel__edition,
+.featured-carousel.is-light-slide .featured-carousel__number {
+  color: var(--color-dark);
+}
+.featured-carousel.is-light-slide .featured-carousel__indicator {
+  background: var(--color-dark);
+}
+/* Nav diamonds: brown outline + brown arrow at rest, filling brown with
+   a beige arrow on hover — the exact inverse of the default tan version,
+   done by swapping which of the 2 arrow images (.arrow-glyph__default =
+   beige, __hover = brown) shows in each state. */
+.featured-carousel.is-light-slide .featured-carousel__nav {
+  border-color: var(--color-dark);
+}
+.featured-carousel.is-light-slide .featured-carousel__nav:hover {
+  background-color: var(--color-dark);
+}
+.featured-carousel.is-light-slide .featured-carousel__nav .arrow-glyph__default,
+.featured-carousel.is-light-slide .featured-carousel__nav:hover .arrow-glyph__hover {
+  opacity: 0;
+}
+.featured-carousel.is-light-slide .featured-carousel__nav .arrow-glyph__hover,
+.featured-carousel.is-light-slide .featured-carousel__nav:hover .arrow-glyph__default {
+  opacity: 1;
+}
 /* Same always-transparent-until-hovered per-cell flash as
    .image-mosaic__hover-tile — "the carousel is made of tiles/squares,
    so it should be universally hoverable" the same way every .square and

@@ -10,6 +10,8 @@ illustration_alt: "Illustration: The Consumptive's Kiss"
 illustration_caption: Illustration by Melody Zhang
 show_in_carousel: true
 carousel_image: assets/images/articles/the-consumptives-kiss.jpg
+carousel_title: "The Consumptive’s Kiss: Tuberculosis & the Elegance of Death"
+carousel_order: 1
 volume: Volume 2
 works_cited:
   - Patterson, Emma C. “Wayne Sanatorium, Tuberculosis, Stores in Wayne.” Radnor Historical Society – Your Town and My Town, 3 Dec. 1954.
