@@ -3,11 +3,11 @@ title: "Philosophy of Practice — Or Rather, Philosophy of Communication"
 category: essays
 date: 2026-09-23
 author: Max Brody
-designer: Melody Zhang
+designer: Annette Seo
 summary: Starting from Roland Barthes’ Camera Lucida and a memorial photograph of a four-year-old girl, a reflection on what words fail to carry between doctor and patient, and what careful observation can recover.
 illustration: assets/images/articles/philosophy-of-practice.png
 illustration_alt: "Illustration: Philosophy of Practice"
-illustration_caption: Illustration by Melody Zhang
+illustration_caption: Illustration by Annette Seo
 show_in_carousel: true
 carousel_image: assets/images/articles/philosophy-of-practice.png
 volume: Volume 1
