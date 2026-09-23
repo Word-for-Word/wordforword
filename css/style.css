@@ -4333,12 +4333,13 @@ a.diamond-cta {
 }
 .featured-carousel__track {
   display: flex;
-  /* 400%/25% below are sized for exactly 4 real slides — a sane
+  /* 600%/16.667% below are sized for exactly 6 real slides (CAROUSEL_SLOTS
+     in scripts/build_articles.py) — a sane
      fallback if, for whatever reason, initFeaturedCarousel() never runs.
      Normally both get overridden inline by that function once it's
      added its 2 loop-continuity clones (see its own comment), since the
-     real total (6) no longer matches this hardcoded assumption. */
-  width: 400%;
+     real total (8) no longer matches this hardcoded assumption. */
+  width: 600%;
   height: 100%;
   /* cubic-bezier(0.25, 1, 0.5, 1) is this page's own established
      "entering" ease-out curve (see .square:hover, the diamond-cta
@@ -4347,11 +4348,11 @@ a.diamond-cta {
 }
 .featured-carousel__slide {
   position: relative;
-  /* 1 of 4 slides, each of which is itself 400% of .featured-carousel's
+  /* 1 of 6 slides, each of which is itself 600% of .featured-carousel's
      own width (see .featured-carousel__track) — together that's exactly
      100% of .featured-carousel per slide. See that rule's own comment on
      why this is a fallback value, normally overridden inline by JS. */
-  flex: 0 0 25%;
+  flex: 0 0 16.667%;
 }
 /* Same pattern as .image-mosaic__photo — sits in the exact same DOM/
    stacking position .featured-carousel__photo-placeholder occupied (first
@@ -4528,6 +4529,22 @@ a.diamond-cta {
 .featured-carousel.is-caption-fading .featured-carousel__edition,
 .featured-carousel.is-caption-fading .featured-carousel__number {
   opacity: 0;
+}
+/* Per-article "Carousel shadow: stronger" (build_articles.py) — darker
+   at the top edge (0.75 vs 0.55) and reaching a bit further down, for
+   mid-tone images the default gradient doesn't separate the beige
+   caption from enough. */
+.featured-carousel__slide[data-scrim="strong"] .featured-carousel__scrim {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 55%);
+}
+/* Same setting, for the nav diamonds: a soft dark glow hugging the
+   outline and arrow (drop-shadow follows the drawn pixels, not the
+   box), so they separate from mid-tone images without adding a fill.
+   Two layers — a tight darker one for the edge, a wider faint one for
+   the halo. On .featured-carousel (toggled per active slide by
+   applyTone() in main.js) since the buttons live outside the slides. */
+.featured-carousel.is-strong-scrim-slide .featured-carousel__nav {
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
 }
 /* Pale-illustration variant — .is-light (per slide) and .is-light-slide
    (on .featured-carousel, whichever slide is active) are set by

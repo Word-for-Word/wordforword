@@ -50,7 +50,7 @@ collections:
         widget: "boolean"
         default: false
         required: false
-        hint: "Also needs a Carousel image below. The homepage carousel only ever shows the 4 most recently published articles that have this checked — if fewer than 4 articles are marked, the homepage keeps its current placeholder slides instead of showing a half-empty carousel."
+        hint: "Also needs a Carousel image below. The homepage carousel only ever shows the 6 most recently published articles that have this checked — if fewer than 6 articles are marked, the homepage keeps its current placeholder slides instead of showing a half-empty carousel."
       - label: "Carousel image"
         name: "carousel_image"
         widget: "image"
@@ -64,9 +64,16 @@ collections:
       - label: "Carousel position"
         name: "carousel_order"
         widget: "select"
-        options: ["1", "2", "3", "4"]
+        options: ["1", "2", "3", "4", "5", "6"]
         required: false
         hint: "Which carousel slide this is (1 = first). Articles without a position fill any leftover slots, newest first."
+      - label: "Carousel shadow"
+        name: "carousel_shadow"
+        widget: "select"
+        options: ["normal", "stronger"]
+        default: "normal"
+        required: false
+        hint: "'Stronger' darkens the shading behind the carousel title, for images where the text is hard to read."
       - label: "Carousel text color"
         name: "carousel_caption_color"
         widget: "select"

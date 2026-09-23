@@ -11,6 +11,7 @@ illustration_caption: Illustration by Samantha Wu
 show_in_carousel: true
 carousel_image: assets/images/articles/demystifying-the-hispanic-paradox.jpg
 carousel_order: 3
+carousel_shadow: stronger
 volume: Volume 2
 works_cited:
   - Dubina, Kevin. “Hispanics in the Labor Force: 5 Facts.” DOL Blog, 25 Sept. 2021.

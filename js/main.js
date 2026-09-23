@@ -5431,6 +5431,7 @@ function buildCarouselLoopClone(sourceSlide) {
   clone.dataset.number = sourceSlide.dataset.number ?? "";
   clone.dataset.articleUrl = sourceSlide.dataset.articleUrl ?? "#";
   if (sourceSlide.dataset.captionTone) clone.dataset.captionTone = sourceSlide.dataset.captionTone;
+  if (sourceSlide.dataset.scrim) clone.dataset.scrim = sourceSlide.dataset.scrim;
 
   const photo = sourceSlide.querySelector(".featured-carousel__photo");
   const placeholder = sourceSlide.querySelector(".featured-carousel__photo-placeholder");
@@ -5484,11 +5485,13 @@ function buildCarouselLoopClone(sourceSlide) {
 // strip (number + indicators) — and anything brighter than this on a
 // 0-1 luminance scale flips that slide to brown UI + a light scrim.
 // Measured against the current illustrations: 0.96 for Philosophy of
-// Practice vs 0.2-0.6 for the rest, so 0.7 sits well clear of both.
+// Practice (brown), 0.2-0.6 for most others, and 0.70 for the mid-tone
+// beige/pink How Upbringing and Physician Burnout images, which were
+// preferred with the default tan text — so the cutoff sits at 0.8.
 // A slide's data-caption-tone="light"/"dark" (from the article's
 // carousel_caption_color field — see build_articles.py) skips
 // detection entirely, for images the average gets wrong.
-const CAROUSEL_LIGHT_THRESHOLD = 0.7;
+const CAROUSEL_LIGHT_THRESHOLD = 0.8;
 let carouselToneCanvas = null;
 function measureCarouselPhotoLuminance(photo) {
   const W = 64;
@@ -5617,7 +5620,11 @@ function initFeaturedCarousel() {
   // so the tan <-> brown swap never shows mid-fade.
   let activeSlide = null;
   const applyTone = () => {
-    if (carousel && activeSlide) carousel.classList.toggle("is-light-slide", activeSlide.dataset.tone === "light");
+    if (!carousel || !activeSlide) return;
+    carousel.classList.toggle("is-light-slide", activeSlide.dataset.tone === "light");
+    // "Carousel shadow: stronger" slides also get a glow behind the nav
+    // diamonds (see .is-strong-scrim-slide in style.css).
+    carousel.classList.toggle("is-strong-scrim-slide", activeSlide.dataset.scrim === "strong");
   };
   const applyCaption = (slide) => {
     activeSlide = slide;

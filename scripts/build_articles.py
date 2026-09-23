@@ -336,6 +336,7 @@ def build_article(md_path, css_version, js_version, base_url):
         "carousel_image": fields.get("carousel_image", ""),
         "carousel_caption_color": fields.get("carousel_caption_color", "auto").strip().lower(),
         "carousel_title": fields.get("carousel_title", "").strip() or fields["title"],
+        "carousel_shadow": fields.get("carousel_shadow", "").strip().lower(),
         "carousel_order": fields.get("carousel_order", "").strip(),
         "author": fields["author"],
         "volume": fields.get("volume", ""),
@@ -499,18 +500,19 @@ def build_sitemap(all_articles):
     (ROOT / "sitemap.xml").write_text(sitemap_xml, encoding="utf-8")
 
 
-# The homepage carousel is sized (in both markup and CSS) for exactly this
-# many slides — see index.html's own comment on .featured-carousel__track.
-CAROUSEL_SLOTS = 4
+# How many featured articles the homepage carousel shows. initFeaturedCarousel()
+# in main.js sizes the track to however many slides exist; only the CSS
+# no-JS fallback on .featured-carousel__track/__slide assumes this number.
+CAROUSEL_SLOTS = 6
 
 
 def split_carousel_title(title):
     """Splits a title into the carousel's 2 caption lines — an italic
     kicker (featured-carousel__title-intro) and the headline — at its
-    first ": " or " — ", keeping that punctuation on the kicker line
+    first ": ", " — " or " – ", keeping that punctuation on the kicker line
     ("The Consumptive's Kiss:" / "Tuberculosis & ..."). A title with
     neither comes back as ("", title): no kicker line."""
-    for sep, keep in ((": ", ":"), (" — ", " —")):
+    for sep, keep in ((": ", ":"), (" — ", " —"), (" – ", " –")):
         if sep in title:
             intro, main = title.split(sep, 1)
             return intro + keep, main
@@ -560,6 +562,11 @@ def build_carousel_slide_html(article, index, is_first):
     # brightness check in main.js (detectCarouselSlideTone()).
     tone = {"brown": "light", "cream": "dark"}.get(article["carousel_caption_color"])
     tone_attr = f' data-caption-tone="{tone}"' if tone else ""
+    # "Carousel shadow: stronger" — a darker top gradient for mid-tone
+    # images where the default one leaves the beige caption too close to
+    # the image's own colors (see [data-scrim="strong"] in style.css).
+    if article["carousel_shadow"] == "stronger":
+        tone_attr += ' data-scrim="strong"'
     return (
         f'          <div class="{slide_class}"{intro_attr} data-title="{title_attr}" data-edition="{volume_attr}" '
         f'data-number="{number}" data-article-url="{article_url}"{tone_attr}>\n'
