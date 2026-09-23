@@ -4690,6 +4690,38 @@ const GI_REVEAL_BLUR_START_PX = 20;
 // of the time keeps the reveal below the nav both before it starts and
 // once it's fully settled into its final rectangle.
 const GI_REVEAL_NAV_Z_INDEX = 101;
+// The closed-applications overlay (scrim/caption/logo) doesn't wait for
+// rawProgress to hit a literal 1 — per explicit follow-up request (first
+// 0.95, still too late), it should already be showing well before the
+// box finishes settling into its final rectangle, not only once every
+// last bit of motion has stopped.
+const GI_REVEAL_OVERLAY_THRESHOLD = 0.8;
+// The 4x2 hover tiles only respond to hover once the box is at least
+// this far through growing to its full size — per explicit request, so
+// tiles don't flash on the still-rotating/growing diamond. Compared
+// against the eased `progress` (what actually drives the box's size),
+// not rawProgress.
+const GI_REVEAL_TILES_HOVER_THRESHOLD = 0.9;
+// How wide (in rawProgress) the logo's own scroll-proportional
+// scale/rotate/fade window is, ending exactly at
+// GI_REVEAL_OVERLAY_THRESHOLD — see the logo's own block in update()
+// for the full reasoning.
+const GI_REVEAL_LOGO_RANGE = 0.2;
+// Scale at the very start of that window (rawProgress ==
+// GI_REVEAL_OVERLAY_THRESHOLD - GI_REVEAL_LOGO_RANGE) — matches
+// hero-asterisk-intro's own scale(0.25) starting point.
+const GI_REVEAL_LOGO_SCALE_HIDDEN = 0.25;
+// Rotation (degrees, clockwise/rightward) at that same starting point,
+// unwinding to 0 as the logo lands.
+const GI_REVEAL_LOGO_ROTATE_HIDDEN_DEG = 90;
+// Ease-out power applied to the logo's own scroll fraction (see its own
+// block in update()) — a PLAIN linear map of scroll position to scale/
+// rotation/opacity lost the quick-pop-then-settle feel hero-asterisk-
+// intro originally had (reported live as "what happened to its intro
+// animation"); this restores that same fast-start/slow-finish shape
+// while staying scroll-driven (so it still reverses smoothly on the way
+// back up, which the original fixed-duration CSS animation couldn't).
+const GI_REVEAL_LOGO_EASE_POWER = 3;
 // Ease-OUT curve applied to the raw scroll progress before every
 // interpolation below (size, position, rotation, border-radius, blur)
 // — was ease-IN (t^3), reversed per explicit follow-up request ("starts
@@ -4735,15 +4767,34 @@ const GI_REVEAL_DELAY_VH = 70;
 // page lets you keep scrolling normally.
 const GI_REVEAL_GROWTH_VH = 150;
 function initGetInvolvedPinGrow() {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // Reduced motion: no growth animation, but the box (and the caption/
+  // logo/tiles inside it) still needs sizing — its width/height only
+  // ever come from this function — so skip straight to the fully-grown
+  // end state instead of bailing out entirely.
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const spacer = document.querySelector(".gi-reveal-spacer");
   const sticky = document.querySelector(".gi-reveal-sticky");
   const box = document.querySelector(".gi-reveal-box");
   const image = document.querySelector(".gi-reveal-image");
+  const scrim = document.querySelector(".gi-reveal-scrim");
+  const caption = document.querySelector(".gi-reveal-caption");
+  const logoWrap = document.querySelector(".gi-reveal-logo-wrap");
+  const hoverTiles = document.querySelector(".gi-reveal-hover-tiles");
   if (!spacer || !sticky || !box || !image) return;
 
   let startRect = null;
   let endRect = null;
+  // Tracks whether the "fully grown" overlay (scrim/caption/logo) is
+  // currently shown, so update() below only toggles it on an actual
+  // crossing of rawProgress===1, not every frame while already there —
+  // same bidirectional show/hide-on-scroll-away behavior as every other
+  // reveal on this page (see revealWithTile()/initSplitCtaReveal()).
+  let overlayShown = false;
+  // Separate from overlayShown above — tracks specifically whether the
+  // logo has already handed off to its own .is-settling CSS bounce (see
+  // that class's own comment), so update() only adds/removes that class
+  // on an actual crossing, not every frame.
+  let logoSettled = false;
 
   const measure = () => {
     const vh = window.innerHeight;
@@ -4810,7 +4861,7 @@ function initGetInvolvedPinGrow() {
     const scrolledPastEntry = window.innerHeight - spacerRect.top;
     const delayPx = (GI_REVEAL_DELAY_VH / 100) * window.innerHeight;
     const growthPx = (GI_REVEAL_GROWTH_VH / 100) * window.innerHeight;
-    const rawProgress = Math.max(0, Math.min(1, (scrolledPastEntry - delayPx) / growthPx));
+    const rawProgress = reduceMotion ? 1 : Math.max(0, Math.min(1, (scrolledPastEntry - delayPx) / growthPx));
     // Eased, not raw — see GI_REVEAL_EASE_POWER's own comment. Every
     // interpolation below (size, position, rotation, border-radius,
     // blur) reads this ONE eased value, so the whole effect eases
@@ -4872,6 +4923,71 @@ function initGetInvolvedPinGrow() {
     // image's own current (now also changing) width/height above.
     image.style.transform = `translate(-50%, -50%) rotate(${-angle}deg)`;
     image.style.filter = `blur(${GI_REVEAL_BLUR_START_PX * (1 - progress)}px)`;
+
+    // rawProgress (not the eased `progress`) — this only needs to know
+    // how far through the actual scroll distance the box is, regardless
+    // of how the eased value maps to it. See GI_REVEAL_OVERLAY_THRESHOLD's
+    // own comment for why this fires before rawProgress reaches a literal 1.
+    const fullyGrown = rawProgress >= GI_REVEAL_OVERLAY_THRESHOLD;
+    if (hoverTiles) {
+      hoverTiles.classList.toggle("is-hoverable", progress >= GI_REVEAL_TILES_HOVER_THRESHOLD);
+    }
+    if (fullyGrown && !overlayShown) {
+      overlayShown = true;
+      if (scrim) scrim.classList.add("is-visible");
+      if (caption) caption.classList.add("is-visible");
+    } else if (!fullyGrown && overlayShown) {
+      overlayShown = false;
+      if (scrim) scrim.classList.remove("is-visible");
+      if (caption) caption.classList.remove("is-visible");
+    }
+
+    // Logo: two different drivers, handed off right at fullyGrown — see
+    // .gi-reveal-logo-wrap's own comment in style.css for the full
+    // reasoning (short version: a pure scroll-position map alone reads
+    // as an instant snap on a normal-speed scroll, no matter how the
+    // curve is eased, since nothing about it takes real TIME — reported
+    // live as the intro animation itself going missing). While still
+    // short of the threshold, JS drives opacity/scale/rotation directly
+    // off rawProgress every frame (scoped to its own GI_REVEAL_LOGO_RANGE-
+    // wide window ending at GI_REVEAL_OVERLAY_THRESHOLD) — this is what
+    // makes scrolling back up unwind it proportionally, exactly like
+    // before. The INSTANT rawProgress reaches the threshold, JS stops
+    // touching transform at all and hands off to .is-settling (a real,
+    // fixed-duration CSS bounce — see that class's own comment) for the
+    // actual felt "landing." Scrolling back out from settled removes
+    // .is-settling and JS immediately resumes driving transform itself
+    // from wherever the settle animation happened to leave it (its own
+    // 100% keyframe matches JS's own resting values exactly, so there's
+    // no jump either direction at the handoff).
+    if (logoWrap) {
+      if (fullyGrown) {
+        if (!logoSettled) {
+          logoSettled = true;
+          logoWrap.style.opacity = "1";
+          logoWrap.style.transform = "";
+          logoWrap.classList.add("is-settling");
+        }
+      } else {
+        if (logoSettled) {
+          logoSettled = false;
+          logoWrap.classList.remove("is-settling");
+        }
+        const logoRangeStart = GI_REVEAL_OVERLAY_THRESHOLD - GI_REVEAL_LOGO_RANGE;
+        const logoRawT = Math.max(0, Math.min(1, (rawProgress - logoRangeStart) / GI_REVEAL_LOGO_RANGE));
+        // Eased, not the raw scroll fraction directly — see
+        // GI_REVEAL_LOGO_EASE_POWER's own comment for why.
+        const logoProgress = 1 - Math.pow(1 - logoRawT, GI_REVEAL_LOGO_EASE_POWER);
+        const logoScale = GI_REVEAL_LOGO_SCALE_HIDDEN + (1 - GI_REVEAL_LOGO_SCALE_HIDDEN) * logoProgress;
+        // Positive (clockwise/rightward) at the hidden end, unwinding to
+        // 0 as it approaches the threshold — composes with
+        // .gi-reveal-logo's own separate, constant 6deg resting tilt
+        // (see that rule's comment) rather than replacing it.
+        const logoRotate = GI_REVEAL_LOGO_ROTATE_HIDDEN_DEG * (1 - logoProgress);
+        logoWrap.style.opacity = String(logoProgress);
+        logoWrap.style.transform = `scale(${logoScale}) rotate(${logoRotate}deg)`;
+      }
+    }
   };
 
   let ticking = false;
@@ -4889,7 +5005,7 @@ function initGetInvolvedPinGrow() {
   };
 
   remeasureAndUpdate();
-  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  if (!reduceMotion) window.addEventListener("scroll", scheduleUpdate, { passive: true });
   window.addEventListener("resize", remeasureAndUpdate);
 }
 

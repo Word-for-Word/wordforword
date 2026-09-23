@@ -587,6 +587,28 @@ ul { list-style: none; margin: 0; padding: 0; }
   70%  { translate: 0 -0.6px; }
   100% { opacity: 1; translate: 0 0; }
 }
+/* page-flash's own bigger, weightier version of the bounce above — see
+   .page-flash__asterisk/__caption further down. Kept as a separate
+   keyframe (not a shared/scaled use of intro-splash-flicker-in) so the
+   intro splash's own already-tuned pop stays untouched; this one exists
+   because the plain version, at 4px of overshoot, read as understated
+   for how the WHOLE page-flash content block (asterisk + caption
+   together) lands — wanted to read more like a "thud" landing into
+   place than a blink-in. Bigger overshoot (10px vs 4px) plus a small
+   scale punch (1.06 -> settle) for weight, and a touch longer (320ms vs
+   240ms) so that extra travel still reads as one clean landing instead
+   of a blur. (First pass went further — 14px/1.08 — and read slightly
+   too strong; pulled back to these values.) translate/scale (not
+   transform) for the same reason as intro-splash-flicker-in above —
+   stays clear of .page-flash__asterisk's own continuous
+   `transform`-based jitter running at the same time. */
+@keyframes page-flash-content-thud {
+  0%   { opacity: 0; translate: 0 0; scale: 1; }
+  1%   { opacity: 1; translate: 0 -10px; scale: 1.06; }
+  45%  { translate: 0 4.5px; scale: 0.97; }
+  70%  { translate: 0 -1.8px; scale: 1.01; }
+  100% { opacity: 1; translate: 0 0; scale: 1; }
+}
 /* Trial variant: screens 01-04 all sit on cream now (see .intro-splash
    above), varying by asterisk/caption color instead — red / blue
    (--color-grey, this project's informal name for it) / darker beige
@@ -858,28 +880,39 @@ html.show-page-flash.page-flash-ready .page-flash__color {
   opacity: 0;
 }
 /* Continuous jitter, not the intro splash's one-shot settle-to-still
-   (there's no "next screen" here to settle in time for) — reuses that
-   same jitter's early values (see intro-splash-asterisk-jitter-settle
-   above), just looped back to (0,0) for a seamless repeat. Comma'd
-   alongside intro-splash-flicker-in (see .intro-splash__asterisk--1.is-cut
-   above) so every page-flash screen pops in with the same blank-pause
-   +bounce the intro splash's own screens 01/00 use, not just a plain
-   fade — the two animations don't fight because they touch different
-   properties (this one's `transform`, that one's `opacity`/`translate`). */
+   (there's no "next screen" here to settle in time for) — started from
+   that jitter's early values (see intro-splash-asterisk-jitter-settle
+   above) but scaled up (~2x, sped up too) on explicit request: at the
+   intro splash's original sub-pixel scale (max ~0.6px), the shake read
+   as imperceptible whenever page load lagged even slightly, since a
+   user who's already been waiting isn't looking closely enough to catch
+   a <1px wobble — it just registered as the colored screen "flatly"
+   sitting there rather than visibly animating. (A first pass scaled it
+   ~4x, which then read as too much movement — pulled back to ~2x.)
+   Kept as its OWN keyframe
+   list (not shared with intro-splash-asterisk-jitter-settle) specifically
+   so that one-shot's own separately-tuned amplitude — deliberately
+   pulled back from an earlier ~1.5px that read as "too intense" there —
+   isn't disturbed by this. Looped back to (0,0) for a seamless repeat.
+   Comma'd alongside page-flash-content-thud (see that keyframe's own
+   comment further down) so every page-flash screen pops in with a
+   blank-pause+bounce, not just a plain fade — the two animations don't
+   fight because they touch different properties (this one's
+   `transform`, that one's `opacity`/`translate`). */
 html.show-page-flash.page-flash-ready .page-flash__asterisk {
   animation:
-    page-flash-asterisk-jitter 0.7s linear infinite,
-    intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
+    page-flash-asterisk-jitter 0.5s linear infinite,
+    page-flash-content-thud 320ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 @keyframes page-flash-asterisk-jitter {
   0%     { transform: translate(0, 0); }
-  12.5%  { transform: translate(-0.6px, 0.4px); }
-  25%    { transform: translate(0.4px, -0.6px); }
-  37.5%  { transform: translate(-0.4px, -0.4px); }
-  50%    { transform: translate(0.6px, 0.3px); }
-  62.5%  { transform: translate(-0.5px, 0.5px); }
-  75%    { transform: translate(0.3px, -0.5px); }
-  87.5%  { transform: translate(-0.6px, 0.2px); }
+  12.5%  { transform: translate(-1.4px, 1px); }
+  25%    { transform: translate(1px, -1.4px); }
+  37.5%  { transform: translate(-1px, -1px); }
+  50%    { transform: translate(1.4px, 0.7px); }
+  62.5%  { transform: translate(-1.2px, 1.2px); }
+  75%    { transform: translate(0.7px, -1.2px); }
+  87.5%  { transform: translate(-1.4px, 0.5px); }
   100%   { transform: translate(0, 0); }
 }
 .page-flash__caption {
@@ -890,11 +923,12 @@ html.show-page-flash.page-flash-ready .page-flash__asterisk {
   text-align: center;
   opacity: 0;
 }
-/* Same intro-splash-flicker-in bounce as the asterisk above, on the
-   caption too — matches the intro splash, where screen 01/00's asterisk
-   AND caption both bounce in together. */
+/* Same page-flash-content-thud bounce as the asterisk above, on the
+   caption too — same 120ms delay, so asterisk and caption still land
+   together as one block, just with more weight than the intro splash's
+   own plain flicker-in (see that keyframe's own comment for why). */
 html.show-page-flash.page-flash-ready .page-flash__caption {
-  animation: intro-splash-flicker-in 240ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
+  animation: page-flash-content-thud 320ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 .page-flash--01 { background: var(--color-red); }
 .page-flash--02 { background: var(--color-grey); }
@@ -4144,6 +4178,141 @@ a.diamond-cta {
   left: 50%;
   object-fit: cover;
   object-position: 50% 70%;
+}
+/* Same 4x2 grid, same per-cell hover flash, as
+   .featured-carousel__hover-tiles/__hover-tile (section 4's real article
+   carousel) — see the HTML comment above .gi-reveal-hover-tiles for why
+   this box's own end size makes that grid come out as the exact same
+   true-square tiles the carousel (and every .square on the page) uses,
+   not a coincidence needing separate tuning. pointer-events:auto
+   overrides .gi-reveal-sticky's own pointer-events:none 2 levels up —
+   without it this layer would inherit "none" and never receive :hover
+   at all, same fix .pin-grow-box .featured-carousel__nav needed. */
+.gi-reveal-hover-tiles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  pointer-events: none;
+}
+/* Only hoverable once the box is >=90% grown — toggled by
+   initGetInvolvedPinGrow() (GI_REVEAL_TILES_HOVER_THRESHOLD). With
+   reduced motion that function never runs, so the box is already full
+   size — the media query below keeps tiles hoverable there. */
+.gi-reveal-hover-tiles.is-hoverable {
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gi-reveal-hover-tiles { pointer-events: auto; }
+}
+.gi-reveal-hover-tile {
+  background: rgba(255, 255, 255, 0);
+  transition: background-color 0.3s ease-out;
+}
+.gi-reveal-hover-tile:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transition: background-color 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* Closed-applications overlay: toggled on once the box is ~95% through
+   growing (GI_REVEAL_OVERLAY_THRESHOLD in initGetInvolvedPinGrow()'s own
+   update(), bidirectionally — scrolling back out hides it again, same
+   as every other scroll reveal on this page). Scrim + caption are
+   literally the same .mosaic-reveal/--slide classes section 1's own
+   .image-mosaic__scrim/__caption use — same fade+slide-up-from-the-
+   bottom, not a reimplementation. */
+.gi-reveal-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 45%);
+  pointer-events: none;
+}
+/* Centered (per explicit follow-up — was left-aligned like section 1's
+   own caption, but that one sits beside a headline+CTA on the left with
+   "Volume 2" balancing it on the right; this is a single standalone
+   line, so centered reads right instead) and bigger/beige (--color-tan,
+   this project's own name for it) to actually read as a real notice
+   against the photo, not a small caption. */
+.gi-reveal-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  z-index: 2;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  font-size: clamp(18px, 2.4vw, 30px);
+}
+/* The logo: the real site mark (Logo.png — the WW seal, not the
+   asterisk/favicon), repositioned/resized for this box. Two different
+   drivers, handed off at the moment it finishes arriving (see
+   initGetInvolvedPinGrow()'s own logo comment for the exact handoff):
+   while it's still short of GI_REVEAL_OVERLAY_THRESHOLD, JS sets
+   opacity/transform directly every frame off scroll position (so
+   scrolling back up unwinds it proportionally — a fire-and-forget CSS
+   animation can't do that). The MOMENT it reaches that threshold, JS
+   stops touching transform and instead adds .is-settling, handing off
+   to a real fixed-duration CSS animation for a felt "landing" bounce —
+   a plain scroll-position map alone reads as an instant snap on a
+   normal-speed scroll (reported live as "what happened to its intro
+   animation," even after easing the scroll-driven curve itself: the
+   issue wasn't the curve shape, it's that a real animation needs actual
+   TIME to read as one, independent of how fast the scroll that crossed
+   the threshold was). opacity:0/no transform here is only the pre-JS
+   resting state — same idiom as .gi-reveal-image's own width/height,
+   "set live" once initGetInvolvedPinGrow() actually runs. Centered
+   vertically via inset+margin rather than a static transform:
+   translateY, since `transform` is what's driven by one of the two
+   mechanisms above at any given moment — a permanent transform here
+   would just get overwritten by both. */
+.gi-reveal-logo-wrap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 6%;
+  margin-block: auto;
+  height: fit-content;
+  width: clamp(64px, 7vw, 110px);
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+/* The landing bounce itself — starts from exactly where the scroll-
+   driven tracking leaves off (scale(1) rotate(0deg), same resting
+   transform JS's own logoProgress===1 case would set) so there's no
+   visible jump at the handoff, then overshoots and settles. Same
+   "weighty landing" language as page-flash-content-thud elsewhere on
+   this site (scale overshoot, not just a fade) — kept as a distinct,
+   smaller-scoped animation rather than reusing hero-asterisk-intro
+   itself, since that one's whole 650deg spin-up is wrong for "landing
+   bounce off an already-unwound rotation." both fill-mode: holds its
+   start value (matching JS's last frame) until the animation actually
+   begins, then its end value once done, so there's nothing for JS's own
+   un-set transform to flash through in between. */
+.gi-reveal-logo-wrap.is-settling {
+  animation: gi-reveal-logo-settle 0.45s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes gi-reveal-logo-settle {
+  0%   { transform: scale(1) rotate(0deg); }
+  45%  { transform: scale(1.15) rotate(-5deg); }
+  70%  { transform: scale(0.95) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+/* Static tilt lives on the INNER image, not the wrap — the wrap's own
+   `transform` is what JS overwrites every frame (see its own comment
+   above), so a static rotate there would just get overwritten too.
+   Putting it here instead composes independently: the wrap still
+   unwinds to rotate(0deg) as it lands, and the image's own constant
+   rotate(6deg) is what's left over once it does, landing tilted right
+   instead of dead vertical. */
+.gi-reveal-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: rotate(6deg);
 }
 .featured-carousel {
   position: relative;
@@ -8079,6 +8248,21 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 .article-page__body blockquote p {
   margin-top: 0;
 }
+/* Inline photos from a ![alt](path) body line (see render_body_html() in
+   scripts/build_articles.py) — small and centered, since these are
+   supporting images inside the text (e.g. a photo the author refers
+   to), not a second full-width illustration. Same 24px corner radius
+   as .article-page__illustration-wrap img. */
+.article-page__figure {
+  margin: 32px auto 0;
+  max-width: 240px;
+}
+.article-page__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+}
 /* Deliberately its own block, not part of .article-page__body — a
    dedicated "Works Cited" CMS field (see admin/config.yml) so citation
    text always renders at this smaller size instead of depending on a
@@ -8730,9 +8914,27 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
   .intro-splash__asterisk-wrap { animation: none; opacity: 0; visibility: hidden; }
   .hero__wordmark-asterisk-wrap { animation: none; opacity: 1; transform: none; }
   .hero__wordmark-asterisk { animation: none; }
+  .gi-reveal-logo-wrap { animation: none; opacity: 1; transform: none; }
   .nav__dropdown-visual-asterisk { animation: none; }
   .custom-cursor-wrap { display: none; }
   .square__down-arrow { animation: none; opacity: 1; }
+  /* Scroll reveals that weren't in the shared list at the top of this
+     block — each just shows at its final resting state immediately. */
+  .team-bio,
+  .marquee-banner--scrolling { transition: none; opacity: 1; transform: none; }
+  .beyond-page__img { transition: none; opacity: 1; translate: -50% -50%; }
+  .beyond-page__img--1 { rotate: -3.01deg; }
+  .beyond-page__img--2 { rotate: 8.96deg; }
+  .beyond-page__asterisk-wrap,
+  .split-cta__illustration-asterisk-wrap { animation: none; opacity: 1; }
+  /* Same as .hero__wordmark-asterisk above — no continuous spin. */
+  .beyond-page__asterisk,
+  .split-cta__illustration-asterisk,
+  .square__inset-asterisk { animation: none; }
+  /* initGetInvolvedPinGrow() jumps straight to the fully-grown box under
+     reduced motion, so there's no growth to give scroll runway to —
+     just the sticky's own 100vh. */
+  .gi-reveal-spacer { height: 100vh; }
 }
 
 /* ===================================================================

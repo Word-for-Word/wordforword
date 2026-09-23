@@ -155,6 +155,9 @@ def render_body_html(body):
     newlines WITHIN a block are joined with a space (soft-wrap), matching
     how a plain paragraph of prose reads.
 
+    A block that's just a single ![alt](path) line becomes an inline
+    <figure> — also something Decap's markdown widget can insert.
+
     Also recognizes ## / ### headers and "- " bullet lists — not just
     prose — since Decap CMS's own markdown widget can produce these even
     though this parser doesn't support the rest of full Markdown; without
@@ -170,6 +173,15 @@ def render_body_html(body):
         if all(line.strip().startswith(">") for line in lines):
             quoted = " ".join(line.strip().lstrip(">").strip() for line in lines)
             html_blocks.append(f"        <blockquote><p>{render_inline(quoted)}</p></blockquote>")
+        elif len(lines) == 1 and re.fullmatch(r"!\[(.*?)\]\((.+?)\)", stripped_first):
+            m = re.fullmatch(r"!\[(.*?)\]\((.+?)\)", stripped_first)
+            src = m.group(2)
+            if not src.startswith(("/", "http://", "https://")):
+                src = "/" + src
+            html_blocks.append(
+                f'        <figure class="article-page__figure"><img src="{html.escape(src, quote=True)}" '
+                f'alt="{html.escape(m.group(1), quote=True)}" loading="lazy" /></figure>'
+            )
         elif stripped_first.startswith("### "):
             html_blocks.append(f"        <h3>{render_inline(stripped_first[4:].strip())}</h3>")
         elif stripped_first.startswith("## "):
