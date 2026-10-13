@@ -1804,9 +1804,11 @@ function revealSwappedHero(hero) {
     el.offsetHeight; // flush the transition:none above before removing it
     el.style.transition = "";
   });
+  restoreLetterKerning(hero);
   positionHeroAsterisk();
   positionHeroWordmarkFor();
   document.fonts.ready.then(() => {
+    restoreLetterKerning(hero);
     positionHeroAsterisk();
     positionHeroWordmarkFor();
   });
@@ -2898,16 +2900,85 @@ function positionHeroWordmarkFor() {
   forWrap.style.setProperty("--squash-base", transformValue);
 }
 
+// Safari (WebKit) drops the font's kerning at every element boundary, so
+// splitting "Word" into one .hero__title-letter span per letter (for the
+// per-letter entrance) renders it noticeably looser there than the same
+// text as one run — measured ~12px wider at 192px ("Wo" loses its tuck
+// entirely). Chrome kerns across spans, so it's unaffected. This measures
+// both versions off-screen (a plain text run vs. the same letters split
+// into spans) and gives each letter a margin-left equal to the difference,
+// in em so it keeps scaling with the clamp()'d font-size on resize. Where
+// the browser already kerns across spans the difference is 0 and nothing
+// changes. Idempotent — measures throwaway clones, never the live letters
+// — so it's safe to re-run once the real web font has loaded.
+function restoreLetterKerning(scope = document) {
+  scope.querySelectorAll(".hero__title-exit--lettered").forEach((word) => {
+    const letters = [...word.querySelectorAll(".hero__title-letter")];
+    if (letters.length < 2) return;
+    const cs = getComputedStyle(word);
+    const fontSize = parseFloat(cs.fontSize);
+    if (!fontSize) return;
+
+    const probe = document.createElement("div");
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText =
+      "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;";
+    ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontStretch",
+     "letterSpacing", "fontKerning", "fontFeatureSettings",
+     "fontVariationSettings"].forEach((prop) => { probe.style[prop] = cs[prop]; });
+    const plain = document.createElement("div");
+    plain.textContent = letters.map((l) => l.textContent).join("");
+    const split = document.createElement("div");
+    letters.forEach((l) => {
+      const s = document.createElement("span");
+      s.style.position = "relative";
+      s.textContent = l.textContent;
+      split.appendChild(s);
+    });
+    probe.append(plain, split);
+    document.body.appendChild(probe);
+
+    const textNode = plain.firstChild;
+    const range = document.createRange();
+    const plainLeft = plain.getBoundingClientRect().left;
+    const splitLeft = split.getBoundingClientRect().left;
+    let offset = 0;
+    const deltas = letters.map((_, i) => {
+      range.setStart(textNode, offset);
+      range.setEnd(textNode, offset + letters[i].textContent.length);
+      offset += letters[i].textContent.length;
+      const kerned = range.getBoundingClientRect().left - plainLeft;
+      const unkerned = split.children[i].getBoundingClientRect().left - splitLeft;
+      return kerned - unkerned;
+    });
+    probe.remove();
+
+    letters.forEach((letter, i) => {
+      // Word 2's "d" sits inside .hero__wordmark-d-anchor — shift the
+      // anchor itself, so the box positionHeroAsterisk() measures moves
+      // with the glyph instead of the glyph overhanging it.
+      const parent = letter.parentElement;
+      const target =
+        parent !== word && parent.firstElementChild === letter ? parent : letter;
+      const margin = i === 0 ? 0 : deltas[i] - deltas[i - 1];
+      target.style.marginLeft =
+        Math.abs(margin) < 0.25 ? "" : `${(margin / fontSize).toFixed(4)}em`;
+    });
+  });
+}
+
 function initHeroAsteriskPosition() {
   const wrap = document.querySelector(".hero__wordmark-wrap");
   const anchor = document.querySelector(".hero__wordmark-d-anchor");
   const word1 = document.querySelector(".hero__wordmark-word--1");
   const word2 = document.querySelector(".hero__wordmark-word--2");
+  restoreLetterKerning();
   positionHeroAsterisk();
   positionHeroWordmarkFor();
   // Re-measure once the real web font is actually in — same fallback-vs-
   // real-font reflow reasoning as initNavHighlight()'s placeIndicator.
   document.fonts.ready.then(() => {
+    restoreLetterKerning();
     positionHeroAsterisk();
     positionHeroWordmarkFor();
   });
