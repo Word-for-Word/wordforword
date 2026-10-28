@@ -1,0 +1,4 @@
+{
+  "_how_to": "Collab posts another account created (Instagram's API never returns these). Add one entry per post: permalink = the post's link, timestamp = the date it was posted (YYYY-MM-DD), caption = its caption, image = a saved copy of its cover image in assets/images/instagram-collab/. The site mixes these in with the auto-fetched posts by date and shows the newest 6.",
+  "posts": []
+}

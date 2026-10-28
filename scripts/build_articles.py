@@ -18,7 +18,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -338,6 +338,7 @@ def build_article(md_path, css_version, js_version, base_url):
         "carousel_title": fields.get("carousel_title", "").strip() or fields["title"],
         "carousel_shadow": fields.get("carousel_shadow", "").strip().lower(),
         "carousel_order": fields.get("carousel_order", "").strip(),
+        "carousel_split": fields.get("carousel_split", "").strip().lower() != "false",
         "author": fields["author"],
         "volume": fields.get("volume", ""),
     }
@@ -506,12 +507,17 @@ def build_sitemap(all_articles):
 CAROUSEL_SLOTS = 6
 
 
-def split_carousel_title(title):
+def split_carousel_title(article):
     """Splits a title into the carousel's 2 caption lines — an italic
     kicker (featured-carousel__title-intro) and the headline — at its
     first ": ", " — " or " – ", keeping that punctuation on the kicker line
     ("The Consumptive's Kiss:" / "Tuberculosis & ..."). A title with
-    neither comes back as ("", title): no kicker line."""
+    neither comes back as ("", title): no kicker line. So does one with
+    `carousel_split: false`, for titles whose dash is part of a single
+    phrase ("How Upbringing Shapes Us – Literally"), not a subtitle."""
+    title = article["carousel_title"]
+    if not article["carousel_split"]:
+        return "", title
     for sep, keep in ((": ", ":"), (" — ", " —"), (" – ", " –")):
         if sep in title:
             intro, main = title.split(sep, 1)
@@ -531,7 +537,7 @@ def carousel_edition_label(article):
 def build_carousel_slide_html(article, index, is_first):
     number = f"({index + 1:02d})"
     article_url = f"/articles/{article['slug']}.html"
-    intro, main = split_carousel_title(article["carousel_title"])
+    intro, main = split_carousel_title(article)
     intro_attr = f' data-title-intro="{html.escape(intro, quote=True)}"' if intro else ""
     title_attr = html.escape(main, quote=True)
     volume_attr = html.escape(carousel_edition_label(article), quote=True)
@@ -599,7 +605,7 @@ def build_carousel_html(all_articles):
 
     slides_html = "\n".join(build_carousel_slide_html(a, i, i == 0) for i, a in enumerate(chosen))
     first = chosen[0]
-    first_intro, first_main = split_carousel_title(first["carousel_title"])
+    first_intro, first_main = split_carousel_title(first)
     intro_style = "" if first_intro else ' style="display: none"'
     caption_html = (
         f'        <a href="/articles/{first["slug"]}.html" class="featured-carousel__title mosaic-reveal mosaic-reveal--slide">'
@@ -650,6 +656,30 @@ def update_homepage_carousel(all_articles):
 
 
 INSTAGRAM_DATA_FILE = ROOT / "content" / "instagram_feed.json"
+# Hand-maintained list of Collab posts that another account created and
+# @pennword4word was only added to as a collaborator. Instagram's API
+# never returns those in the account's own media list, so
+# fetch_instagram.py can't pick them up. Each entry is shaped like a
+# post in instagram_feed.json: permalink, timestamp, caption, and an
+# image saved under assets/images/instagram-collab/ (a separate folder
+# on purpose, because fetch_instagram.py's prune_stale_images() deletes
+# anything in assets/images/instagram/ it didn't fetch itself).
+INSTAGRAM_COLLAB_FILE = ROOT / "content" / "instagram_collab_posts.json"
+INSTAGRAM_FEED_SIZE = 6
+
+
+def instagram_post_time(post):
+    """Sort key for mixing fetched and hand-added posts by date. Fetched
+    posts carry Instagram's own "2026-09-01T23:02:46+0000"; hand-added
+    ones may give just "2026-01-17", which is treated as midnight UTC."""
+    stamp = post.get("timestamp", "")
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d"):
+        try:
+            parsed = datetime.strptime(stamp, fmt)
+            return parsed.replace(tzinfo=parsed.tzinfo or timezone.utc)
+        except ValueError:
+            continue
+    return datetime.min.replace(tzinfo=timezone.utc)
 
 
 def build_instagram_card_html(post):
@@ -734,6 +764,11 @@ def update_instagram_feed():
     if not posts:
         print("Instagram feed: content/instagram_feed.json has no posts — leaving today's placeholder cards in place.")
         return
+    if INSTAGRAM_COLLAB_FILE.exists():
+        collab_posts = json.loads(INSTAGRAM_COLLAB_FILE.read_text(encoding="utf-8")).get("posts", [])
+        fetched_links = {p.get("permalink") for p in posts}
+        posts = posts + [p for p in collab_posts if p.get("permalink") not in fetched_links]
+    posts = sorted(posts, key=instagram_post_time, reverse=True)[:INSTAGRAM_FEED_SIZE]
 
     cards_html = build_instagram_columns_html(posts)
     index_path = ROOT / "index.html"

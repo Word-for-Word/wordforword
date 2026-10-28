@@ -3341,17 +3341,11 @@ main {
   font-family: var(--font-display);
   font-style: italic;
   font-size: clamp(26px, 8vw, 40px);
-  transition: color 0.3s ease-out;
   cursor: pointer;
 }
-/* Same red-on-hover convention as .nav__links a — this is a real link
-   now (see index.html), so it needs its own hover affordance separate
-   from .image-mosaic__hover-tile's generic per-cell photo flash
-   underneath it. */
-.image-mosaic__caption--headline:hover {
-  color: var(--color-red);
-  transition: color 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-}
+/* No text color change on hover (removed per doubletake request — it
+   used to turn red like .nav__links a): the diamond button below is the
+   link's only hover animation. */
 /* This diamond is the only .diamond-cta--fill-on-hover instance on the
    page that sits INSIDE a larger clickable text link rather than being
    the whole clickable element itself, so "hover the diamond" and "hover
@@ -3621,12 +3615,9 @@ a.diamond-cta {
    .image-mosaic__caption--headline:hover), so a single generic rule
    here covers every hover-swapping instance regardless of which 2
    colors it actually uses.
-   NOTE: "Arrow, blue.png" and "Arrow, brown.png" are misnamed relative
-   to their actual pixel colors — "blue.png" is --color-dark and
-   "brown.png" is --color-grey. This project already calls --color-grey
-   "blue" informally elsewhere (.diamond-cta--fill-on-hover--blue), so
-   treat these 2 files by their ACTUAL rendered color, not their
-   filename, when using them anywhere. */
+   Files match their names: "Arrow, brown.png" is --color-dark,
+   "Arrow, blue.png" is --color-grey (this project's informal "blue",
+   as in .diamond-cta--fill-on-hover--blue). */
 .arrow-glyph {
   display: inline-block;
   position: relative;
@@ -3776,7 +3767,18 @@ a.diamond-cta {
 .featured-carousel__nav--prev.diamond-cta--fill-on-hover:hover > .arrow-glyph {
   animation: arrow-glyph-pizzazz--rotated-flipped 0.6s cubic-bezier(0.33, 1, 0.68, 1);
 }
+/* "Read our latest issue!": its diamond's arrow is a direct (rotated)
+   child too, but hovering the TEXT first only matched the plain
+   `left`-based variant above — which the diamond's rotation bends into
+   a diagonal (doubletake report: "slides in from the top left"). This
+   (higher specificity) keeps it on the --rotated variant whether the
+   pointer enters via the text or the diamond, so it also doesn't
+   restart mid-hover when crossing from one to the other. */
+.image-mosaic__caption--headline:hover .diamond-cta > .arrow-glyph {
+  animation: arrow-glyph-pizzazz--rotated 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+}
 @media (prefers-reduced-motion: reduce) {
+  .image-mosaic__caption--headline:hover .diamond-cta > .arrow-glyph,
   .diamond-cta--fill-on-hover:hover .arrow-glyph,
   .image-mosaic__caption--headline:hover .arrow-glyph,
   .diamond-cta--fill-on-hover:hover > .arrow-glyph,
@@ -5077,8 +5079,8 @@ span.split-cta__text-line {
   height: 9px;
 }
 .split-cta__diamond-arrow-cream {
-  -webkit-mask-image: url("../assets/images/Arrow, blue.png");
-  mask-image: url("../assets/images/Arrow, blue.png");
+  -webkit-mask-image: url("../assets/images/Arrow, brown.png");
+  mask-image: url("../assets/images/Arrow, brown.png");
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -6020,8 +6022,8 @@ span.split-cta__text-line {
   inset: 0;
   width: 100%;
   height: 100%;
-  -webkit-mask-image: url("../assets/images/Arrow, blue.png");
-  mask-image: url("../assets/images/Arrow, blue.png");
+  -webkit-mask-image: url("../assets/images/Arrow, brown.png");
+  mask-image: url("../assets/images/Arrow, brown.png");
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -6068,7 +6070,7 @@ span.split-cta__text-line {
    text glyph this used at first — a font character has almost no
    visual weight next to the nav arrows' own solid mask artwork, which
    is exactly the "different stroke" mismatch reported live. Measured
-   the actual arrow source art (Arrow, blue.png, 66x42) to match: its
+   the actual arrow source art (Arrow, brown.png, 66x42) to match: its
    shaft is ~6px thick within a 42px-tall box, i.e. ~14% of the glyph's
    own height — at this span's 16px size, that's ~2px, hence the bars
    below. This span still ALSO matches the shared ".diamond-cta >
@@ -6384,6 +6386,11 @@ body.edition-lightbox-open {
   display: flex;
   flex-direction: column;
   gap: 48px;
+  /* Same 120px inset as "Beyond the Page" just above (.split-cta__text's
+     padding-left), on both sides, so the bios line up with that
+     section's text instead of running to the page edges. Mobile
+     override (32px, again matching .split-cta__text) further down. */
+  padding: 0 120px;
 }
 .team-bio {
   display: flex;
@@ -6819,18 +6826,56 @@ body.edition-lightbox-open {
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
   /* 80px, not 24px — bumped per explicit follow-up for a significant
      gap below the static text (title/description/handle), not just a
      normal paragraph-sized one. */
   margin-top: 80px;
   font-size: var(--text-small);
-  opacity: 0;
   max-width: 32ch;
-  transition: opacity 0.3s ease;
+  /* Sits in its own solid white box (per doubletake request): the box
+     hugs the text instead of spanning the column, side padding larger
+     than top/bottom like the text tiles. Full --color-dark (no 0.8
+     opacity any more) so it's the exact design-system brown. */
+  width: fit-content;
+  padding: 10px 16px;
+  color: var(--color-dark);
+  isolation: isolate; /* keeps the ::before box behind the text, not behind the section */
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
-.instagram-feed.instagram-feed--hovering .instagram-feed__hover-caption {
-  opacity: 0.8;
+/* The white box itself, as its own layer behind the text. */
+.instagram-feed__hover-caption::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #fff;
+}
+/* .is-showing is re-added by initInstagramHoverCaption() each time a
+   DIFFERENT post is hovered, so the reveal replays per post rather than
+   only on the first hover. Two stages, both done by clipping the whole
+   caption (box + text together), per doubletake request that the old
+   corner-scale pop was "too snappy": first a short strip (10px tall —
+   exactly the top padding, so no text peeks through yet) grows left to
+   right, then it opens downward, uncovering the text line by line. */
+.instagram-feed__hover-caption.is-showing {
+  opacity: 1;
+  transition: none;
+  animation: caption-reveal 0.6s both;
+}
+@keyframes caption-reveal {
+  0% {
+    clip-path: inset(0 100% calc(100% - 10px) 0);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  40% {
+    clip-path: inset(0 0 calc(100% - 10px) 0);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  100% { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .instagram-feed__hover-caption.is-showing { animation: none; }
 }
 /* 2 independent flex columns rather than a single CSS grid — the
    RIGHT one gets a top offset (below) for the staggered/masonry look
@@ -7340,6 +7385,7 @@ body.edition-lightbox-open {
      eats over a third of a 320px viewport's width, crushing "What
      else?" and the paragraph lines into an unnecessarily narrow strip. */
   .split-cta__text { padding-left: 32px; padding-right: 32px; }
+  .team-bios { padding: 0 32px; }
   .publications__grid { grid-template-columns: repeat(2, 1fr); }
   /* Same reasoning as .square-grid--4col above — 4 narrow columns with
      side checkers squeezed thin doesn't hold up on mobile, so stack to

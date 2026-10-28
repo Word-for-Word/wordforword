@@ -103,6 +103,7 @@ window.scrollTo(0, 0);
 document.addEventListener("DOMContentLoaded", () => {
   window.scrollTo(0, 0);
   initViewportFrameSync();
+  initAnimatedFavicon();
   initPageFlashReady();
   initNavHighlight();
   initDropdownIndent();
@@ -213,7 +214,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initInstagramHoverCaption();
     initInstagramColumnParallax();
     initPublicationFamilyTransitions();
-    initDevPanel();
+    // initDevPanel(); — switched off per request ("not necessary for this
+    // project"). The function below is kept, so re-enable by uncommenting.
     // Last on purpose — see this function's own comment on why it needs
     // to run after initHeroEyebrowExit() above has already registered
     // its OWN "introfinished" listener (that's the one that actually
@@ -392,11 +394,24 @@ function initInstagramHoverCaption() {
   const captionEl = document.querySelector(".instagram-feed__hover-caption");
   if (!feed || !captionEl) return;
 
+  // .is-showing drives the caption's grow-then-text animation (see
+  // .instagram-feed__hover-caption in style.css). It's only restarted
+  // when a DIFFERENT card is entered: mouseover also fires on every
+  // move between a card's own children, and replaying it on those
+  // would make the box flicker.
+  let currentCard = null;
   const show = (card) => {
+    if (card === currentCard) return;
+    currentCard = card;
     captionEl.textContent = card.dataset.caption || "";
+    captionEl.classList.remove("is-showing");
+    void captionEl.offsetWidth; // restart the animation
+    captionEl.classList.add("is-showing");
     feed.classList.add("instagram-feed--hovering");
   };
   const hide = () => {
+    currentCard = null;
+    captionEl.classList.remove("is-showing");
     feed.classList.remove("instagram-feed--hovering");
   };
 
@@ -3537,7 +3552,9 @@ function initLuxuryScroll() {
   }
 
   const lenis = new Lenis({
-    lerp: 0.18, // higher = snappier/closer to native, lower = smoother/heavier
+    // Was 0.18, which read as laggy on a Mac trackpad (already smooths
+    // natively); 0.4 then felt too snappy, so this is the middle ground.
+    lerp: 0.28, // higher = snappier/closer to native, lower = smoother/heavier
     smoothWheel: true,
   });
   // Exposed so applyPublicationFamilySwap() (the publication-family AJAX
@@ -5718,6 +5735,20 @@ function initFeaturedCarousel() {
     if (captionNumber) captionNumber.textContent = slide.dataset.number ?? "";
   };
   applyCaption(track.children[index]);
+  // The edition line's CSS `top` assumes a 2-line title. Titles that
+  // fit on 1 line (or wrap to 3) would leave it floating too far below
+  // (or overlapping), so pin it just under the title's real height
+  // instead. A ResizeObserver catches every cause of a height change —
+  // new slide text, viewport resize, webfont swap — and since text only
+  // changes mid-crossfade, the jump happens while it's invisible.
+  if (captionTitle && captionEdition && "ResizeObserver" in window) {
+    const EDITION_GAP_PX = 10;
+    const placeEdition = () => {
+      captionEdition.style.top = `${captionTitle.offsetTop + captionTitle.offsetHeight + EDITION_GAP_PX}px`;
+    };
+    new ResizeObserver(placeEdition).observe(captionTitle);
+    placeEdition();
+  }
   for (const slide of track.children) {
     detectCarouselSlideTone(slide, () => {
       if (slide === activeSlide) applyTone();
@@ -5860,4 +5891,36 @@ function initCarouselReveal() {
 
   revealWithTile(masks[0], [scrim, title, edition, ...navButtons, indicators].filter(Boolean));
   revealWithTile(masks[7], [number].filter(Boolean));
+}
+
+// Browser-tab icon cycles through the same asterisks as the homepage
+// splash (01-04) plus the real red logo asterisk, each shown for the
+// same beat, on a continuous loop — a tiny echo of the splash. Works by
+// swapping the <link rel="icon"> href on a timer (animated GIF favicons
+// only play in Firefox). Chrome/Firefox/Edge honor the swaps; Safari
+// mostly caches the first icon, so it just shows the static logo. Frames
+// are the splash PNGs padded to squares (Favicon frame N.png) so the
+// non-square asterisks don't get stretched. Skipped entirely for
+// prefers-reduced-motion.
+function initAnimatedFavicon() {
+  const link = document.querySelector('link[rel="icon"][sizes="32x32"]');
+  if (!link) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const base = link.getAttribute("href").replace(/Favicon\.png$/, "");
+  const frames = [
+    { src: base + "Favicon frame 1.png", holdMs: 550 },
+    { src: base + "Favicon frame 2.png", holdMs: 550 },
+    { src: base + "Favicon frame 3.png", holdMs: 550 },
+    { src: base + "Favicon frame 4.png", holdMs: 550 },
+    { src: base + "Favicon.png", holdMs: 550 },
+  ];
+  // Preload so the first loop doesn't flash a blank icon.
+  frames.forEach((f) => { new Image().src = f.src; });
+  let i = frames.length - 1;
+  const tick = () => {
+    i = (i + 1) % frames.length;
+    link.href = frames[i].src;
+    setTimeout(tick, frames[i].holdMs);
+  };
+  setTimeout(tick, frames[i].holdMs);
 }

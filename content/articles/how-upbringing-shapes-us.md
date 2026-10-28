@@ -11,6 +11,7 @@ illustration_caption: Illustration by Anna Yu
 show_in_carousel: true
 carousel_image: assets/images/articles/how-upbringing-shapes-us-carousel.jpg
 carousel_order: 5
+carousel_split: false
 carousel_caption_color: cream
 volume: Volume 2
 works_cited:
