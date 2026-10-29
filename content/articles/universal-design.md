@@ -12,6 +12,10 @@ show_in_carousel: true
 carousel_image: assets/images/articles/universal-design.jpg
 carousel_title: "Restructuring the World to Deconstruct Prejudice: The Power of Universal Design"
 carousel_order: 4
+carousel_excerpt:
+  - "The safety trope stamped on every elevator across the world reads “in case of fire, take the stairs,” but how does this urgent requirement apply to individuals with disabilities? This example reveals just how easy it can be to overlook the disability stigma that is tangibly ingrained in the surrounding world."
+  - "I challenge you to imagine a world where disabilities shed their negative connotations, and physical spaces are naturally and equally accessible to all."
+carousel_excerpt_side: right
 volume: Volume 1
 works_cited:
   - Penn Office of Affirmative Action & Equal Opportunity Programs. “Accommodation Services for Faculty, Staff & Visitors with Disabilities.” Penn OAA EOP.

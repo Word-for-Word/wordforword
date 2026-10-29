@@ -203,6 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initMarqueeAsterisks();
     initMarqueeCentering();
     initCustomCursor();
+    initDecorativeBoil();
     initRoleTapReveal();
     initFeaturedCarousel();
     initCarouselReveal();
@@ -327,6 +328,13 @@ function initViewportFrameSync() {
 
 function initPageFlashReady() {
   if (!document.documentElement.classList.contains("show-page-flash")) return;
+  // Asterisk boils until .page-flash
+  // finishes sliding away — see startAsteriskBoil().
+  const flash = document.querySelector(".page-flash");
+  const stopBoil = startAsteriskBoil([...document.querySelectorAll(".page-flash__asterisk")], "asterisk-boil-flash");
+  flash?.addEventListener("animationend", (e) => {
+    if (e.target === flash && e.animationName === "page-flash-slide") stopBoil();
+  });
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.documentElement.classList.add("page-flash-ready");
@@ -2461,6 +2469,90 @@ const INTRO_SPLASH_SLIDE_MS = 1000;
 // order).
 let splashFinalLandedDelayMs = 0;
 
+// Hand-drawn "line boil" for the site's asterisks — the intro splash's
+// and the page-flash screens' (both replaced CSS translate jitters), the
+// hero wordmark's, section 3's, the inset tiles', and the cursor companion's, all per explicit
+// request. An SVG filter warps each asterisk's edges with a noise pattern;
+// re-rolling that noise's seed every frameMs is what makes the outline
+// look redrawn. These 4 numbers are the knobs for how rough it looks:
+const ASTERISK_BOIL = {
+  // How tightly the edges kink. Higher = many small kinks (scratchier),
+  // lower = a few broad, gentle bends. Per CSS px, so tied to the
+  // splash asterisks' own ~29px size — 0.12 means roughly 1 bend per 8px.
+  frequency: 0.12,
+  // Layers of noise. 1 = one smooth wobble; 2-3 add finer grit on top,
+  // which is what gives the codepen its broken-up, scratchy lines.
+  detail: 1,
+  // How far edges get pushed, in CSS px — each edge shifts up to half
+  // this in either direction.
+  strength: 3.5,
+  // ms between redraws (the codepen's own rate).
+  frameMs: 150,
+};
+
+// Builds (once per id) the hidden <svg><filter> a boil points at. Made
+// here rather than written into each page's HTML since the cursor and
+// page-flash asterisks live on every page. Each caller gets its OWN
+// filter id so stopping one (the splash) never freezes another (the
+// cursor) that's still running.
+function ensureBoilFilter(id) {
+  const existing = document.getElementById(id);
+  if (existing) return existing;
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  // Out of the layout flow, so it never takes up space anywhere.
+  svg.style.position = "absolute";
+  const filter = document.createElementNS(NS, "filter");
+  filter.id = id;
+  // Room past the element's own box for edges pushed outward.
+  filter.setAttribute("x", "-20%");
+  filter.setAttribute("y", "-20%");
+  filter.setAttribute("width", "140%");
+  filter.setAttribute("height", "140%");
+  const noise = document.createElementNS(NS, "feTurbulence");
+  noise.setAttribute("type", "fractalNoise");
+  const displace = document.createElementNS(NS, "feDisplacementMap");
+  displace.setAttribute("in", "SourceGraphic");
+  displace.setAttribute("xChannelSelector", "R");
+  displace.setAttribute("yChannelSelector", "G");
+  filter.append(noise, displace);
+  svg.appendChild(filter);
+  document.body.appendChild(svg);
+  return filter;
+}
+
+// Starts boiling every element in `targets` (one element or a list)
+// through filter `id`, and returns a function that stops it. `overrides`
+// swaps in different values for any of ASTERISK_BOIL's knobs (e.g. a
+// gentler strength) for just this one boil. No-op
+// (returns a no-op) under prefers-reduced-motion or with nothing to boil,
+// leaving the asterisks perfectly still.
+function startAsteriskBoil(targets, id, overrides = {}) {
+  const els = [].concat(targets).filter(Boolean);
+  if (!els.length) return () => {};
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
+  const settings = { ...ASTERISK_BOIL, ...overrides };
+  const filter = ensureBoilFilter(id);
+  const noise = filter.querySelector("feTurbulence");
+  filter.querySelector("feDisplacementMap").setAttribute("scale", settings.strength);
+  noise.setAttribute("baseFrequency", settings.frequency);
+  noise.setAttribute("numOctaves", settings.detail);
+  els.forEach((el) => (el.style.filter = `url(#${id})`));
+  let seed = 1;
+  const timer = setInterval(() => {
+    seed += 1;
+    noise.setAttribute("seed", seed);
+  }, settings.frameMs);
+  return () => {
+    clearInterval(timer);
+    els.forEach((el) => (el.style.filter = ""));
+  };
+}
+
 // Drives ALL 5 intro-splash screens (1/2/3/4/final) through ONE unified
 // mechanism — a plain .is-cut opacity toggle, scheduled via setTimeout,
 // instead of each screen running its own independent animation-delay/
@@ -2534,6 +2626,13 @@ function initSplashScreens() {
     caption: document.querySelector(`.intro-splash__caption--${n}`),
   }));
   if (!splash || !screens.every((s) => s.asterisk && s.caption)) return;
+  // Boils through every screen, final/00 included (per explicit request),
+  // and only stops once the splash has fully slid off-screen — no point
+  // re-rolling a filter nobody can see.
+  const stopBoil = startAsteriskBoil(document.querySelector(".intro-splash__asterisk-wrap"), "asterisk-boil-intro");
+  splash.addEventListener("animationend", (e) => {
+    if (e.target === splash && e.animationName === "intro-splash-slide") stopBoil();
+  });
 
   const lastMomentIndex = SPLASH_SCREEN_CUT_DELAYS_MS.length - 1;
   const elapsed = (document.timeline.currentTime || 0) + SKIP_INTRO_SPLASH_OFFSET_MS;
@@ -2832,7 +2931,7 @@ function positionHeroAsterisk() {
   // practice that this wasn't observed to drift the same way.
   const STRADDLE_Y = 30;
   // Right-nudge bumped repeatedly per explicit follow-up feedback:
-  // +2 -> +4 -> +5 -> +6.
+  // +2 -> +4 -> +5 -> +6 -> +9.
   //
   // The reusable --compact hero (see its own comment in style.css —
   // publications.html today, about.html/get-involved.html potentially
@@ -2852,7 +2951,7 @@ function positionHeroAsterisk() {
   // letter, so "slightly further away" keeps holding at any glyph size.
   const clearanceX = anchor.offsetWidth * 0.08;
   asteriskWrap.style.top = `${anchorTop + STRADDLE_Y - extraUp - asteriskHeight}px`;
-  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 6 + extraRight + clearanceX}px`;
+  asteriskWrap.style.left = `${anchorRight - asteriskWidth / 2 + 9 + extraRight + clearanceX}px`;
   asteriskWrap.style.right = "auto";
 }
 
@@ -4553,7 +4652,9 @@ function initSplitCtaParallax() {
 // collide with, and a parent's transform composes fine with whatever
 // its children are independently doing.
 const SLOGAN_MIN_SCALE = 0.85;
-const SLOGAN_MAX_SCALE = 1.15;
+// Was 1.15 (~23px on the 20px base) — raised per explicit request for a
+// bigger max size (~32px).
+const SLOGAN_MAX_SCALE = 1.6;
 // How much scroll distance the grow phase spans, as a fraction of the
 // viewport's own height — not a fixed px value, so this reads the same
 // relative "pace" regardless of viewport size.
@@ -5246,6 +5347,31 @@ function initBeyondPageMagneticImages() {
 // moving decoration attached to the user's own pointer — exactly the
 // kind of motion that setting is meant to suppress) and on touch/coarse
 // pointers (no real mouse to trail).
+// Hero wordmark asterisk, section 3's 2 illustration asterisks, and the
+// square tiles' inset asterisks (.square__inset-asterisk-wrap), and the
+// About page's "Beyond the Page" asterisk, and the Publications
+// dropdown's illustration asterisks boil nonstop too, as does the
+// footer wordmark, per explicit request. On the wraps, not the spinning
+// asterisks inside, for the same reason as the cursor's (see
+// initCustomCursor()): the wobble stays put while the asterisk turns.
+function initDecorativeBoil() {
+  startAsteriskBoil(
+    [
+      document.querySelector(".hero__wordmark-asterisk-wrap"),
+      ...document.querySelectorAll(".split-cta__illustration-asterisk-wrap"),
+      ...document.querySelectorAll(".square__inset-asterisk-wrap"),
+      document.querySelector(".beyond-page__asterisk-wrap"),
+      ...document.querySelectorAll(".nav__dropdown-visual-asterisk-wrap"),
+    ],
+    "asterisk-boil-hero"
+  );
+  // Footer's "Word for Word*" wordmark (one PNG, no spin of its own, so
+  // the boil goes straight on the img). Its own filter at half strength —
+  // the asterisks' full 3.5 read as too wobbly across the lettering, per
+  // explicit follow-up.
+  startAsteriskBoil(document.querySelector(".site-footer__title"), "asterisk-boil-wordmark", { strength: 1.75 });
+}
+
 function initCustomCursor() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -5267,6 +5393,10 @@ function initCustomCursor() {
   glyph.className = "custom-cursor-asterisk";
   wrap.appendChild(glyph);
   document.body.appendChild(wrap);
+  // Boils for as long as the page is open. On the wrap, not the glyph,
+  // so the wobble stays put on screen while the asterisk spins under it
+  // (on the glyph, the noise would just rotate along with it).
+  startAsteriskBoil(wrap, "asterisk-boil-cursor");
 
   // Fades out while the pointer is genuinely away from the browser
   // viewport (moved off-screen, or the user switched to another

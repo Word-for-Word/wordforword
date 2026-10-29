@@ -81,6 +81,19 @@ collections:
         default: "auto"
         required: false
         hint: "Auto picks brown text for pale images and cream text for everything else. Only change this if auto gets it wrong for this image."
+      - label: "Carousel excerpt"
+        name: "carousel_excerpt"
+        widget: "list"
+        field: { label: "Paragraph", name: "paragraph", widget: "text" }
+        required: false
+        hint: "Optional — a paragraph or two copied from the article, shown in the empty part of the carousel image. Only use for images with a large plain area on one side. Keep it short (around 50–90 words total). Hidden on smaller screens."
+      - label: "Carousel excerpt side"
+        name: "carousel_excerpt_side"
+        widget: "select"
+        options: ["left", "right"]
+        default: "left"
+        required: false
+        hint: "Which side of the carousel image is empty enough for the excerpt."
       - label: "Volume #"
         name: "volume"
         widget: "string"

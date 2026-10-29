@@ -13,6 +13,9 @@ carousel_image: assets/images/articles/how-upbringing-shapes-us-carousel.jpg
 carousel_order: 5
 carousel_split: false
 carousel_caption_color: cream
+carousel_excerpt:
+  - "Here’s a hypothetical: consider a young girl raised in a low-income abusive household. Her father is an alcoholic, her mother is flighty and neglectful, and she gets bullied at school. Surprisingly, the morphology of her organs can be altered simply as a result of the cards she was dealt early on."
+carousel_excerpt_side: left
 volume: Volume 2
 works_cited:
   - Hogg, B., Gardoki-Souto, I., Valiente-Gómez, A., et al. (2023). Psychological trauma as a transdiagnostic risk factor for mental disorder: an umbrella meta-analysis. European Archives of Psychiatry and Clinical Neuroscience, 273, 397-410.

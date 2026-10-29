@@ -130,7 +130,7 @@
       img.src = `assets/images/Asterisk ${n}.png`;
     }
   </script>
-  <link rel="stylesheet" href="/css/style.css?v=416" />
+  <link rel="stylesheet" href="/css/style.css?v=425" />
   <!-- PostHog analytics -->
   <script>
     !(function (t, e) {
@@ -219,9 +219,9 @@
        its "(0N)" tag below) sits below the asterisk, colored to match
        THAT screen's asterisk, cut in/out in lockstep with it via the
        same shared keyframes/timestamps (see .intro-splash__caption--N in
-       CSS) — never jitters, since it lives outside
-       .intro-splash__asterisk-wrap (the jitter is scoped to that wrapper
-       only). Asterisk + caption are centered as ONE group (.intro-splash
+       CSS) — never boils, since it lives outside
+       .intro-splash__asterisk-wrap (the line boil is scoped to
+       that wrapper only). Asterisk + caption are centered as ONE group (.intro-splash
        itself is a flex column, gap:30px, centered) rather than pinning
        the asterisk alone to true viewport center — that alternative was
        tried and rejected: it read as "asterisk centered, caption bolted
@@ -1301,6 +1301,10 @@
           <div class="featured-carousel__slide" data-title-intro="Philosophy of Practice —" data-title="Or Rather, Philosophy of Communication" data-edition="Max Brody, Edition 1" data-number="(02)" data-article-url="/articles/philosophy-of-practice.html">
             <img class="featured-carousel__photo" src="/assets/images/articles/philosophy-of-practice.png" alt="Illustration: Philosophy of Practice" />
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__excerpt featured-carousel__excerpt--right" aria-hidden="true">
+              <p>I have seen many, many photographs in my life: few have punctured me.</p>
+              <p>To my future patients in the doctor’s office: I promise you are not ordinary. To me, you hold everything.</p>
+            </div>
             <div class="featured-carousel__hover-tiles">
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
@@ -1329,6 +1333,10 @@
           <div class="featured-carousel__slide" data-title-intro="Restructuring the World to Deconstruct Prejudice:" data-title="The Power of Universal Design" data-edition="Tova Tachau, Edition 1" data-number="(04)" data-article-url="/articles/universal-design.html">
             <img class="featured-carousel__photo" src="/assets/images/articles/universal-design.jpg" alt="Illustration: Restructuring the World to Deconstruct Prejudice" />
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__excerpt featured-carousel__excerpt--right" aria-hidden="true">
+              <p>The safety trope stamped on every elevator across the world reads “in case of fire, take the stairs,” but how does this urgent requirement apply to individuals with disabilities? This example reveals just how easy it can be to overlook the disability stigma that is tangibly ingrained in the surrounding world.</p>
+              <p>I challenge you to imagine a world where disabilities shed their negative connotations, and physical spaces are naturally and equally accessible to all.</p>
+            </div>
             <div class="featured-carousel__hover-tiles">
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
@@ -1343,6 +1351,9 @@
           <div class="featured-carousel__slide" data-title="How Upbringing Shapes Us – Literally" data-edition="Annika Richard, Edition 2" data-number="(05)" data-article-url="/articles/how-upbringing-shapes-us.html" data-caption-tone="dark">
             <img class="featured-carousel__photo" src="/assets/images/articles/how-upbringing-shapes-us-carousel.jpg" alt="Illustration: How Upbringing Shapes Us" />
             <div class="featured-carousel__scrim" aria-hidden="true"></div>
+            <div class="featured-carousel__excerpt featured-carousel__excerpt--left" aria-hidden="true">
+              <p>Here’s a hypothetical: consider a young girl raised in a low-income abusive household. Her father is an alcoholic, her mother is flighty and neglectful, and she gets bullied at school. Surprisingly, the morphology of her organs can be altered simply as a result of the cards she was dealt early on.</p>
+            </div>
             <div class="featured-carousel__hover-tiles">
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
               <div class="featured-carousel__hover-tile" aria-hidden="true"></div>
@@ -1656,6 +1667,6 @@
        stylesheet above either, so DOMContentLoaded (and this file's own
        intro reveal) can fire promptly regardless of how slow either of
        those is. -->
-  <script src="/js/main.js?v=242" defer></script>
+  <script src="/js/main.js?v=256" defer></script>
 </body>
 </html>

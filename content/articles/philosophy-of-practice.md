@@ -11,6 +11,10 @@ illustration_caption: Illustration by Annette Seo
 show_in_carousel: true
 carousel_image: assets/images/articles/philosophy-of-practice.png
 carousel_order: 2
+carousel_excerpt:
+  - "I have seen many, many photographs in my life: few have punctured me."
+  - "To my future patients in the doctor’s office: I promise you are not ordinary. To me, you hold everything."
+carousel_excerpt_side: right
 volume: Volume 1
 ---
 Roland Barthes, in his hybrid monograph and mourning memoir, Camera Lucida, reflects:

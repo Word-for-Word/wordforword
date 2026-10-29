@@ -339,6 +339,8 @@ def build_article(md_path, css_version, js_version, base_url):
         "carousel_shadow": fields.get("carousel_shadow", "").strip().lower(),
         "carousel_order": fields.get("carousel_order", "").strip(),
         "carousel_split": fields.get("carousel_split", "").strip().lower() != "false",
+        "carousel_excerpt": fields.get("carousel_excerpt") or [],
+        "carousel_excerpt_side": fields.get("carousel_excerpt_side", "").strip().lower(),
         "author": fields["author"],
         "volume": fields.get("volume", ""),
     }
@@ -573,6 +575,20 @@ def build_carousel_slide_html(article, index, is_first):
     # the image's own colors (see [data-scrim="strong"] in style.css).
     if article["carousel_shadow"] == "stronger":
         tone_attr += ' data-scrim="strong"'
+    # "Carousel excerpt" — a paragraph or two from the article, set into
+    # the illustration's own empty space on whichever side the image
+    # leaves open (see .featured-carousel__excerpt in style.css).
+    excerpt = article["carousel_excerpt"]
+    if isinstance(excerpt, str):
+        excerpt = [excerpt] if excerpt.strip() else []
+    if excerpt:
+        side = "right" if article["carousel_excerpt_side"] == "right" else "left"
+        paragraphs = "\n".join(f"              <p>{html.escape(p)}</p>" for p in excerpt)
+        extra += (
+            f'            <div class="featured-carousel__excerpt featured-carousel__excerpt--{side}" aria-hidden="true">\n'
+            f"{paragraphs}\n"
+            "            </div>\n"
+        )
     return (
         f'          <div class="{slide_class}"{intro_attr} data-title="{title_attr}" data-edition="{volume_attr}" '
         f'data-number="{number}" data-article-url="{article_url}"{tone_attr}>\n'

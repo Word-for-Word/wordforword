@@ -370,73 +370,17 @@ ul { list-style: none; margin: 0; padding: 0; }
   animation: intro-splash-slide 1s cubic-bezier(0.33, 1, 0.68, 1) 0ms forwards;
 }
 /* Smaller than the hero asterisk (0.65x) — this one's just a splash
-   decoration, not meant to read at full hero size. Buzzes continuously
-   through ALL FOUR numbered asterisks (1/2/3/4 — this is one shared
-   wrapper, so whichever child asterisk is currently cut in rides the
-   same wiggle), then DECAYS to a smooth, still stop in the brief 70ms
-   gap between asterisk--4 hiding (1910ms) and the final/00 asterisk
-   landing (1980ms — see .intro-splash__asterisk--final's own cut
-   delay), so there's a genuine settled beat before .intro-splash itself
-   slides away (2480ms). Buzz must stay at full amplitude all the way to
-   ~96% (not decay gradually from 70% as an earlier pass did) — with a
-   270-1980ms window and the four numbered screens' visible windows
-   scattered across the FULL span (asterisk--4's is 1560-1910ms, deep
-   into what used to be the decay tail), a gradual decay starting too
-   early left the later asterisks looking like they'd already gone
-   still. Confining the decay to the invisible 1910-1980ms gap means
-   every numbered asterisk gets the same lively wiggle, and the decay
-   itself is never actually seen (nothing is on-screen during that gap)
-   — only its result, a fully-settled final asterisk. One single,
-   self-contained, non-infinite animation spanning that whole 1980ms
-   window (not "infinite jitter forever, then separately triggered
-   settle") deliberately avoids layering two named animations on the
-   same element/property: a same-class-of-bug investigation elsewhere in
-   this file (see the reset-timing work on the hero asterisk) found that
-   when two animations both end up simultaneously active/forwards-filled
-   on the same property, which one wins is NOT reliably "whichever is
-   listed last" — a real browser quirk, not just a theoretical risk. A
-   single keyframe list sidesteps that ambiguity entirely. Every offset
-   stays small (max ~0.6px — an earlier ~1.5px read as too intense). */
+   decoration, not meant to read at full hero size. Was a CSS translate
+   jitter on this wrapper; now a hand-drawn "line boil" instead, per
+   explicit request — startAsteriskBoil() in main.js sets an inline SVG
+   filter here whose noise it re-rolls every ~150ms. Being
+   ONE shared wrapper, whichever child asterisk is currently cut in
+   boils the same way — final/00 included — until the splash has slid
+   away. */
 .intro-splash__asterisk-wrap {
   position: relative;
   width: calc(var(--hero-asterisk-size) * 0.65);
   aspect-ratio: 184 / 200;
-  /* 1900ms matches the final/00 screen's real landing time now that
-     01-04 were sped up (see SPLASH_SCREEN_CUT_DELAYS_MS in main.js,
-     was 1980ms) — keyframe percentages below are unchanged, so the decay
-     tail still lands right as "00" cuts in. */
-  animation: intro-splash-asterisk-jitter-settle 1900ms linear forwards;
-}
-@keyframes intro-splash-asterisk-jitter-settle {
-  0%   { transform: translate(0, 0); }
-  5%   { transform: translate(-0.6px, 0.4px); }
-  10%  { transform: translate(0.4px, -0.6px); }
-  15%  { transform: translate(-0.4px, -0.4px); }
-  20%  { transform: translate(0.6px, 0.3px); }
-  25%  { transform: translate(-0.5px, 0.5px); }
-  30%  { transform: translate(0.3px, -0.5px); }
-  35%  { transform: translate(-0.6px, 0.2px); }
-  40%  { transform: translate(0.5px, -0.3px); }
-  45%  { transform: translate(-0.3px, 0.6px); }
-  50%  { transform: translate(0.4px, -0.4px); }
-  55%  { transform: translate(-0.5px, -0.3px); }
-  60%  { transform: translate(0.6px, 0.4px); }
-  65%  { transform: translate(-0.4px, 0.5px); }
-  70%  { transform: translate(0.3px, -0.6px); }
-  /* Same buzz cycle repeated (not decayed) — keeps asterisk--3's and
-     asterisk--4's own visible windows (1140-1490ms and 1560-1910ms) just
-     as lively as asterisk--1's. */
-  75%  { transform: translate(-0.6px, 0.4px); }
-  80%  { transform: translate(0.4px, -0.6px); }
-  85%  { transform: translate(-0.4px, -0.4px); }
-  90%  { transform: translate(0.6px, 0.3px); }
-  95%  { transform: translate(-0.5px, 0.5px); }
-  /* Decay tail, compressed into the invisible 1910-1980ms gap after
-     asterisk--4 has already hidden — never actually seen mid-motion,
-     only its settled result once the final asterisk cuts in. */
-  97%   { transform: translate(0.15px, -0.15px); }
-  98.5% { transform: translate(-0.05px, 0.05px); }
-  100%  { transform: translate(0, 0); }
 }
 /* All 5 stacked in the same spot. Each one's own hide fires 70ms
    BEFORE the next one's appear (not simultaneously) — that gap is
@@ -526,10 +470,9 @@ ul { list-style: none; margin: 0; padding: 0; }
    in main.js) comfortably outlasts this animation's 360ms total (120ms
    delay + 240ms run), so the bounce always finishes settling before the
    next screen cuts in. Composes fine with
-   .intro-splash__asterisk-wrap's own continuous jitter-settle animation
-   (a DIFFERENT element — the wrapper around all 5 numbered asterisks,
-   see that class below) since nested elements' own `transform`s stack
-   independently rather than fighting over the same property.
+   .intro-splash__asterisk-wrap's own line-boil filter (a DIFFERENT
+   element — the wrapper around all 5 numbered asterisks, see that class
+   below), which just redraws whatever this bounce has already moved.
 
    The bounce itself animates the standalone `translate` property, NOT
    `transform` — .intro-splash__caption itself already carries its own
@@ -600,8 +543,8 @@ ul { list-style: none; margin: 0; padding: 0; }
    of a blur. (First pass went further — 14px/1.08 — and read slightly
    too strong; pulled back to these values.) translate/scale (not
    transform) for the same reason as intro-splash-flicker-in above —
-   stays clear of .page-flash__asterisk's own continuous
-   `transform`-based jitter running at the same time. */
+   originally to stay clear of a `transform`-based jitter that used to
+   run alongside it on .page-flash__asterisk (since removed). */
 @keyframes page-flash-content-thud {
   0%   { opacity: 0; translate: 0 0; scale: 1; }
   1%   { opacity: 1; translate: 0 -10px; scale: 1.06; }
@@ -879,41 +822,12 @@ html.show-page-flash.page-flash-ready .page-flash__color {
   width: auto;
   opacity: 0;
 }
-/* Continuous jitter, not the intro splash's one-shot settle-to-still
-   (there's no "next screen" here to settle in time for) — started from
-   that jitter's early values (see intro-splash-asterisk-jitter-settle
-   above) but scaled up (~2x, sped up too) on explicit request: at the
-   intro splash's original sub-pixel scale (max ~0.6px), the shake read
-   as imperceptible whenever page load lagged even slightly, since a
-   user who's already been waiting isn't looking closely enough to catch
-   a <1px wobble — it just registered as the colored screen "flatly"
-   sitting there rather than visibly animating. (A first pass scaled it
-   ~4x, which then read as too much movement — pulled back to ~2x.)
-   Kept as its OWN keyframe
-   list (not shared with intro-splash-asterisk-jitter-settle) specifically
-   so that one-shot's own separately-tuned amplitude — deliberately
-   pulled back from an earlier ~1.5px that read as "too intense" there —
-   isn't disturbed by this. Looped back to (0,0) for a seamless repeat.
-   Comma'd alongside page-flash-content-thud (see that keyframe's own
-   comment further down) so every page-flash screen pops in with a
-   blank-pause+bounce, not just a plain fade — the two animations don't
-   fight because they touch different properties (this one's
-   `transform`, that one's `opacity`/`translate`). */
+/* Pops in with page-flash-content-thud's blank-pause+bounce (see that
+   keyframe's own comment further down). Used to ALSO run a continuous
+   translate jitter — removed per explicit request now that the line boil
+   (startAsteriskBoil() in main.js) supplies the motion on its own. */
 html.show-page-flash.page-flash-ready .page-flash__asterisk {
-  animation:
-    page-flash-asterisk-jitter 0.5s linear infinite,
-    page-flash-content-thud 320ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
-}
-@keyframes page-flash-asterisk-jitter {
-  0%     { transform: translate(0, 0); }
-  12.5%  { transform: translate(-1.4px, 1px); }
-  25%    { transform: translate(1px, -1.4px); }
-  37.5%  { transform: translate(-1px, -1px); }
-  50%    { transform: translate(1.4px, 0.7px); }
-  62.5%  { transform: translate(-1.2px, 1.2px); }
-  75%    { transform: translate(0.7px, -1.2px); }
-  87.5%  { transform: translate(-1.4px, 0.5px); }
-  100%   { transform: translate(0, 0); }
+  animation: page-flash-content-thud 320ms cubic-bezier(0.34, 1.8, 0.64, 1) 120ms both;
 }
 .page-flash__caption {
   display: flex;
@@ -4610,6 +4524,39 @@ a.diamond-cta {
   background: rgba(255, 255, 255, 0.14);
   transition: background-color 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
+/* Per-article "Carousel excerpt" (build_articles.py) — a paragraph or
+   two from the article, set into the illustration's own empty space
+   (e.g. How Upbringing Shapes Us' plain tan left side). Lives INSIDE the
+   slide so it slides along with its own image. Inset 9% from its side
+   to clear the 40px-inset nav diamond at mid-height; vertically
+   centered so it stays below the title/edition caption. Above the
+   hover tiles (z-index:2) but click-through, so those still flash and
+   nothing here blocks the slide underneath. */
+.featured-carousel__excerpt {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34%;
+  z-index: 3;
+  pointer-events: none;
+  color: var(--color-dark);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.45;
+}
+.featured-carousel__excerpt--left { left: 9%; }
+.featured-carousel__excerpt--right { right: 9%; }
+.featured-carousel__excerpt p + p {
+  margin-top: 0.8em;
+}
+/* Below ~1100px the centered excerpt starts running into the title/
+   edition caption above it, and mobile's 3/4 crop (see .featured-
+   carousel) cuts away the empty space it's meant to sit in anyway. */
+@media (max-width: 1100px) {
+  .featured-carousel__excerpt {
+    display: none;
+  }
+}
 /* Real <button>s (JS-driven, no destination), not <a> —
    .diamond-cta--tight for the same small icon-only sizing as
    split-cta's own diamond and section 2 square 7's. Sits ON TOP of the
@@ -5304,7 +5251,9 @@ span.split-cta__text-line {
      2 on hover, inconsistent for what's meant to be one uniform 2x2
      grid. Equal rows now, so all 4 tiles are identical dimensions. */
   grid-template-rows: repeat(2, 1fr);
-  border-radius: 24px;
+  /* Matches .square-grid's own 15px so section 3's bg reads as the same
+     corner treatment as sections 1-2 directly above it. */
+  border-radius: 15px;
   overflow: hidden;
 }
 .split-cta__illustration-tile {
@@ -6939,7 +6888,7 @@ body.edition-lightbox-open {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 15px;
+  border-radius: 6px;
   background: var(--instagram-tint);
   opacity: 0;
   transition: opacity 0.2s ease-out;
@@ -6962,17 +6911,11 @@ body.edition-lightbox-open {
      the page behind/around it. */
   position: relative;
   isolation: isolate;
-  border-radius: 15px;
+  /* Was 15px, then 0 — per explicit follow-up, back to rounded but
+     much subtler than the site's usual 15px tile corners. */
+  border-radius: 6px;
   overflow: hidden;
   background: var(--color-tan);
-  /* Lifts on hover, same .publication-card__cover convention (Volumes)
-     — 0.2s ease-out both directions, per explicit request to reuse
-     that exact hover treatment here. */
-  transition: transform 0.2s ease-out;
-}
-.instagram-card:hover .instagram-card__cover,
-.instagram-card:focus-visible .instagram-card__cover {
-  transform: translateY(-12px);
 }
 .instagram-card__cover img {
   display: block;
@@ -8651,7 +8594,9 @@ body.intro-finished .hero__wordmark-asterisk-wrap.is-respinning {
 }
 .article-teaser__cover {
   aspect-ratio: 4 / 3;
-  border-radius: 15px;
+  /* Was 15px — reduced per explicit request, matching .instagram-card__
+     cover's own subtler 6px. */
+  border-radius: 6px;
   overflow: hidden;
   background: var(--color-tan);
 }
