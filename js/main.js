@@ -2354,8 +2354,17 @@ function initIntroReveal() {
     // initHeroEyebrowExit() listens for this to do its FIRST sync of the
     // hero asterisk specifically — see that function for why.
     document.dispatchEvent(new CustomEvent("introfinished", { detail: { asteriskVisible } }));
-  }, Math.max(0, 6650 - elapsed, splashReadyFloorMs + 1600 + 180));
-  // ^ Same slow-load floor as the --intro-delay correction above, and for
+  }, Math.max(0, 6650 - elapsed + groupShiftMs, splashReadyFloorMs + 1600 + 180));
+  // ^ + groupShiftMs: on a slow load, the correction above pushes EVERY
+  // timed element back by that same shift (stagger kept intact), so the
+  // latest-finishing reveal lands at 6650 - elapsed + groupShiftMs. The
+  // floor term alone (below) only covers the EARLIEST element landing at
+  // splashReadyFloorMs, not the later ones — confirmed live on a cold
+  // load: this fired ~1.1s before the hero asterisk's own intro spin
+  // (word 2's delay + 930ms, then 1.1s long) had finished, and
+  // body.intro-finished's animation:none snapped it straight to rest
+  // mid-spin.
+  // Same slow-load floor as the --intro-delay correction above, and for
   // the same reason: 6650 (= the eyebrow lines' own 4870ms delay + their
   // 1.6s slide-slow duration + a 180ms buffer) assumes elapsed is small
   // enough that nothing above got floored. On a slow load where it
